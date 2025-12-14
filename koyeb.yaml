@@ -1,0 +1,11 @@
+type: web
+name: fastpast
+build:
+  buildpacks:
+    - url: urn:cnb:builder:paketo-buildpacks/nodejs
+  env:
+    BP_NODE_VERSION: "18.17.0"
+run:
+  command: npm start
+  env:
+    PORT: 8000
