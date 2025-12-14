@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: fastpast
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: YOUTUBE_API_KEY_1
+        sync: false
