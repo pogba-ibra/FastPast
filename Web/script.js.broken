@@ -1,0 +1,1882 @@
+// This file will contain the JavaScript logic for video downloading.
+
+// Global variable for tracking drag state (used by both rope and theme toggle)
+
+// Playlist state (global scope)
+const playlistState = {
+  videos: [],
+  currentIndex: 0,
+  playlistId: null,
+  nextPageToken: null,
+  isPlaylist: false
+};
+
+let isDragging = false;
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  const urlInput = document.getElementById("video-url");
+  const processBtn = document.getElementById("process-btn");
+  const processingStatus = document.getElementById("processing-status");
+  const videoPreview = document.getElementById("video-preview");
+  const videoPlayer = document.getElementById("video-player");
+  const videoThumbnail = document.getElementById("video-thumbnail");
+  const videoTitle = document.getElementById("video-title");
+  const formatSelect = document.getElementById("format");
+  const qualitySelect = document.getElementById("quality");
+  if (qualitySelect) {
+
+    // ========== Playlist Navigation Functions ==========
+
+    //Fetch playlist videos from server
+    async function fetchPlaylistVideos(playlistUrl, pageToken = null) {
+      try {
+        const response = await fetch('http://localhost:3002/get-playlist-videos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playlistUrl, pageToken })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to fetch playlist');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Error fetching playlist:', error);
+        throw error;
+      }
+    }
+
+    // Navigate to specific video in playlist
+    function navigateToVideo(index) {
+      if (index < 0 || index >= playlistState.videos.length) {
+        return;
+      }
+
+      playlistState.currentIndex = index;
+      const video = playlistState.videos[index];
+      const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
+
+      // Update input - get element directly
+      const urlInput = document.getElementById('video-url');
+      const processingStatus = document.getElementById('processing-status');
+
+      if (urlInput) {
+        urlInput.value = videoUrl;
+      }
+
+      // Update UI
+      document.getElementById('current-video-index').textContent = index + 1;
+      document.getElementById('prev-video-btn').disabled = index === 0;
+      document.getElementById('next-video-btn').disabled =
+        index === playlistState.videos.length - 1 && !playlistState.nextPageToken;
+
+      // Load video
+      if (processingStatus) {
+        processingStatus.style.display = 'block';
+      }
+
+      loadVideoQualities(videoUrl)
+        .then(() => showVideoPreview(videoUrl))
+        .catch(error => {
+          console.error('Error loading video:', error);
+          alert('Failed to load video: ' + error.message);
+          if (processingStatus) {
+            processingStatus.style.display = 'none';
+          }
+        });
+
+      // Lazy load more if approaching end
+      if (index >= playlistState.videos.length - 3 && playlistState.nextPageToken) {
+        const playlistUrl = `https://www.youtube.com/playlist?list=${playlistState.playlistId}`;
+        fetchPlaylistVideos(playlistUrl, playlistState.nextPageToken)
+          .then(data => {
+            playlistState.videos.push(...data.videos);
+            playlistState.nextPageToken = data.nextPageToken;
+            const totalText = playlistState.videos.length + (data.nextPageToken ? '+' : '');
+            document.getElementById('total-videos').textContent = totalText;
+          })
+          .catch(error => console.error('Error loading more videos:', error));
+      }
+    }
+
+    // Initialize playlist navigation
+    function initPlaylistNavigation() {
+      const prevBtn = document.getElementById('prev-video-btn');
+      const nextBtn = document.getElementById('next-video-btn');
+
+      if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+          navigateToVideo(playlistState.currentIndex - 1);
+        });
+      }
+
+      if (nextBtn) {
+        //Fetch playlist videos from server
+        async function fetchPlaylistVideos(playlistUrl, pageToken = null) {
+          try {
+            const response = await fetch('http://localhost:3002/get-playlist-videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playlistUrl, pageToken })
+            });
+
+            if (!response.ok) {
+              const error = await response.json();
+              throw new Error(error.error || 'Failed to fetch playlist');
+            }
+
+            return await response.json();
+          } catch (error) {
+            console.error('Error fetching playlist:', error);
+            throw error;
+          }
+        }
+
+        // Navigate to specific video in playlist
+        function navigateToVideo(index) {
+          if (index < 0 || index >= playlistState.videos.length) {
+            return;
+          }
+
+          playlistState.currentIndex = index;
+          const video = playlistState.videos[index];
+          const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
+
+          // Update input - get element directly
+          const urlInput = document.getElementById('video-url');
+          const processingStatus = document.getElementById('processing-status');
+
+          if (urlInput) {
+            urlInput.value = videoUrl;
+          }
+
+          // Update UI
+          document.getElementById('current-video-index').textContent = index + 1;
+          document.getElementById('prev-video-btn').disabled = index === 0;
+          document.getElementById('next-video-btn').disabled =
+            index === playlistState.videos.length - 1 && !playlistState.nextPageToken;
+
+          // Load video
+          if (processingStatus) {
+            processingStatus.style.display = 'block';
+          }
+
+          loadVideoQualities(videoUrl)
+            .then(() => showVideoPreview(videoUrl))
+            .catch(error => {
+              console.error('Error loading video:', error);
+              alert('Failed to load video: ' + error.message);
+              if (processingStatus) {
+                processingStatus.style.display = 'none';
+              }
+            });
+
+          // Lazy load more if approaching end
+          if (index >= playlistState.videos.length - 3 && playlistState.nextPageToken) {
+            const playlistUrl = `https://www.youtube.com/playlist?list=${playlistState.playlistId}`;
+            fetchPlaylistVideos(playlistUrl, playlistState.nextPageToken)
+              .then(data => {
+                playlistState.videos.push(...data.videos);
+                playlistState.nextPageToken = data.nextPageToken;
+                const totalText = playlistState.videos.length + (data.nextPageToken ? '+' : '');
+                document.getElementById('total-videos').textContent = totalText;
+              })
+              .catch(error => console.error('Error loading more videos:', error));
+          }
+        }
+
+        // Initialize playlist navigation
+        function initPlaylistNavigation() {
+          const prevBtn = document.getElementById('prev-video-btn');
+          const nextBtn = document.getElementById('next-video-btn');
+
+          if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+              navigateToVideo(playlistState.currentIndex - 1);
+            });
+          }
+
+          if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+              navigateToVideo(playlistState.currentIndex + 1);
+            });
+          }
+        }
+
+        // ========== End Playlist Functions ==========
+
+        const successMessage = document.getElementById("success-message");
+        const hamburgerBtn = document.getElementById("hamburger-btn");
+        const navMenu = document.getElementById("nav-menu");
+        const lampRopeToggle = document.getElementById("lamp-rope-toggle");
+
+        // Highlight current page in menu
+        const currentPath = window.location.pathname.split("/").pop() || "index.html";
+        const menuLinks = document.querySelectorAll("#nav-menu a");
+        menuLinks.forEach((link) => {
+          if (link.getAttribute("href") === currentPath) {
+            link.parentElement.classList.add("selected");
+          }
+        });
+
+        // Hamburger menu toggle
+        hamburgerBtn.addEventListener("click", () => {
+          const checkbox = document.getElementById("menu-checkbox");
+          checkbox.checked = !checkbox.checked;
+          navMenu.classList.toggle("active");
+          document.body.classList.toggle("nav-open");
+          hamburgerBtn.classList.toggle("menu-open");
+          document.getElementById("blur-overlay").classList.toggle("active");
+        });
+
+        // Helper function to close mobile menu
+        function closeMobileMenu() {
+          const checkbox = document.getElementById("menu-checkbox");
+          if (checkbox.checked) {
+            checkbox.checked = false;
+            navMenu.classList.remove("active");
+            document.body.classList.remove("nav-open");
+            hamburgerBtn.classList.remove("menu-open");
+            document.getElementById("blur-overlay").classList.remove("active");
+          }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          if (
+            navMenu.classList.contains("active") &&
+            !navMenu.contains(e.target) &&
+            !hamburgerBtn.contains(e.target) &&
+            !document.getElementById("blur-overlay").contains(e.target)
+          ) {
+            closeMobileMenu();
+          }
+        });
+
+        // Close menu when clicking on blur overlay
+        document.getElementById("blur-overlay").addEventListener("click", () => {
+          closeMobileMenu();
+        });
+
+        // Close menu button
+        const closeMenuBtn = document.getElementById("close-menu-btn");
+        if (closeMenuBtn) {
+          closeMenuBtn.addEventListener("click", () => {
+            closeMobileMenu();
+          });
+        }
+
+        // Parallax effect removed as per user request
+
+        // Go Premium button
+        const goPremiumBtns = document.querySelectorAll(".go-premium-btn");
+
+        // Hide Go Premium buttons on pricing page
+        if (currentPath === "pricing.html") {
+          goPremiumBtns.forEach((btn) => {
+            btn.style.display = "none";
+          });
+        } else {
+          goPremiumBtns.forEach((btn) => {
+            btn.addEventListener("click", () => {
+              // Scroll to pricing-tiers section with smooth behavior
+              const pricingSection = document.querySelector(".pricing-tiers");
+              if (pricingSection) {
+                // Close mobile menu first if open
+                closeMobileMenu();
+
+                pricingSection.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+                // Trigger fade-in animation
+                setTimeout(() => {
+                  pricingSection.classList.add("fade-in");
+                }, 100);
+              }
+            });
+          });
+        }
+
+        // Lamp rope toggle for dark mode
+        if (lampRopeToggle) {
+          // Helper function to update UI for dark mode
+          function updateDarkModeUI(isDark) {
+            const container = lampRopeToggle.querySelector(".container");
+            const solarSystem = lampRopeToggle.querySelector(".solar-system");
+
+            if (isDark) {
+              document.body.classList.add("dark-mode");
+              document.documentElement.classList.add("dark-mode");
+              lampRopeToggle.classList.add("dark-mode");
+              // Show planet system when entering dark mode
+              container.style.display = "flex";
+              // Hide solar system in dark mode
+              if (solarSystem) solarSystem.style.display = "none";
+            } else {
+              document.body.classList.remove("dark-mode");
+              document.documentElement.classList.remove("dark-mode");
+              lampRopeToggle.classList.remove("dark-mode");
+              // Hide planet system when entering light mode
+              container.style.display = "none";
+              // Show solar system in light mode
+              if (solarSystem) solarSystem.style.display = "block";
+            }
+          }
+
+          // Check for saved preference on load - ONLY for desktop screens
+          if (window.matchMedia("(min-width: 960px)").matches) {
+            const savedDarkMode = localStorage.getItem("theme");
+            if (savedDarkMode === "dark") {
+              updateDarkModeUI(true);
+            }
+          }
+
+          // Variables for drag functionality
+          let startY = 0;
+          let currentY = 0;
+          let hasTriggeredDarkMode = false;
+
+          // Mouse events
+          lampRopeToggle.addEventListener("mousedown", startDrag);
+          document.addEventListener("mousemove", drag);
+          document.addEventListener("mouseup", endDrag);
+
+          // Prevent default click behavior on the rope
+          lampRopeToggle.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+
+          // Touch events for mobile
+          lampRopeToggle.addEventListener("touchstart", startDrag);
+          document.addEventListener("touchmove", drag);
+          document.addEventListener("touchend", endDrag);
+
+          function startDrag(e) {
+            isDragging = true;
+            hasTriggeredDarkMode = false;
+
+            // Store initial position
+            if (e.type === "touchstart") {
+              startY = e.touches[0].clientY;
+            } else {
+              startY = e.clientY;
+            }
+
+            // Prevent default to avoid text selection
+            if (e.cancelable) {
+              e.preventDefault();
+            }
+          }
+
+          function drag(e) {
+            if (!isDragging) return;
+
+            // Calculate current position
+            if (e.type === "touchmove") {
+              currentY = e.touches[0].clientY;
+            } else {
+              currentY = e.clientY;
+            }
+
+            // Calculate how far the rope has been pulled
+            const pullDistance = currentY - startY;
+
+            // Apply visual feedback based on pull distance
+            if (pullDistance > 0) {
+              // Get the container with planet and orbit
+              const container = lampRopeToggle.querySelector(".container");
+              const orbitPosition = 70; // Position of the orbit from the top of the rope
+              const maxMovement = 30; // Maximum movement for the rope
+              const maxSolarMovement = 160; // Maximum movement for the solar system
+              const movement = Math.min(pullDistance * 1, maxMovement);
+              const solarMovement = Math.min(pullDistance * 1, maxSolarMovement);
+
+              // Temporarily disable transition for smooth dragging
+              container.style.transition = "none";
+
+              // Move the container (which contains the planet and orbit) down as the rope is pulled
+              container.style.transform = `translateY(${orbitPosition + movement}px)`;
+
+              // Extend the rope to stay connected to the planet
+              const newHeight = 160 + movement; // Base height (160) plus movement
+              lampRopeToggle.style.height = `${newHeight}px`;
+
+              // Move solar system in light mode
+              if (!document.body.classList.contains("dark-mode")) {
+                const solarSystem = lampRopeToggle.querySelector(".solar-system");
+                if (solarSystem) {
+                  solarSystem.style.transform = `translateX(-50%) scale(0.2) translateY(${solarMovement}px)`;
+                }
+              }
+
+              // Add pulling indicator class for visual feedback
+              lampRopeToggle.classList.add("pulling-indicator");
+
+              // Visual feedback when pulling
+              lampRopeToggle.style.boxShadow = "0 0 10px rgba(230, 57, 70, 0.7)";
+
+              // Track if rope has been pulled enough but don't toggle yet
+              if (pullDistance > 50) {
+                hasTriggeredDarkMode = true;
+              }
+            }
+          }
+
+          function endDrag() {
+            if (!isDragging) return;
+
+            isDragging = false;
+
+            // Remove pulling indicator class
+            lampRopeToggle.classList.remove("pulling-indicator");
+
+            // Remove the glow effect from the rope
+            lampRopeToggle.style.boxShadow = "none";
+
+            // Toggle dark mode only when releasing the rope after pulling enough
+            if (hasTriggeredDarkMode) {
+              const isNowDark = !document.body.classList.contains("dark-mode");
+
+              // Update UI
+              updateDarkModeUI(isNowDark);
+
+              // Save preference to localStorage using 'theme' key for compatibility
+              localStorage.setItem("theme", isNowDark ? "dark" : "light");
+            }
+
+            // Reset the hasTriggeredDarkMode flag for next pull
+            hasTriggeredDarkMode = false;
+
+            // Reset rope height instantly
+            lampRopeToggle.style.height = "160px";
+
+            // Reset container position with smooth transition
+            const container = lampRopeToggle.querySelector(".container");
+            container.style.transform = "translateY(70px)";
+            container.style.transition = "transform 0.3s ease";
+
+            // Reset solar system position in light mode
+            if (!document.body.classList.contains("dark-mode")) {
+              const solarSystem = lampRopeToggle.querySelector(".solar-system");
+              if (solarSystem) {
+                solarSystem.style.transition = "transform 0.3s ease";
+                solarSystem.style.transform =
+                  "translateX(-50%) scale(0.2) translateY(0px)";
+              }
+            }
+
+            // Remove transitions after animation completes
+            setTimeout(() => {
+              lampRopeToggle.style.transition = "none";
+              container.style.transition = "";
+              const solarSystem = lampRopeToggle.querySelector(".solar-system");
+              if (solarSystem) {
+                solarSystem.style.transition = "";
+              }
+            }, 300);
+          }
+
+          // Sound function removed - no sound effect when pulling rope
+        }
+
+        // Theme toggle mobile for dark mode
+        const themeToggleMobile = document.getElementById("input");
+        if (themeToggleMobile) {
+          // Always start in light mode for mobile (as per requirement)
+          if (localStorage.getItem("fastpast-dark-mode") === "true" && window.innerWidth <= 959) {
+            // Explicitly ensure light mode if we are on mobile, 
+            // though we simply won't load the preference which is cleaner.
+          }
+
+          themeToggleMobile.addEventListener("change", () => {
+            const isDark = !document.body.classList.contains("dark-mode");
+
+            // Toggle dark mode
+            document.body.classList.toggle("dark-mode");
+
+            // Also toggle dark-mode class on lampRopeToggle for CSS selectors to work
+            if (lampRopeToggle) {
+              lampRopeToggle.classList.toggle("dark-mode");
+            }
+
+            // Note: We DO NOT persist mobile toggle changes as per user instruction "only for screens who has the lamp rope"
+            // or effectively, we treat mobile toggle as temporary.
+            // If user wants mobile toggle to persist too but ONLY apply on desktop if larger screen, that's different.
+            // User said: "only for screens who has the lamp rope... when i enable dark mode... it should be also in the dark mode"
+            // implying the feature itself is tied to the lamp rope experience.
+          });
+        }
+
+        // Clear input button
+        const clearBtn = document.getElementById("clear-btn");
+        const clearInput = () => {
+          urlInput.value = "";
+          urlInput.focus();
+          videoPreview.style.display = "none";
+          downloadOtherBtn.style.display = "none";
+          const recodeOption = document.getElementById("recode-option");
+          if (recodeOption) {
+            recodeOption.style.display = "none";
+          }
+          const acceleratorOption = document.getElementById("accelerator-option");
+          if (acceleratorOption) {
+            acceleratorOption.style.display = "none";
+          }
+          const clipOption = document.getElementById("clip-option");
+          if (clipOption) {
+            clipOption.style.display = "none";
+          }
+          const recodeCheckbox = document.getElementById("recode-h265");
+          if (recodeCheckbox) {
+            recodeCheckbox.checked = false;
+          }
+          const acceleratorCheckbox = document.getElementById("multi-segment");
+          if (acceleratorCheckbox) {
+            acceleratorCheckbox.checked = false;
+          }
+          const startInput = document.getElementById("start-time");
+          if (startInput) {
+            startInput.value = "";
+          }
+          const endInput = document.getElementById("end-time");
+          if (endInput) {
+            endInput.value = "";
+          }
+          videoPlayer.src = "";
+          videoPlayer.classList.remove("video-expand");
+          videoThumbnail.src = "";
+          const loadingOverlay = document.getElementById("video-loading-overlay");
+          if (loadingOverlay) {
+            loadingOverlay.style.display = "none";
+          }
+          videoPreview.classList.remove("slide-in-up");
+          const formatSelector = document.querySelector(".format-selector");
+          if (formatSelector) {
+            formatSelector.classList.remove("show");
+          }
+          if (successMessage) {
+            successMessage.style.display = "none";
+            successMessage.classList.remove("show");
+          }
+          resetDownloadProgress();
+          downloadBtn.disabled = false;
+          downloadOtherBtn.disabled = false;
+          downloadOtherBtn.classList.remove("disabled");
+          downloadOtherBtn.removeAttribute("disabled");
+          const homeHero = document.querySelector(".home-hero");
+          if (homeHero) {
+            homeHero.classList.remove("symmetric-bg");
+          }
+          const mainElement = document.querySelector("main");
+          if (mainElement) {
+            mainElement.style.backgroundColor = "";
+          }
+          videoPreview.style.backgroundColor = "";
+        };
+        if (clearBtn) {
+          clearBtn.addEventListener("click", clearInput);
+        }
+
+        const downloadState = {
+          iframe: null,
+          form: null,
+          pending: null,
+        };
+
+
+        // Playlist state management
+        function resetDownloadProgress() {
+          if (!downloadProgressText) {
+            return;
+          }
+          downloadProgressText.style.display = "none";
+          downloadProgressText.innerHTML = defaultProgressMarkup;
+        }
+
+        function handleDownloadFrameLoad() {
+          if (!downloadState.pending) {
+            return;
+          }
+          let errorMessage = "";
+          try {
+            const doc = downloadState.iframe?.contentDocument;
+            const bodyText = doc?.body?.textContent?.trim();
+            if (bodyText) {
+              try {
+                const data = JSON.parse(bodyText);
+                if (data.error) {
+                  errorMessage = data.details || data.error;
+                }
+              } catch (err) {
+                errorMessage = bodyText;
+              }
+            }
+          } catch (err) {
+            console.error("Download frame parse error:", err);
+          }
+          finishDownloadState(errorMessage);
+        }
+
+        function ensureDownloadTransport() {
+          if (!downloadState.iframe) {
+            const iframe = document.createElement("iframe");
+            iframe.name = "fastpast-download-frame";
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+            iframe.addEventListener("load", handleDownloadFrameLoad);
+            downloadState.iframe = iframe;
+          }
+          if (!downloadState.form) {
+            const form = document.createElement("form");
+            form.method = "POST";
+            form.action = "http://localhost:3002/download";
+            form.target = "fastpast-download-frame";
+            form.style.display = "none";
+            document.body.appendChild(form);
+            downloadState.form = form;
+          }
+        }
+
+        function finishDownloadState(errorMessage) {
+          downloadState.pending = null;
+          downloadBtn.disabled = false;
+          downloadOtherBtn.disabled = false;
+          downloadOtherBtn.classList.remove("disabled");
+          downloadOtherBtn.removeAttribute("disabled");
+          resetDownloadProgress();
+          if (errorMessage) {
+            if (successMessage) {
+              successMessage.style.display = "none";
+              successMessage.classList.remove("show");
+            }
+            alert(errorMessage);
+          }
+        }
+
+        function submitDownloadRequest(fields) {
+          ensureDownloadTransport();
+          const form = downloadState.form;
+          while (form.firstChild) {
+            form.removeChild(form.firstChild);
+          }
+          Object.entries(fields).forEach(([name, value]) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value ?? "";
+            form.appendChild(input);
+          });
+          downloadState.pending = { startedAt: Date.now() };
+          try {
+            form.submit();
+          } catch (err) {
+            console.error("Download submit error:", err);
+            finishDownloadState("Failed to start download. Please try again.");
+          }
+        }
+
+        function showDownloadPreparing(message) {
+          if (!downloadProgressText) {
+            return;
+          }
+          downloadProgressText.style.display = "block";
+          downloadProgressText.textContent = message || "";
+        }
+
+        // Keyboard events for urlInput
+        if (urlInput) {
+          urlInput.addEventListener("keydown", (e) => {
+            // Clear input if all text is selected and Delete/Backspace is pressed
+            if (
+              (e.key === "Delete" || e.key === "Backspace") &&
+              urlInput.selectionStart === 0 &&
+              urlInput.selectionEnd === urlInput.value.length
+            ) {
+              e.preventDefault();
+              clearInput();
+            }
+          });
+
+          urlInput.addEventListener("keyup", (e) => {
+            // Process if Enter is pressed and URL is valid
+            if (e.key === "Enter") {
+              const url = urlInput.value.trim();
+              if (url && isValidVideoUrl(url)) {
+                processBtn.click();
+              }
+            }
+          });
+        }
+
+        function createFallbackQuality(height) {
+          const label =
+            height >= 1080
+              ? "High Quality"
+              : height >= 720
+                ? "HD Quality"
+                : "Standard Quality";
+          return {
+            value: `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
+            text: `${height}p (${label})`,
+            height,
+          };
+        }
+
+        // Function to get available qualities for a video using yt-dlp
+        async function getAvailableQualities(videoUrl, format) {
+          try {
+            console.log("Fetching qualities for", videoUrl, format);
+            const response = await fetch("http://localhost:3002/get-qualities", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ videoUrl, format }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Fetched data:", data);
+
+            // Check if this is a Vimeo authentication error
+            if (
+              videoUrl.includes("vimeo.com") &&
+              data.error &&
+              data.error.includes("logged-in")
+            ) {
+              throw new Error(data.error);
+            }
+
+            return data;
+          } catch (error) {
+            console.error("Error fetching qualities:", error);
+
+            // For Vimeo authentication errors, don't use fallback - throw the error
+            if (
+              videoUrl.includes("vimeo.com") &&
+              error.message &&
+              error.message.includes("logged-in")
+            ) {
+              throw error;
+            }
+
+            // Fallback to mock qualities if server is unavailable (for non-Vimeo or other errors)
+            if (format === "mp4") {
+              return {
+                qualities: [
+                  createFallbackQuality(720),
+                  createFallbackQuality(1080),
+                  createFallbackQuality(1440),
+                  createFallbackQuality(2160),
+                ],
+                thumbnail: "",
+                title: "",
+                duration: 3600,
+              };
+            } else if (format === "mp3") {
+              return {
+                qualities: [
+                  { value: "64kbps", text: "64 kbps (Low Quality)" },
+                  { value: "128kbps", text: "128 kbps (Standard Quality)" },
+                  { value: "192kbps", text: "192 kbps (High Quality)" },
+                  { value: "256kbps", text: "256 kbps (Very High Quality)" },
+                  { value: "320kbps", text: "320 kbps (Lossless Quality)" },
+                ],
+                thumbnail: "",
+                title: "",
+              };
+            }
+            return { qualities: [], thumbnail: "", title: "" };
+          }
+        }
+
+        // Function to populate quality options based on selected format
+        function populateQualityOptions() {
+          const format = formatSelect.value;
+          qualitySelect.innerHTML = '<option value="">Select Quality</option>';
+
+          if (
+            format &&
+            window.availableQualities &&
+            window.availableQualities[format] &&
+            window.availableQualities[format].length > 0
+          ) {
+            // Show actual qualities from server
+            window.availableQualities[format].forEach((quality) => {
+              const option = document.createElement("option");
+              option.value = quality.value;
+              option.textContent = quality.text;
+              qualitySelect.appendChild(option);
+            });
+          } else if (format) {
+            // Show default qualities if server data not available yet
+            if (format === "mp4") {
+              const defaultQualities = [
+                { value: "720p", text: "720p (HD Quality)" },
+                { value: "1080p", text: "1080p (Full HD Quality)" },
+                { value: "1440p", text: "1440p (2K Quality)" },
+                { value: "2160p", text: "2160p (4K Quality)" },
+              ];
+              defaultQualities.forEach((quality) => {
+                const option = document.createElement("option");
+                option.value = quality.value;
+                option.textContent = quality.text;
+                qualitySelect.appendChild(option);
+              });
+            } else if (format === "mp3") {
+              const defaultQualities = [
+                { value: "128kbps", text: "128 kbps (Standard Quality)" },
+                { value: "192kbps", text: "192 kbps (High Quality)" },
+                { value: "256kbps", text: "256 kbps (Very High Quality)" },
+                { value: "320kbps", text: "320 kbps (Lossless Quality)" },
+              ];
+              defaultQualities.forEach((quality) => {
+                const option = document.createElement("option");
+                option.value = quality.value;
+                option.textContent = quality.text;
+                qualitySelect.appendChild(option);
+              });
+            }
+          } else {
+            // Clear quality options if no format selected
+            qualitySelect.innerHTML = '<option value="">Select Quality</option>';
+          }
+        }
+
+        // Format change handler to populate quality options
+        if (formatSelect) {
+          formatSelect.addEventListener("change", () => {
+            if (formatSelect.value) {
+              qualitySelect.disabled = false;
+              populateQualityOptions();
+            } else {
+              qualitySelect.disabled = true;
+              qualitySelect.innerHTML = '<option value="">Select Quality</option>';
+
+  // Playlist helper functions
+  function getYouTubePlaylistId(url) {
+    const regex = /[?&]list=([a-zA-Z0-9_-]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  }
+
+  function isPlaylistUrl(url) {
+    return getYouTubePlaylistId(url) !== null && 
+           (url.includes('youtube.com') || url.includes('youtu.be'));
+  }
+
+              downloadBtn.style.display = "none";
+            }
+          });
+        }
+
+        // Quality change handler to show download button and options
+        if (qualitySelect) {
+          qualitySelect.addEventListener("change", () => {
+            if (qualitySelect.value) {
+              downloadBtn.style.display = "inline-block";
+              downloadBtn.classList.add("pulse");
+              downloadOtherBtn.style.display = "inline-block";
+              // Show additional options
+              document.getElementById("accelerator-option").style.display = "block";
+              if (
+                formatSelect.value === "mp4" &&
+                (urlInput.value.includes("youtube.com") ||
+                  urlInput.value.includes("youtu.be")) &&
+                !urlInput.value.includes("/shorts/")
+              ) {
+                document.getElementById("clip-option").style.display = "block";
+                setupSliders();
+              }
+              // H.265 re-encode is not supported by yt-dlp, so hide the option
+              // if (formatSelect.value === "mp4") {
+              //   document.getElementById("recode-option").style.display = "block";
+              // }
+            } else {
+              downloadBtn.style.display = "none";
+              downloadBtn.classList.remove("pulse");
+              downloadOtherBtn.style.display = "none";
+              document.getElementById("recode-option").style.display = "none";
+              document.getElementById("accelerator-option").style.display = "none";
+              document.getElementById("clip-option").style.display = "none";
+            }
+          });
+        }
+
+
+
+        // Function to extract YouTube video ID from URL
+        function getYouTubeVideoId(url) {
+          const regex =
+            /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+          const match = url.match(regex);
+          return match ? match[1] : null;
+        }
+
+        // Extract YouTube playlist ID from URL
+        function getYouTubePlaylistId(url) {
+          const regex = /[?&]list=([a-zA-Z0-9_-]+)/;
+          const match = url.match(regex);
+          return match ? match[1] : null;
+        }
+
+        // Check if URL is a playlist
+        function isPlaylistUrl(url) {
+          return getYouTubePlaylistId(url) !== null &&
+            (url.includes('youtube.com') || url.includes('youtu.be'));
+        }
+
+
+        // Function to validate video URL from supported platforms
+        function isValidVideoUrl(url) {
+          const domains = [
+            "youtube.com",
+            "youtu.be",
+            "tiktok.com",
+            "pinterest.com",
+            "pin.it",
+            "facebook.com",
+            "instagram.com",
+            "twitter.com",
+            "x.com",
+            "vimeo.com",
+            "dailymotion.com",
+            "odysee.com",
+            "reddit.com",
+            "threads.net",
+            "threads.com",
+            "vk.com",
+            "vk.ru",
+            "vk.cc",
+            "vkontakte.ru",
+            "vkvideo.ru",
+          ];
+          const lowerUrl = url.toLowerCase();
+          return domains.some((domain) => lowerUrl.includes(domain));
+        }
+
+        // Function to get embed URL for video preview
+        function getEmbedUrl(url) {
+          const lowerUrl = url.toLowerCase();
+
+          if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) {
+            const videoId = getYouTubeVideoId(url);
+            return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+          } else if (lowerUrl.includes("tiktok.com")) {
+            const match = url.match(/\/video\/(\d+)/);
+            return match ? `https://www.tiktok.com/embed/${match[1]}` : "";
+          } else if (lowerUrl.includes("facebook.com")) {
+            return "";
+          } else if (lowerUrl.includes("instagram.com")) {
+            const match = url.match(/\/p\/([^\/]+)/);
+            return match ? `https://www.instagram.com/p/${match[1]}/embed/` : "";
+          } else if (
+            lowerUrl.includes("pinterest.com") ||
+            lowerUrl.includes("pin.it")
+          ) {
+            return "";
+          } else if (lowerUrl.includes("twitter.com") || lowerUrl.includes("x.com")) {
+            const match = url.match(/\/status\/(\d+)/);
+            return match
+              ? `https://platform.twitter.com/embed/Tweet.html?id=${match[1]}`
+              : "";
+          } else if (lowerUrl.includes("vimeo.com")) {
+            const match = url.match(/\/(\d+)/);
+            return match ? `https://player.vimeo.com/video/${match[1]}` : "";
+          } else if (lowerUrl.includes("dailymotion.com")) {
+            const match = url.match(/\/video\/([a-zA-Z0-9]+)/);
+            return match ? `https://www.dailymotion.com/embed/video/${match[1]}` : "";
+          } else if (lowerUrl.includes("odysee.com")) {
+            return "";
+          } else if (lowerUrl.includes("reddit.com")) {
+            return "";
+          } else if (
+            lowerUrl.includes("vk.com") ||
+            lowerUrl.includes("vk.ru") ||
+            lowerUrl.includes("vk.cc") ||
+            lowerUrl.includes("vkontakte.ru") ||
+            lowerUrl.includes("vkvideo.ru")
+          ) {
+            const match = url.match(/\/video(-?\d+)_(\d+)/);
+            return match
+              ? `https://vk.com/video_ext.php?oid=${match[1]}&id=${match[2]}`
+              : "";
+          }
+          return "";
+        }
+
+        // Process video URL
+        if (processBtn) {
+          processBtn.addEventListener("click", async () => {
+            const videoUrl = urlInput.value.trim();
+
+
+            // Check if it's a playlist URL
+            if (isPlaylistUrl(videoUrl)) {
+              processingStatus.style.display = 'block';
+
+              try {
+                const data = await fetchPlaylistVideos(videoUrl);
+
+                if (!data.videos || data.videos.length === 0) {
+                  alert('No videos found in playlist');
+                  processingStatus.style.display = 'none';
+                  return;
+                }
+
+                // Initialize playlist state
+                playlistState.videos = data.videos;
+                playlistState.currentIndex = 0;
+                playlistState.playlistId = getYouTubePlaylistId(videoUrl);
+                playlistState.nextPageToken = data.nextPageToken;
+                playlistState.isPlaylist = true;
+
+                // Show navigation controls
+                document.getElementById('prev-video-btn').style.display = 'flex';
+                document.getElementById('next-video-btn').style.display = 'flex';
+                document.getElementById('playlist-indicator').style.display = 'block';
+
+                const totalText = data.videos.length + (data.nextPageToken ? '+' : '');
+                document.getElementById('total-videos').textContent = totalText;
+                document.getElementById('current-video-index').textContent = '1';
+
+                // Load first video
+                navigateToVideo(0);
+                return;
+              } catch (error) {
+                console.error('Playlist error:', error);
+                alert('Failed to load playlist: ' + error.message);
+                processingStatus.style.display = 'none';
+                return;
+              }
+            } else {
+              // Hide playlist controls for single videos
+              if (document.getElementById('prev-video-btn')) {
+                document.getElementById('prev-video-btn').style.display = 'none';
+                document.getElementById('next-video-btn').style.display = 'none';
+                document.getElementById('playlist-indicator').style.display = 'none';
+              }
+              playlistState.isPlaylist = false;
+            }
+
+            if (!videoUrl) {
+              alert("Please enter a video URL.");
+              return;
+            }
+
+            // Show processing status
+            processingStatus.style.display = "block";
+            processingStatus.classList.add("pulse");
+            videoPreview.style.display = "none";
+
+            try {
+              // Validate video URL
+              if (!isValidVideoUrl(videoUrl)) {
+                throw new Error(
+                  "Invalid video URL. Please enter a valid URL from supported platforms (YouTube, TikTok, Pinterest, Facebook, Instagram, Twitter/X, Vimeo, Dailymotion, Odysee, Reddit, Threads, VK)."
+                );
+              }
+
+              // Load qualities first, then show preview
+              await loadVideoQualities(videoUrl);
+
+              // Only show preview after qualities are loaded
+              showVideoPreview(videoUrl);
+            } catch (error) {
+              console.error("Error processing video:", error);
+              alert(
+                error.message ||
+                "Failed to process video. Please check the URL and try again."
+              );
+              processingStatus.style.display = "none";
+            }
+          });
+        }
+
+        // Function to show video preview after data is loaded
+        function showVideoPreview(videoUrl) {
+          // Get video info from loaded data
+          const embedUrl = getEmbedUrl(videoUrl);
+          const loadingOverlay = document.getElementById("video-loading-overlay");
+
+          if (embedUrl) {
+            loadingOverlay.style.display = "flex";
+            videoPlayer.src = embedUrl;
+            if (videoUrl.includes("tiktok.com")) {
+              videoPlayer.classList.add("tiktok-embed");
+              videoPreview.classList.add("tiktok-preview");
+            } else {
+              videoPlayer.classList.remove("tiktok-embed");
+              videoPreview.classList.remove("tiktok-preview");
+            }
+            videoPlayer.style.display = "block";
+            videoThumbnail.style.display = "none";
+
+            videoPlayer.onload = () => {
+              loadingOverlay.style.display = "none";
+              videoPlayer.classList.add("video-expand");
+            };
+          } else {
+            videoPlayer.src = "";
+            videoPlayer.style.display = "none";
+            const thumbnailSrc = videoThumbnail.getAttribute("data-src") || "";
+
+            // Handle missing thumbnails, especially for Instagram and Threads
+            if (
+              !thumbnailSrc &&
+              (videoUrl.includes("instagram.com") ||
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com"))
+            ) {
+              // Create a placeholder for Instagram videos without thumbnails
+              videoThumbnail.src =
+                "data:image/svg+xml;base64," +
+                btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+            <defs>
+              <linearGradient id="instagramGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#833ab4;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#fd1d1d;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#fcb045;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="200" height="200" fill="url(#instagramGradient)"/>
+            <circle cx="100" cy="100" r="40" fill="none" stroke="white" stroke-width="8"/>
+            <circle cx="135" cy="65" r="8" fill="white"/>
+          </svg>
+        `);
+              videoThumbnail.style.objectFit = "contain";
+              videoThumbnail.style.backgroundColor = "#f8f9fa";
+            } else if (thumbnailSrc) {
+              // Use proxy for Instagram and Threads thumbnails to avoid CORS issues
+              if (
+                videoUrl.includes("instagram.com") ||
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com")
+              ) {
+                videoThumbnail.src = `/proxy-image?url=${encodeURIComponent(
+                  thumbnailSrc
+                )}`;
+              } else {
+                videoThumbnail.src = thumbnailSrc;
+              }
+
+              // Force height constraints for social media platforms
+              if (videoUrl.includes("facebook.com") ||
+                videoUrl.includes("instagram.com") ||
+                videoUrl.includes("pinterest.com") ||
+                videoUrl.includes("pin.it") ||
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com")) {
+                videoThumbnail.style.height = "375px";
+                videoThumbnail.style.maxHeight = "400px";
+                videoThumbnail.style.minHeight = "350px";
+                videoThumbnail.style.objectFit = "cover";
+                videoThumbnail.style.width = "auto";
+                videoThumbnail.style.margin = "0 auto 20px auto";
+                videoThumbnail.style.display = "block";
+                videoThumbnail.classList.add("social-media-thumbnail");
+              }
+            } else {
+              // Generic fallback for other platforms
+              videoThumbnail.src =
+                "data:image/svg+xml;base64," +
+                btoa(`
+          <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+            <rect width="200" height="200" fill="#e9ecef"/>
+            <text x="100" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">No Thumbnail</text>
+          </svg>
+        `);
+            }
+
+            videoThumbnail.style.display = "block";
+            loadingOverlay.style.display = "none";
+
+            // Apply height constraints after image loads for social media platforms
+            videoThumbnail.onload = function () {
+              if (videoUrl.includes("facebook.com") ||
+                videoUrl.includes("instagram.com") ||
+                videoUrl.includes("pinterest.com") ||
+                videoUrl.includes("pin.it") ||
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com")) {
+                this.style.height = "375px";
+                this.style.maxHeight = "400px";
+                this.style.minHeight = "350px";
+                this.style.objectFit = "cover";
+                this.style.width = "auto";
+                this.style.margin = "0 auto 20px auto";
+                this.style.display = "block";
+                this.classList.add("social-media-thumbnail");
+              }
+            };
+
+            // Add error handling for thumbnail loading
+            videoThumbnail.onerror = function () {
+              if (
+                videoUrl.includes("instagram.com") ||
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com")
+              ) {
+                // Fallback to Instagram placeholder on error
+                this.src =
+                  "data:image/svg+xml;base64," +
+                  btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+              <defs>
+                <linearGradient id="instagramGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" style="stop-color:#833ab4;stop-opacity:1" />
+                  <stop offset="50%" style="stop-color:#fd1d1d;stop-opacity:1" />
+                  <stop offset="100%" style="stop-color:#fcb045;stop-opacity:1" />
+                </linearGradient>
+              </defs>
+              <rect width="200" height="200" fill="url(#instagramGradient)"/>
+              <circle cx="100" cy="100" r="40" fill="none" stroke="white" stroke-width="8"/>
+              <circle cx="135" cy="65" r="8" fill="white"/>
+            </svg>
+          `);
+              } else {
+                // Generic fallback
+                this.src =
+                  "data:image/svg+xml;base64," +
+                  btoa(`
+            <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+              <rect width="200" height="200" fill="#e9ecef"/>
+              <text x="100" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#6c757d">No Thumbnail</text>
+            </svg>
+          `);
+              }
+              this.onerror = null; // Prevent infinite loop
+            };
+          }
+
+          // Hide processing status and show preview
+          processingStatus.style.display = "none";
+          processingStatus.classList.remove("pulse");
+          videoPreview.style.display = "block";
+          videoPreview.classList.add("slide-in-up");
+
+          // Show format selector
+          const formatSelector = document.querySelector(".format-selector");
+          setTimeout(() => {
+            formatSelector.classList.add("show");
+          }, 300);
+
+          // Update background
+          const hero = document.querySelector(".home-hero");
+          hero.classList.add("symmetric-bg");
+          document.querySelector("main").style.backgroundColor = "#f4f7f6";
+          videoPreview.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+        }
+
+        // Function to load video qualities before showing preview
+        async function loadVideoQualities(videoUrl) {
+          try {
+            // Special handling for Vimeo: Check if video is downloadable first
+            if (videoUrl.includes("vimeo.com")) {
+              try {
+                await getAvailableQualities(videoUrl, "mp4");
+              } catch (error) {
+                if (error.message && error.message.includes("logged-in")) {
+                  throw new Error("The download link not found.");
+                }
+                throw error;
+              }
+            }
+
+            // Get available qualities for this video
+            let mp4Data, mp3Data;
+            if (!videoUrl.includes("vimeo.com")) {
+              [mp4Data, mp3Data] = await Promise.all([
+                getAvailableQualities(videoUrl, "mp4"),
+                getAvailableQualities(videoUrl, "mp3"),
+              ]);
+            } else {
+              mp4Data = await getAvailableQualities(videoUrl, "mp4");
+              mp3Data = await getAvailableQualities(videoUrl, "mp3");
+            }
+
+            // Update video title
+            if (mp4Data.title) {
+              videoTitle.textContent = mp4Data.title;
+            } else {
+              // Set basic title based on platform
+              if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
+                videoTitle.textContent = "YouTube Video";
+              } else if (videoUrl.includes("tiktok.com")) {
+                videoTitle.textContent = "TikTok Video";
+              } else if (videoUrl.includes("instagram.com")) {
+                videoTitle.textContent = "Instagram Video";
+              } else if (videoUrl.includes("facebook.com")) {
+                videoTitle.textContent = "Facebook Video";
+              } else if (videoUrl.includes("vimeo.com")) {
+                videoTitle.textContent = "Vimeo Video";
+              } else if (
+                videoUrl.includes("threads.net") ||
+                videoUrl.includes("threads.com")
+              ) {
+                videoTitle.textContent = "Threads Video";
+              } else {
+                videoTitle.textContent = "Video";
+              }
+            }
+
+            // Store thumbnail for later use
+            if (mp4Data.thumbnail) {
+              videoThumbnail.setAttribute("data-src", mp4Data.thumbnail);
+            }
+
+            // Store available qualities globally
+            window.availableQualities = {
+              mp4: mp4Data.qualities,
+              mp3: mp3Data.qualities,
+            };
+            window.videoDuration = mp4Data.duration || 0;
+
+            // Do not auto-select format, let user choose
+            populateQualityOptions();
+          } catch (error) {
+            console.error("Error loading qualities:", error);
+
+            // Set fallback title
+            videoTitle.textContent = "Video";
+
+            // Show fallback qualities
+            window.availableQualities = {
+              mp4: [createFallbackQuality(720), createFallbackQuality(1080)],
+              mp3: [
+                { value: "128kbps", text: "128 kbps (Standard Quality)" },
+                { value: "320kbps", text: "320 kbps (Lossless Quality)" },
+              ],
+            };
+            window.videoDuration = 3600;
+            populateQualityOptions();
+
+            // Re-throw error to be caught by main handler
+            throw error;
+          }
+        }
+
+        // Download video
+        if (downloadBtn) {
+          downloadBtn.addEventListener("click", () => {
+            const videoUrl = urlInput.value.trim();
+            const format = formatSelect.value;
+            const quality = qualitySelect.value;
+
+            if (!videoUrl) {
+              alert("Please enter a video URL.");
+              return;
+            }
+
+            if (!quality) {
+              alert("Please select a quality.");
+              return;
+            }
+
+            const formatQualities =
+              (window.availableQualities && window.availableQualities[format]) || [];
+            const selectedQuality = formatQualities.find(
+              (item) => item.value === quality
+            );
+
+            ensureDownloadTransport();
+            downloadBtn.disabled = true;
+            downloadOtherBtn.disabled = true;
+            downloadOtherBtn.classList.add("disabled");
+            downloadOtherBtn.setAttribute("disabled", "disabled");
+
+            showDownloadPreparing("");
+
+            const downloadAcceleratorCheckbox = document.getElementById(
+              "download-accelerator"
+            );
+            const recodeCheckbox = document.getElementById("recode-h265");
+            const startInput = document.getElementById("start-time");
+            const endInput = document.getElementById("end-time");
+
+            const fields = {
+              videoUrl: videoUrl,
+              format: format,
+              quality: selectedQuality?.value || quality,
+              qualityLabel: selectedQuality?.text || quality,
+              formatSelector: format === "mp4" ? selectedQuality?.value || quality : "",
+              selectedHeight: selectedQuality?.height || "",
+              recodeH265: recodeCheckbox?.checked ? "true" : "false",
+              downloadAccelerator: downloadAcceleratorCheckbox?.checked
+                ? "true"
+                : "false",
+              startTime: startInput?.value || "",
+              endTime: endInput?.value || "",
+            };
+
+            submitDownloadRequest(fields);
+
+            // Show success message after 4 second delay
+            if (successMessage) {
+              setTimeout(() => {
+                successMessage.style.display = "flex";
+                successMessage.classList.add("show");
+              }, 4000);
+            }
+          });
+        }
+
+        // Queue Management System
+        const downloadQueue = [];
+        const queueStatus = document.getElementById("queue-status");
+        const queuePending = document.getElementById("queue-pending");
+        const queueDownloading = document.getElementById("queue-downloading");
+        const queueCompleted = document.getElementById("queue-completed");
+        const downloadQueueElement = document.getElementById("download-queue");
+        const queueList = document.getElementById("queue-list");
+
+        // Download Other Video Button Click Handler
+        if (downloadOtherBtn) {
+          downloadOtherBtn.addEventListener("click", () => {
+            // Reload the page when the button is clicked
+            window.location.reload();
+          });
+        }
+
+        // Process Queue Function
+        let isProcessingQueue = false;
+        function processQueue() {
+          if (isProcessingQueue || downloadQueue.length === 0) return;
+
+          isProcessingQueue = true;
+          const nextItem = downloadQueue.find((item) => item.status === "pending");
+
+          if (!nextItem) {
+            isProcessingQueue = false;
+            return;
+          }
+
+          // Update status to downloading
+          nextItem.status = "downloading";
+          updateQueueUI();
+
+          // Show downloading status
+          queuePending.style.display = "none";
+          queueDownloading.style.display = "flex";
+
+          // Simulate download progress
+          simulateDownload(nextItem);
+        }
+
+        // Simulate Download Function
+        function simulateDownload(item) {
+          let progress = 0;
+          const progressInterval = setInterval(() => {
+            progress += 5;
+
+            // Update queue item progress
+            const queueItemElement = document.getElementById(`queue-item-${item.id}`);
+            if (queueItemElement) {
+              const progressFill = queueItemElement.querySelector(
+                ".queue-item-progress-fill"
+              );
+              const statusText = queueItemElement.querySelector(".queue-item-status");
+
+              if (progressFill) progressFill.style.width = `${progress}%`;
+              if (statusText) statusText.textContent = `Downloading...${progress}%`;
+            }
+
+            if (progress >= 100) {
+              clearInterval(progressInterval);
+
+              // Update status to completed
+              item.status = "completed";
+              updateQueueUI();
+
+              // Show completed status
+              queueDownloading.style.display = "none";
+              queueCompleted.style.display = "flex";
+
+              // Hide completed status after 2 seconds
+              setTimeout(() => {
+                queueCompleted.style.display = "none";
+
+                // Check if there are more pending items
+                const hasPending = downloadQueue.some((i) => i.status === "pending");
+                if (hasPending) {
+                  queuePending.style.display = "flex";
+                } else {
+                  queueStatus.style.display = "none";
+                }
+
+                // Continue processing queue
+                isProcessingQueue = false;
+                processQueue();
+              }, 2000);
+            }
+          }, 200);
+        }
+
+        // Update Queue UI Function
+        function updateQueueUI() {
+          queueList.innerHTML = "";
+
+          downloadQueue.forEach((item) => {
+            const queueItemElement = document.createElement("div");
+            queueItemElement.className = `queue-item ${item.status}`;
+            queueItemElement.id = `queue-item-${item.id}`;
+
+            const statusIcon =
+              item.status === "pending"
+                ? "fa-clock"
+                : item.status === "downloading"
+                  ? "fa-download"
+                  : "fa-check-circle";
+
+            const statusText =
+              item.status === "pending"
+                ? "Pending"
+                : item.status === "downloading"
+                  ? "Downloading..."
+                  : "Completed";
+
+            const progressWidth =
+              item.status === "completed"
+                ? "100%"
+                : item.status === "downloading"
+                  ? "50%"
+                  : "0%";
+
+            queueItemElement.innerHTML = `
+        <i class="fas ${statusIcon}"></i>
+        <div class="queue-item-info">
+          <div class="queue-item-title">${item.title}</div>
+          <div class="queue-item-status">${statusText}</div>
+          <div class="queue-item-progress">
+            <div class="queue-item-progress-fill" style="width: ${progressWidth}"></div>
+          </div>
+        </div>
+        <div class="queue-item-actions">
+          ${item.status === "pending"
+                ? `<button class="queue-item-action" title="Remove from queue"><i class="fas fa-times"></i></button>`
+                : ""
+              }
+        </div>
+      `;
+
+            queueList.appendChild(queueItemElement);
+
+            // Add event listener to remove button
+            if (item.status === "pending") {
+              const removeBtn = queueItemElement.querySelector(".queue-item-action");
+              if (removeBtn) {
+                removeBtn.addEventListener("click", () => {
+                  const index = downloadQueue.findIndex((i) => i.id === item.id);
+                  if (index !== -1) {
+                    downloadQueue.splice(index, 1);
+                    updateQueueUI();
+
+                    // Hide queue if empty
+                    if (downloadQueue.length === 0) {
+                      downloadQueueElement.style.display = "none";
+                      queueStatus.style.display = "none";
+                    }
+                  }
+                });
+              }
+            }
+          });
+        }
+
+        // Function to parse MM:SS to seconds
+        function parseTime(timeStr) {
+          const parts = timeStr.split(":");
+          if (parts.length === 2) {
+            const min = parseInt(parts[0]) || 0;
+            const sec = parseInt(parts[1]) || 0;
+            return min * 60 + sec;
+          }
+          return 0;
+        }
+
+        // Function to format seconds to MM:SS
+        function formatTime(seconds) {
+          const min = Math.floor(seconds / 60);
+          const sec = seconds % 60;
+          return `${min.toString().padStart(2, "0")}:${sec
+            .toString()
+            .padStart(2, "0")}`;
+        }
+
+        // Dual Range Slider Variables
+        let isSliderDragging = false;
+        let activeHandle = null;
+        let sliderRect = null;
+
+        // Function to update slider positions and range
+        function updateSlider() {
+          let duration = window.videoDuration || 3600;
+          if (duration < 10) duration = 3600;
+          const startSec =
+            parseTime(document.getElementById("start-time").value) || 0;
+          const endSec =
+            parseTime(document.getElementById("end-time").value) || duration;
+
+          // Ensure start < end
+          const clampedStart = Math.max(0, Math.min(startSec, endSec - 1));
+          const clampedEnd = Math.min(duration, Math.max(endSec, clampedStart + 1));
+
+          // Update text inputs
+          document.getElementById("start-time").value = formatTime(clampedStart);
+          document.getElementById("end-time").value = formatTime(clampedEnd);
+
+          // Update handle positions
+          const startPercent = (clampedStart / duration) * 100;
+          const endPercent = (clampedEnd / duration) * 100;
+
+          const startHandle = document.getElementById("start-handle");
+          const endHandle = document.getElementById("end-handle");
+
+          startHandle.style.left = `${startPercent}%`;
+          startHandle.setAttribute("data-time", formatTime(clampedStart));
+
+          endHandle.style.left = `${endPercent}%`;
+          endHandle.setAttribute("data-time", formatTime(clampedEnd));
+
+          document.querySelector(".slider-range").style.left = `${startPercent}%`;
+          document.querySelector(
+            ".slider-range"
+          ).style.width = `${endPercent - startPercent}%`;
+        }
+
+        // Function to initialize the dual range slider
+        function initDualRangeSlider() {
+          const startTimeInput = document.getElementById("start-time");
+          const endTimeInput = document.getElementById("end-time");
+          const startHandle = document.getElementById("start-handle");
+          const endHandle = document.getElementById("end-handle");
+          const sliderTrack = document.querySelector(".slider-track");
+
+          if (
+            !startTimeInput ||
+            !endTimeInput ||
+            !startHandle ||
+            !endHandle ||
+            !sliderTrack
+          ) {
+            return;
+          }
+
+          let duration = window.videoDuration || 3600; // Default 1 hour if not available
+          if (duration < 10) duration = 3600; // Ensure minimum duration
+          startTimeInput.value = "00:00";
+          endTimeInput.value = formatTime(duration);
+
+          updateSlider();
+
+          // Event listeners for handles
+
+          function startDrag(e, handle) {
+            isSliderDragging = true;
+            activeHandle = handle;
+            sliderRect = sliderTrack.getBoundingClientRect();
+            e.preventDefault();
+          }
+
+          startHandle.addEventListener("mousedown", (e) => startDrag(e, "start"));
+          endHandle.addEventListener("mousedown", (e) => startDrag(e, "end"));
+
+          document.addEventListener("mousemove", (e) => {
+            if (!isSliderDragging || !sliderRect) return;
+
+            let duration = window.videoDuration || 3600;
+            if (duration < 10) duration = 3600;
+            const x = e.clientX - sliderRect.left;
+            const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
+            const seconds = Math.round((percent / 100) * duration);
+
+            if (activeHandle === "start") {
+              const currentEnd = parseTime(endTimeInput.value);
+              startTimeInput.value = formatTime(
+                Math.min(seconds, currentEnd - 1)
+              );
+            } else if (activeHandle === "end") {
+              const currentStart = parseTime(
+                startTimeInput.value
+              );
+              endTimeInput.value = formatTime(
+                Math.max(seconds, currentStart + 1)
+              );
+            }
+
+            updateSlider();
+          });
+
+          document.addEventListener("mouseup", () => {
+            isSliderDragging = false;
+            activeHandle = null;
+            sliderRect = null;
+          });
+
+          // Event listeners for text inputs
+          startTimeInput.addEventListener("input", () => {
+            let duration = window.videoDuration || 3600;
+            if (duration < 10) duration = 3600;
+            const sec = parseTime(startTimeInput.value);
+            if (!isNaN(sec) && sec >= 0 && sec <= duration) {
+              updateSlider();
+            }
+          });
+
+          endTimeInput.addEventListener("input", () => {
+            let duration = window.videoDuration || 3600;
+            if (duration < 10) duration = 3600;
+            const sec = parseTime(endTimeInput.value);
+            if (!isNaN(sec) && sec >= 0 && sec <= duration) {
+              updateSlider();
+            }
+          });
+        }
+
+        // Modify qualitySelect to initialize slider
+        let originalQualityChange = null;
+        if (qualitySelect) {
+          originalQualityChange = qualitySelect.onchange;
+          qualitySelect.addEventListener("change", () => {
+            if (qualitySelect.value) {
+              // ... existing code ...
+              if (
+                formatSelect &&
+                formatSelect.value === "mp4" &&
+                (urlInput.value.includes("youtube.com") ||
+                  urlInput.value.includes("youtu.be")) &&
+                !urlInput.value.includes("/shorts/")
+              ) {
+                document.getElementById("clip-option").style.display = "block";
+                initDualRangeSlider();
+              }
+            }
+          });
+        }
+
+        // Typewriter effect for headline
+        const headlines = [
+          "Rapid Download & Clip: Videos & Music in Seconds",
+          "Swift Edit & Grab: Modern Media Tools",
+        ];
+        let currentIndex = 0;
+        let currentText = "";
+        let isDeleting = false;
+        let typeSpeed = 100;
+
+        function typeWriter() {
+          const fullText = headlines[currentIndex];
+          if (isDeleting) {
+            currentText = fullText.substring(0, currentText.length - 1);
+          } else {
+            currentText = fullText.substring(0, currentText.length + 1);
+          }
+          const headline = document.getElementById("animated-headline");
+          if (headline) {
+            headline.innerText = currentText;
+          }
+          if (!isDeleting && currentText === fullText) {
+            setTimeout(() => (isDeleting = true), 2000); // pause before deleting
+          } else if (isDeleting && currentText === "") {
+            isDeleting = false;
+            currentIndex = (currentIndex + 1) % headlines.length;
+          }
+          const speed = isDeleting ? typeSpeed / 2 : typeSpeed;
+          setTimeout(typeWriter, speed);
+        }
+
+        // Page load animation sequence
+        setTimeout(() => {
+          const heroH2 = document.querySelector(".hero h2");
+          if (heroH2) {
+            heroH2.style.opacity = "1";
+          }
+          typeWriter(); // start typewriter after h2 fades in
+        }, 2000);
+
+        setTimeout(() => {
+          const heroP = document.querySelector(".hero p");
+          if (heroP) {
+            heroP.style.opacity = "1";
+          }
+        }, 3000);
+
+        setTimeout(() => {
+          const downloadForm = document.querySelector(".download-form");
+          if (downloadForm) {
+            downloadForm.style.opacity = "1";
+          }
+        }, 4000);
+      });
+
+// Scroll Animations
+let hasScrolled = false;
+
+const observerOptions = {
+  threshold: 0.1,
+  rootMargin: "0px 0px -50px 0px",
+};
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting && hasScrolled) {
+      entry.target.classList.add("animate");
+    }
+  });
+}, observerOptions);
+
+// Observe all animated elements
+document
+  .querySelectorAll(".fade-in, .slide-in-left, .slide-in-right")
+  .forEach((el) => {
+    observer.observe(el);
+  });
+
+// Back to Top Button
+const backToTopBtn = document.getElementById("back-to-top");
+
+window.addEventListener("scroll", () => {
+  if (backToTopBtn) {
+    if (window.pageYOffset > 300) {
+      backToTopBtn.classList.add("show");
+    } else {
+      backToTopBtn.classList.remove("show");
+    }
+  }
+
+  // Color transition for card headers on scroll
+  const featureCards = document.querySelectorAll(
+    ".feature-item-standout, .feature-item"
+  );
+  featureCards.forEach((card) => {
+    const rect = card.getBoundingClientRect();
+    const header = card.querySelector("h3, h4");
+    if (header) {
+      if (rect.top < 0) {
+        header.style.color = "#f39c12"; // scrolled past
+      } else {
+        header.style.color = "#1d3557"; // not scrolled past
+      }
+    }
+  });
+});
+
+if (backToTopBtn) {
+  backToTopBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  });
+}

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Explore FastPast features: 4K downloads, audio extraction, smart detection, and more. The ultimate video downloader tool.">
+    <title>FastPast - Features</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+        /* Mobile responsive styles for features header */
+        @media (max-width: 768px) {
+            .features-header-container {
+                flex-direction: column !important;
+                margin-bottom: 20px !important;
+            }
+
+            .features-icon {
+                margin-right: 0 !important;
+                margin-bottom: 20px !important;
+                width: 80px !important;
+                height: 80px !important;
+            }
+
+            .features-icon i {
+                font-size: 35px !important;
+            }
+
+            .features-title {
+                font-size: 2.5rem !important;
+                text-align: center !important;
+                line-height: 1.2 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .features-title {
+                font-size: 2rem !important;
+            }
+
+            .features-icon {
+                width: 70px !important;
+                height: 70px !important;
+            }
+
+            .features-icon i {
+                font-size: 30px !important;
+            }
+        }
+    </style>
+
+    <script src="script.js" defer></script>
+    <script src="slider.js" defer></script>
+    <script src="mobile-input.js" defer></script>
+    <script src="js/parallax.js" defer></script>
+    <script src="js/scroll-reveal.js" defer></script>
+    <script src="theme-persistence.js"></script>
+    <script src="../theme-toggle-final.js" defer></script>
+    <link rel="stylesheet" href="style/profile-dropdown.css">
+    <script src="js/profile-dropdown.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+                <div class="lamp-rope-toggle" id="lamp-rope-toggle" title="Toggle Dark Mode">
+                    <div class="container">
+                        <div class="planet"></div>
+                        <div class="orbit">
+                            <div class="moon"></div>
+                        </div>
+                    </div>
+                    <div class="solar-system">
+                        <div id="sun"></div>
+
+                        <div class="orbit mercury-orbit"></div>
+                        <div class="mercury-spin">
+                            <div id="mercury"></div>
+                        </div>
+
+                        <div class="orbit venus-orbit"></div>
+                        <div class="venus-spin">
+                            <div id="venus"></div>
+                        </div>
+
+                        <div class="orbit earth-orbit"></div>
+                        <div class="earth-spin">
+                            <div class="orbit moon-orbit"></div>
+                            <div class="moon-spin">
+                                <div id="moon"></div>
+                            </div>
+
+                            <img id="earth" alt="Earth"
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/150px-The_Earth_seen_from_Apollo_17.jpg" />
+                        </div>
+
+                        <div class="orbit mars-orbit"></div>
+                        <div class="mars-spin">
+                            <div id="mars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <nav>
+                <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                    <li class="mobile-only"><button class="btn go-premium-btn"
+                            onclick="window.location.href='index.html#pricing-tiers'"><i class="fas fa-crown"></i> Go
+                            Premium</button></li>
+                    <li class="mobile-only"><button class="btn login-btn"><i class="fas fa-sign-in-alt"></i>
+                            LOGIN</button></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;"
+                        aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+                <div class="theme-toggle-mobile">
+                    <label class="switch" for="input">
+                        <input id="input" type="checkbox" aria-label="Toggle dark mode" />
+                        <div class="slider round">
+                            <div class="sun-moon">
+                                <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                            </div>
+                            <div class="stars">
+                                <svg id="star-1" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-2" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-3" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-4" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn go-premium-btn" onclick="window.location.href='index.html#pricing-tiers'"><i
+                        class="fas fa-crown"></i> Go Premium</button>
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <!-- BEAUTIFUL FEATURES HERO SECTION -->
+        <section class="features-hero"
+            style="padding: 100px 0; background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%); color: white; position: relative; overflow: hidden;">
+            <!-- Animated Background Elements -->
+            <div
+                style="position: absolute; top: -100px; left: -100px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(168,218,220,0.1), transparent); border-radius: 50%; animation: float 8s ease-in-out infinite;">
+            </div>
+            <div
+                style="position: absolute; bottom: -80px; right: -80px; width: 160px; height: 160px; background: radial-gradient(circle, rgba(90,155,212,0.15), transparent); border-radius: 50%; animation: float 10s ease-in-out infinite reverse;">
+            </div>
+            <div
+                style="position: absolute; top: 30%; left: 10%; width: 100px; height: 100px; background: radial-gradient(circle, rgba(168,218,220,0.08), transparent); border-radius: 50%; animation: float 12s ease-in-out infinite;">
+            </div>
+
+            <div class="container" style="position: relative; z-index: 2;">
+                <div class="section-header" style="text-align: center;">
+                    <!-- Icon and Title -->
+                    <div class="features-header-container"
+                        style="display: flex; justify-content: center; align-items: center; margin-bottom: 30px;">
+                        <div class="features-icon"
+                            style="background: linear-gradient(135deg, #a8dadc 0%, rgba(255,255,255,0.3) 100%); width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.2); animation: pulse 3s ease-in-out infinite;">
+                            <i class="fas fa-star" style="font-size: 45px; color: #1d3557;"></i>
+                        </div>
+                        <h1 class="features-title"
+                            style="font-size: 4rem; font-weight: 900; margin: 0; text-shadow: 2px 2px 8px rgba(0,0,0,0.3); background: linear-gradient(45deg, #ffffff, #a8dadc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                            Powerful Features
+                        </h1>
+                    </div>
+
+                    <p
+                        style="color: rgba(255,255,255,0.95); max-width: 800px; margin: 0 auto 35px; font-size: 1.4rem; line-height: 1.6; font-weight: 400;">
+                        🚀 Everything FastPast offers — <strong>blazing fast</strong>, <strong>secure</strong>, and
+                        <strong>effortless</strong>. Built for speed, privacy, and seamless media workflows across all
+                        platforms.
+                    </p>
+
+                    <!-- Stats Section -->
+                    <div style="display: flex; justify-content: center; gap: 40px; margin: 40px 0; flex-wrap: wrap;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; font-weight: 900; color: #a8dadc; margin-bottom: 8px;">12+
+                            </div>
+                            <div style="color: rgba(255,255,255,0.8); font-size: 1rem;">Core Features</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; font-weight: 900; color: #a8dadc; margin-bottom: 8px;">50+
+                            </div>
+                            <div style="color: rgba(255,255,255,0.8); font-size: 1rem;">Platforms</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; font-weight: 900; color: #a8dadc; margin-bottom: 8px;">4K</div>
+                            <div style="color: rgba(255,255,255,0.8); font-size: 1rem;">Quality</div>
+                        </div>
+                    </div>
+
+                    <!-- CTA Buttons -->
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                        <a href="../index.html"
+                            style="background: linear-gradient(135deg, #a8dadc 0%, #5a9bd4 100%); color: #1d3557; padding: 18px 35px; border-radius: 30px; text-decoration: none; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(168,218,220,0.4); transition: all 0.3s ease; border: none; cursor: pointer;"
+                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 35px rgba(168,218,220,0.6)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 25px rgba(168,218,220,0.4)'">
+                            <i class="fas fa-play-circle" style="margin-right: 10px;"></i>Get Started Free
+                        </a>
+                        <a href="#core-features"
+                            style="background: rgba(255,255,255,0.15); color: white; padding: 18px 35px; border-radius: 30px; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid rgba(255,255,255,0.3); transition: all 0.3s ease; cursor: pointer;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.25)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                            <i class="fas fa-arrow-down" style="margin-right: 10px;"></i>Explore Features
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add float animation -->
+            <style>
+                @keyframes float {
+
+                    0%,
+                    100% {
+                        transform: translateY(0px);
+                    }
+
+                    50% {
+                        transform: translateY(-20px);
+                    }
+                }
+
+                @keyframes pulse {
+
+                    0%,
+                    100% {
+                        transform: scale(1);
+                    }
+
+                    50% {
+                        transform: scale(1.05);
+                    }
+                }
+            </style>
+
+            <!-- DARK MODE AND BEAUTIFUL STYLING -->
+            <style>
+                /* Beautiful Feature Cards with Dark Mode Support */
+                .feature-card-container {
+                    background: var(--card-bg, white);
+                    border-radius: 24px;
+                    padding: 40px 35px;
+                    box-shadow: var(--card-shadow, 0 15px 40px rgba(69, 123, 157, 0.1));
+                    border: 2px solid var(--card-border, rgba(69, 123, 157, 0.05));
+                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .feature-card-container:hover {
+                    transform: translateY(-12px) scale(1.02);
+                    box-shadow: var(--card-hover-shadow, 0 25px 60px rgba(69, 123, 157, 0.2));
+                }
+
+                .feature-icon-wrapper {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin-bottom: 25px;
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .feature-icon-wrapper::before {
+                    content: '';
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(135deg, var(--icon-bg-start, #457b9d), var(--icon-bg-end, #5a9bd4));
+                    border-radius: inherit;
+                    z-index: 0;
+                }
+
+                .feature-icon {
+                    width: 35px;
+                    height: 35px;
+                    color: white;
+                    position: relative;
+                    z-index: 1;
+                }
+
+                .feature-card-container h3 {
+                    color: var(--text-primary, #1d3557);
+                    font-size: 1.7rem;
+                    font-weight: 800;
+                    margin-bottom: 18px;
+                    line-height: 1.2;
+                }
+
+                .feature-card-container p {
+                    color: var(--text-secondary, #457b9d);
+                    line-height: 1.7;
+                    margin-bottom: 25px;
+                    font-size: 1.05rem;
+                }
+
+                .feature-tags {
+                    display: flex;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+
+                .feature-tag {
+                    background: var(--tag-bg, rgba(69, 123, 157, 0.12));
+                    color: var(--tag-text, #1d3557);
+                    padding: 8px 16px;
+                    border-radius: 18px;
+                    font-size: 0.9rem;
+                    font-weight: 650;
+                    transition: all 0.3s ease;
+                }
+
+                .feature-tag:hover {
+                    background: var(--tag-hover-bg, rgba(69, 123, 157, 0.2));
+                    transform: translateY(-2px);
+                }
+
+                /* Specific icon color variations */
+                .feature-icon-globe {
+                    --icon-bg-start: #457b9d;
+                    --icon-bg-end: #5a9bd4;
+                }
+
+                .feature-icon-user {
+                    --icon-bg-start: #1d3557;
+                    --icon-bg-end: #457b9d;
+                }
+
+                .feature-icon-free {
+                    --icon-bg-start: #a8dadc;
+                    --icon-bg-end: #5a9bd4;
+                }
+
+                .feature-icon-click {
+                    --icon-bg-start: #5a9bd4;
+                    --icon-bg-end: #a8dadc;
+                }
+
+                .feature-icon-quality {
+                    --icon-bg-start: #457b9d;
+                    --icon-bg-end: #1d3557;
+                }
+
+                .feature-icon-audio {
+                    --icon-bg-start: #1d3557;
+                    --icon-bg-end: #5a9bd4;
+                }
+
+                .feature-icon-mobile {
+                    --icon-bg-start: #a8dadc;
+                    --icon-bg-end: #457b9d;
+                }
+
+                .feature-icon-cross {
+                    --icon-bg-start: #457b9d;
+                    --icon-bg-end: #a8dadc;
+                }
+
+                .feature-icon-preview {
+                    --icon-bg-start: #1d3557;
+                    --icon-bg-end: #457b9d;
+                }
+
+                .feature-icon-speed {
+                    --icon-bg-start: #5a9bd4;
+                    --icon-bg-end: #1d3557;
+                }
+
+                .feature-icon-clean {
+                    --icon-bg-start: #a8dadc;
+                    --icon-bg-end: #5a9bd4;
+                }
+
+                .feature-icon-rocket {
+                    --icon-bg-start: #457b9d;
+                    --icon-bg-end: #5a9bd4;
+                }
+
+                .feature-icon-shield {
+                    --icon-bg-start: #1d3557;
+                    --icon-bg-end: #457b9d;
+                }
+
+                .feature-icon-video {
+                    --icon-bg-start: #5a9bd4;
+                    --icon-bg-end: #a8dadc;
+                }
+
+                /* Dark Mode Styles */
+                .dark-mode .feature-card-container {
+                    --card-bg: rgba(29, 53, 87, 0.8);
+                    --card-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+                    --card-border: rgba(168, 218, 220, 0.15);
+                    --card-hover-shadow: 0 25px 60px rgba(0, 0, 0, 0.4);
+                    --text-primary: #a8dadc;
+                    --text-secondary: rgba(168, 218, 220, 0.85);
+                    --tag-bg: rgba(168, 218, 220, 0.15);
+                    --tag-text: #a8dadc;
+                    --tag-hover-bg: rgba(168, 218, 220, 0.25);
+                    backdrop-filter: blur(10px);
+                }
+
+                /* Update existing cards to use new system */
+                .features-grid article {
+                    background: var(--card-bg, white) !important;
+                    box-shadow: var(--card-shadow, 0 15px 40px rgba(69, 123, 157, 0.1)) !important;
+                    border: 2px solid var(--card-border, rgba(69, 123, 157, 0.05)) !important;
+                }
+
+                .dark-mode .features-grid article {
+                    --card-bg: rgba(29, 53, 87, 0.8);
+                    --card-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+                    --card-border: rgba(168, 218, 220, 0.15);
+                    backdrop-filter: blur(10px);
+                }
+
+                .dark-mode .features-grid article h3 {
+                    color: #a8dadc !important;
+                }
+
+                .dark-mode .features-grid article p {
+                    color: rgba(168, 218, 220, 0.85) !important;
+                }
+
+                .dark-mode .features-grid article span {
+                    background: rgba(168, 218, 220, 0.15) !important;
+                    color: #a8dadc !important;
+                }
+
+                /* Dark mode for hero section */
+                .dark-mode .features-hero {
+                    background: linear-gradient(135deg, rgba(29, 53, 87, 0.95) 0%, rgba(69, 123, 157, 0.95) 100%) !important;
+                }
+
+                /* Dark mode for section headers */
+                .dark-mode h2 {
+                    color: #a8dadc !important;
+                }
+
+                .dark-mode p {
+                    color: rgba(168, 218, 220, 0.85) !important;
+                }
+
+                /* Dark mode for section badges */
+                .dark-mode div[style*="background: linear-gradient(135deg, #457b9d"] {
+                    background: linear-gradient(135deg, rgba(168, 218, 220, 0.2), rgba(90, 155, 212, 0.3)) !important;
+                    color: #a8dadc !important;
+                }
+
+                .dark-mode div[style*="background: linear-gradient(135deg, #1d3557"] {
+                    background: linear-gradient(135deg, rgba(168, 218, 220, 0.2), rgba(90, 155, 212, 0.3)) !important;
+                    color: #a8dadc !important;
+                }
+
+                .dark-mode div[style*="background: linear-gradient(135deg, #5a9bd4"] {
+                    background: linear-gradient(135deg, rgba(168, 218, 220, 0.2), rgba(90, 155, 212, 0.3)) !important;
+                    color: #a8dadc !important;
+                }
+            </style>
+        </section>
+
+        <section class="container" style="max-width:1200px; margin:80px auto 120px;" id="core-features">
+            <!-- BEAUTIFUL CORE FEATURES SECTION -->
+            <div style="text-align: center; margin-bottom: 60px;">
+                <div
+                    style="display: inline-block; background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%); color: white; padding: 12px 30px; border-radius: 25px; font-weight: 600; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(69,123,157,0.3);">
+                    <i class="fas fa-rocket" style="margin-right: 10px;"></i>Core Features
+                </div>
+                <h2
+                    style="color: #1d3557; font-size: 3.2rem; font-weight: 900; margin-bottom: 20px; text-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+                    Essential Power Tools</h2>
+                <p style="color: #457b9d; font-size: 1.3rem; max-width: 700px; margin: 0 auto; line-height: 1.6;">Solid,
+                    dependable features you expect — optimized for lightning-fast performance and bulletproof privacy.
+                </p>
+            </div>
+
+            <!-- BEAUTIFUL FEATURE CARDS GRID -->
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 80px;">
+
+                <!-- Feature Card 1 -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-rocket">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" stroke="currentColor"
+                                stroke-width="2" />
+                            <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" />
+                            <path d="M16 10a4 4 0 0 1-8 0" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 2v4M12 14l3 3-3 3" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>⚡ Blazing Fast Downloads</h3>
+                    <p>Multi-segment engine and smart queuing deliver the fastest downloads available for any connection
+                        speed. Optimized for maximum performance.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Multi-Segment</span>
+                        <span class="feature-tag">Smart Queue</span>
+                        <span class="feature-tag">Auto Resume</span>
+                        <span class="feature-tag">Speed Boost</span>
+                    </div>
+                </div>
+
+                <!-- Feature Card 2 -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-shield">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor"
+                                stroke-width="2" />
+                            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" />
+                            <circle cx="12" cy="8" r="1" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <h3>🛡️ Secure & Private</h3>
+                    <p>Zero tracking, no data collection, and complete privacy protection. Your downloads and browsing
+                        history stay completely private and secure.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Zero Tracking</span>
+                        <span class="feature-tag">No Logs</span>
+                        <span class="feature-tag">Private</span>
+                        <span class="feature-tag">Secure</span>
+                    </div>
+                </div>
+
+                <!-- Feature Card 3 -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-video">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <polygon points="23 7 16 12 23 17 23 7" stroke="currentColor" stroke-width="2"
+                                fill="currentColor" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" stroke="currentColor" stroke-width="2"
+                                fill="none" />
+                            <path d="M7 8l3 2-3 2V8z" stroke="currentColor" stroke-width="1.5" />
+                        </svg>
+                    </div>
+                    <h3>🎥 4K HD & Format Support</h3>
+                    <p>Download ultra-high quality 4K/1080p videos or extract audio in MP3, AAC, WAV formats with
+                        intelligent format detection and conversion.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">4K Ultra HD</span>
+                        <span class="feature-tag">MP3/MP4</span>
+                        <span class="feature-tag">Auto Convert</span>
+                        <span class="feature-tag">All Formats</span>
+                    </div>
+                </div>
+
+                <!-- Feature Card 4 -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-globe">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path
+                                d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+                                stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>🌍 Universal Platform Support</h3>
+                    <p>Download from YouTube, TikTok, Instagram, Facebook, Twitter, Vimeo and 50+ platforms with
+                        optimized support.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">YouTube</span>
+                        <span class="feature-tag">TikTok</span>
+                        <span class="feature-tag">Instagram</span>
+                        <span class="feature-tag">50+ More</span>
+                    </div>
+                </div>
+
+                <!-- Feature Card 5 - No Account Required -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-user">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor"
+                                stroke-width="2" />
+                            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" />
+                            <path d="M18 8l2 2-2 2" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>🚫 No Account Required</h3>
+                    <p>Start downloading immediately - no registration, no sign-up, no personal information required.
+                        Just paste and download!</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Instant Access</span>
+                        <span class="feature-tag">Anonymous</span>
+                        <span class="feature-tag">No Signup</span>
+                    </div>
+                </div>
+
+                <!-- Feature Card 6 - Free Forever -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-free">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z"
+                                fill="currentColor" />
+                        </svg>
+                    </div>
+                    <h3>🆓 Always Free to Use</h3>
+                    <p>Core downloading features are completely free forever. Premium plans available for advanced
+                        features and unlimited downloads.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Free Core</span>
+                        <span class="feature-tag">No Hidden Fees</span>
+                        <span class="feature-tag">Premium Option</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BEAUTIFUL ADVANCED TOOLS SECTION -->
+            <div style="text-align: center; margin-bottom: 60px;">
+                <div
+                    style="display: inline-block; background: linear-gradient(135deg, #1d3557 0%, #5a9bd4 100%); color: white; padding: 12px 30px; border-radius: 25px; font-weight: 600; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(29,53,87,0.3);">
+                    <i class="fas fa-tools" style="margin-right: 10px;"></i>Advanced Tools
+                </div>
+                <h2
+                    style="color: #1d3557; font-size: 3.2rem; font-weight: 900; margin-bottom: 20px; text-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+                    Pro-Level Automation</h2>
+                <p style="color: #457b9d; font-size: 1.3rem; max-width: 700px; margin: 0 auto; line-height: 1.6;">
+                    Power-user features for advanced workflows, batch processing, and intelligent automation.</p>
+            </div>
+
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 80px;">
+
+                <!-- Advanced Feature 1 - One-Click Download -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-click">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M9 11H5a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" />
+                            <path d="M15 11h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4" stroke="currentColor"
+                                stroke-width="2" />
+                            <path d="M12 16v6M12 6l-3 3 3 3" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>⚡ One-Click Paste & Download</h3>
+                    <p>Simply paste any video URL and click download - our smart detection handles the rest. No complex
+                        settings or configurations needed.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Smart Detection</span>
+                        <span class="feature-tag">Instant</span>
+                        <span class="feature-tag">No Setup</span>
+                    </div>
+                </div>
+
+                <!-- Advanced Feature 2 - Quality Selection -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-quality">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                            <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" />
+                            <circle cx="12" cy="12" r="2" fill="currentColor" />
+                        </svg>
+                    </div>
+                    <h3>🎯 Quality Selection</h3>
+                    <p>Choose from multiple quality options: 144p, 360p, 720p, 1080p, and 4K when available. Perfect
+                        balance of quality and file size.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">144p-4K</span>
+                        <span class="feature-tag">Auto-Detect</span>
+                        <span class="feature-tag">Custom Size</span>
+                    </div>
+                </div>
+
+                <!-- Advanced Feature 3 - Audio Extraction -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-audio">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor"
+                                stroke-width="2" />
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke="currentColor"
+                                stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>🎵 Audio-Only Downloads</h3>
+                    <p>Extract high-quality audio from videos in MP3, WAV, or AAC formats. Perfect for music, podcasts,
+                        and educational content.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">MP3</span>
+                        <span class="feature-tag">WAV</span>
+                        <span class="feature-tag">High Quality</span>
+                    </div>
+                </div>
+
+                <!-- Advanced Feature 4 - Mobile Optimized -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-mobile">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="2" />
+                            <line x1="12" y1="18" x2="12" y2="18" stroke="currentColor" stroke-width="2" />
+                            <path d="M8 6h8v8H8z" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>📱 Mobile-First Design</h3>
+                    <p>Fully optimized for mobile devices with touch-friendly interface, clipboard integration, and
+                        seamless downloading on phones and tablets.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Touch UI</span>
+                        <span class="feature-tag">Responsive</span>
+                        <span class="feature-tag">Clipboard</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BEAUTIFUL CREATIVE ADDITIONS SECTION -->
+            <div style="text-align: center; margin-bottom: 60px;">
+                <div
+                    style="display: inline-block; background: linear-gradient(135deg, #5a9bd4 0%, #a8dadc 100%); color: #1d3557; padding: 12px 30px; border-radius: 25px; font-weight: 600; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(90,155,212,0.3);">
+                    <i class="fas fa-palette" style="margin-right: 10px;"></i>Creative Tools
+                </div>
+                <h2
+                    style="color: #1d3557; font-size: 3.2rem; font-weight: 900; margin-bottom: 20px; text-shadow: 1px 1px 3px rgba(0,0,0,0.1);">
+                    Creative Innovation</h2>
+                <p style="color: #457b9d; font-size: 1.3rem; max-width: 700px; margin: 0 auto; line-height: 1.6;">Fresh
+                    ideas and cutting-edge tools that expand what FastPast can do for content creators.</p>
+            </div>
+
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; margin-bottom: 80px;">
+
+                <!-- Creative Feature 1 - Cross-Platform -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-cross">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2" />
+                            <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="2" />
+                            <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2" />
+                            <path d="M7 8l5 3 5-3" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>💻 Cross-Platform Compatible</h3>
+                    <p>Works flawlessly on Windows, Mac, Linux, iOS, and Android. Access FastPast from any device with a
+                        web browser - no installation required.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Windows</span>
+                        <span class="feature-tag">Mac</span>
+                        <span class="feature-tag">Mobile</span>
+                        <span class="feature-tag">Web-Based</span>
+                    </div>
+                </div>
+
+                <!-- Creative Feature 2 - Thumbnail Preview -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-preview">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor"
+                                stroke-width="2" />
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" />
+                            <path d="M21 3l-6 6" stroke="currentColor" stroke-width="2" />
+                            <path d="M15 3h6v6" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <h3>👀 Smart Preview System</h3>
+                    <p>Preview videos before downloading with thumbnail generation, duration info, and quality options.
+                        Know exactly what you're getting.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Thumbnails</span>
+                        <span class="feature-tag">Duration</span>
+                        <span class="feature-tag">Quality Info</span>
+                    </div>
+                </div>
+
+                <!-- Creative Feature 3 - Fast Processing -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-speed">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" />
+                            <path d="M4 4l16 16" stroke="currentColor" stroke-width="2" opacity="0.3" />
+                        </svg>
+                    </div>
+                    <h3>⚡ Lightning-Fast Processing</h3>
+                    <p>Advanced server infrastructure ensures rapid processing and download speeds. Most videos process
+                        in under 10 seconds.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">10s Processing</span>
+                        <span class="feature-tag">Global Servers</span>
+                        <span class="feature-tag">Optimized</span>
+                    </div>
+                </div>
+
+                <!-- Creative Feature 4 - Clean Interface -->
+                <div class="feature-card-container">
+                    <div class="feature-icon-wrapper feature-icon-clean">
+                        <svg viewBox="0 0 24 24" fill="none" class="feature-icon">
+                            <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+                            <path d="M9 9h6v6H9z" stroke="currentColor" stroke-width="2" />
+                            <path d="M9 3v6M15 3v6M21 9h-6M21 15h-6" stroke="currentColor" stroke-width="2"
+                                opacity="0.5" />
+                        </svg>
+                    </div>
+                    <h3>🎨 Clean, Intuitive Interface</h3>
+                    <p>Beautiful, clutter-free design that focuses on what matters. Dark mode support and responsive
+                        layout for the best user experience.</p>
+                    <div class="feature-tags">
+                        <span class="feature-tag">Dark Mode</span>
+                        <span class="feature-tag">Responsive</span>
+                        <span class="feature-tag">Minimal</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BEAUTIFUL FINAL CTA SECTION -->
+            <div
+                style="background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%); border-radius: 25px; padding: 50px 40px; text-align: center; margin-top: 80px; position: relative; overflow: hidden;">
+                <!-- Background decoration -->
+                <div
+                    style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(168,218,220,0.1), transparent); border-radius: 50%;">
+                </div>
+                <div
+                    style="position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: radial-gradient(circle, rgba(90,155,212,0.1), transparent); border-radius: 50%;">
+                </div>
+
+                <div style="position: relative; z-index: 2;">
+                    <h3
+                        style="color: white; font-size: 2.5rem; font-weight: 800; margin-bottom: 20px; text-shadow: 1px 1px 3px rgba(0,0,0,0.3);">
+                        Ready to Experience FastPast?</h3>
+                    <p
+                        style="color: rgba(255,255,255,0.9); font-size: 1.2rem; margin-bottom: 35px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                        Unlock all premium features, unlimited downloads, and priority support. Start your journey
+                        today!</p>
+
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                        <a href="/pricing"
+                            style="background: linear-gradient(135deg, #a8dadc 0%, #5a9bd4 100%); color: #1d3557; padding: 18px 35px; border-radius: 30px; text-decoration: none; font-weight: 700; font-size: 1.1rem; box-shadow: 0 8px 25px rgba(168,218,220,0.4); transition: all 0.3s ease; border: none; cursor: pointer;"
+                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 35px rgba(168,218,220,0.6)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 25px rgba(168,218,220,0.4)'">
+                            <i class="fas fa-crown" style="margin-right: 10px;"></i>Explore Premium
+                        </a>
+                        <a href="/faq"
+                            style="background: rgba(255,255,255,0.15); color: white; padding: 18px 35px; border-radius: 30px; text-decoration: none; font-weight: 700; font-size: 1.1rem; border: 2px solid rgba(255,255,255,0.3); transition: all 0.3s ease; cursor: pointer;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.25)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                            <i class="fas fa-lightbulb" style="margin-right: 10px;"></i>Request Feature
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+</body>
+
+</html>

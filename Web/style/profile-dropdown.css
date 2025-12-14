@@ -1,0 +1,379 @@
+/* Profile Dropdown Styles */
+
+/* Prevent flash of login button on authenticated pages */
+html.user-authenticated .login-btn {
+    display: none !important;
+}
+
+html.user-not-authenticated .profile-dropdown-container {
+    display: none !important;
+}
+
+html.user-not-authenticated .mobile-profile-menu-item {
+    display: none !important;
+}
+
+.profile-dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    padding: 0;
+    /* Ensure image fills the button */
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.profile-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.profile-button i {
+    font-size: 24px;
+    color: white;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    min-width: 250px;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.profile-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Dark mode support */
+body.dark-mode .profile-dropdown {
+    background: #2d2d2d;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.profile-avatar {
+    font-size: 40px;
+    color: #667eea;
+}
+
+body.dark-mode .profile-avatar {
+    color: #8b9cff;
+}
+
+.profile-info {
+    flex: 1;
+}
+
+.profile-greeting {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+body.dark-mode .profile-greeting {
+    color: #aaa;
+}
+
+.profile-username {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+}
+
+body.dark-mode .profile-username {
+    color: #fff;
+}
+
+.profile-membership {
+    margin-bottom: 15px;
+}
+
+.membership-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.membership-badge.free {
+    background: #e0e0e0;
+    color: #666;
+}
+
+.membership-badge.monthly {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.membership-badge.semi-yearly {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.membership-badge.yearly {
+    background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+    color: white;
+}
+
+.membership-badge.lifetime {
+    background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+    color: white;
+}
+
+.membership-badge.creator {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.membership-badge.studio {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+/* Subscription Timer */
+.subscription-timer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.subscription-timer i {
+    font-size: 16px;
+}
+
+body.dark-mode .subscription-timer {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    color: #8b9cff;
+}
+
+.profile-divider {
+    height: 1px;
+    background: #e0e0e0;
+    margin: 15px 0;
+}
+
+body.dark-mode .profile-divider {
+    background: #444;
+}
+
+.logout-button {
+    width: 100%;
+    padding: 12px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.logout-button:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.logout-button i {
+    font-size: 16px;
+}
+
+/* Mobile Profile Styles */
+.mobile-profile-menu-item {
+    list-style: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: none;
+    /* Hidden by default */
+}
+
+/* Show only on mobile/tablet (when hamburger menu is visible) */
+@media (max-width: 960px) {
+    .mobile-profile-menu-item {
+        display: block;
+    }
+}
+
+.mobile-profile-toggle {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 20px;
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.mobile-profile-toggle i {
+    font-size: 20px;
+}
+
+.mobile-profile-toggle:hover,
+.mobile-profile-toggle.active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-profile-expanded {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.mobile-profile-expanded.show {
+    max-height: 300px;
+}
+
+.mobile-profile-content {
+    padding: 20px;
+    text-align: center;
+}
+
+.mobile-profile-greeting {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 5px;
+}
+
+.mobile-profile-username {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    margin-bottom: 12px;
+}
+
+.mobile-profile-badge {
+    margin-bottom: 15px;
+}
+
+/* Mobile Subscription Timer */
+.mobile-subscription-timer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 15px;
+}
+
+.mobile-subscription-timer i {
+    font-size: 16px;
+}
+
+body.dark-mode .mobile-subscription-timer {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    color: #8b9cff;
+}
+
+.mobile-logout-btn {
+    width: 100%;
+    padding: 12px;
+    background: #f44336;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.mobile-logout-btn:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+}
+
+.mobile-logout-btn i {
+    font-size: 16px;
+}
+
+/* Animation */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.profile-dropdown.show {
+    animation: fadeInDown 0.3s ease;
+}
+
+/* Profile Picture Image Styles */
+.profile-pic-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid white;
+}
+
+.profile-avatar.img-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.mobile-profile-toggle img {
+    border-radius: 50%;
+}

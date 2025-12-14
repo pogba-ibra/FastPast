@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="FastPast Pricing - Choose from Free, Creator, or Studio plans. Affordable video downloading and editing solutions.">
+    <title>FastPast - Pricing</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="script.js" defer></script>
+    <script src="slider.js" defer></script>
+    <script src="mobile-input.js" defer></script>
+    <script src="../theme-toggle-final.js" defer></script>
+    <style>
+        .go-premium-btn {
+            display: none;
+        }
+
+        /* Dragon background pattern for the entire pricing page */
+        body {
+            position: relative;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Images/free%20plan%20dragon.png');
+            background-size: 150px 150px;
+            background-repeat: repeat;
+            opacity: 0.1;
+            z-index: -10;
+            pointer-events: none;
+        }
+
+        .pricing-hero,
+        .pricing-tiers {
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Simplified repeating dragon background layers */
+        .pricing-hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Images/free%20plan%20dragon.png');
+            background-size: 100px 100px;
+            background-repeat: repeat;
+            opacity: 0.2;
+            z-index: -3;
+            animation: dragonFloat1 30s linear infinite;
+            pointer-events: none;
+        }
+
+        .pricing-hero::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Images/basic%20plan%20dragon.png');
+            background-size: 120px 120px;
+            background-repeat: repeat;
+            background-position: 60px 60px;
+            opacity: 0.15;
+            z-index: -2;
+            animation: dragonFloat2 25s linear infinite reverse;
+            pointer-events: none;
+        }
+
+        .pricing-tiers::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Images/pro%20plan%20dragon.png');
+            background-size: 80px 80px;
+            background-repeat: repeat;
+            background-position: 40px 40px;
+            opacity: 0.2;
+            z-index: -3;
+            animation: dragonFloat3 35s linear infinite;
+            pointer-events: none;
+        }
+
+        .pricing-tiers::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('Images/free%20plan%20dragon.png');
+            background-size: 140px 140px;
+            background-repeat: repeat;
+            background-position: 70px 70px;
+            opacity: 0.12;
+            z-index: -2;
+            animation: dragonFloat1 40s linear infinite reverse;
+            pointer-events: none;
+        }
+
+        /* Multiple floating animations for variety */
+        @keyframes dragonFloat1 {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+
+            25% {
+                transform: translateX(10px) translateY(5px);
+            }
+
+            50% {
+                transform: translateX(-5px) translateY(10px);
+            }
+
+            75% {
+                transform: translateX(5px) translateY(-5px);
+            }
+
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+        }
+
+        @keyframes dragonFloat2 {
+            0% {
+                transform: translateX(0) translateY(0) rotate(0deg);
+            }
+
+            50% {
+                transform: translateX(-15px) translateY(8px) rotate(1deg);
+            }
+
+            100% {
+                transform: translateX(0) translateY(0) rotate(0deg);
+            }
+        }
+
+        @keyframes dragonFloat3 {
+            0% {
+                transform: translateX(0) translateY(0);
+            }
+
+            33% {
+                transform: translateX(8px) translateY(-3px);
+            }
+
+            66% {
+                transform: translateX(-3px) translateY(8px);
+            }
+
+            100% {
+                transform: translateX(0) translateY(0);
+            }
+        }
+
+        /* Ensure content stays above the background */
+        .pricing-hero .container,
+        .pricing-tiers .container {
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Move Creator plan content elements down (except dragon) */
+        .creator-plan .plan-header,
+        .creator-plan .price-section,
+        .creator-plan .plan-benefits,
+        .creator-plan .plan-cta {
+            transform: translateY(25px);
+        }
+
+        /* Keep popular-badge above plan-badge in the creator plan */
+        .creator-plan .popular-badge {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Dark mode adjustments */
+        .dark-mode .pricing-hero::before,
+        .dark-mode .pricing-hero::after,
+        .dark-mode .pricing-tiers::before,
+        .dark-mode .pricing-tiers::after {
+            opacity: 0.2;
+            filter: brightness(1.5) contrast(1.2) saturate(1.3);
+        }
+
+        /* Ensure dragons are visible on all screen sizes */
+        @media (max-width: 768px) {
+            .pricing-hero::before {
+                background-size: 60px 60px;
+            }
+
+            .pricing-hero::after {
+                background-size: 80px 80px;
+            }
+
+            .pricing-tiers::before {
+                background-size: 50px 50px;
+            }
+
+            .pricing-tiers::after {
+                background-size: 90px 90px;
+            }
+
+            .dark-mode .pricing-hero::before,
+            .dark-mode .pricing-hero::after,
+            .dark-mode .pricing-tiers::before,
+            .dark-mode .pricing-tiers::after {
+                opacity: 0.25;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="style/profile-dropdown.css">
+    <script src="js/profile-dropdown.js" defer></script>
+</head>
+
+<body data-page="pricing">
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+                <div class="lamp-rope-toggle" id="lamp-rope-toggle" title="Toggle Dark Mode">
+                    <div class="container">
+                        <div class="planet"></div>
+                        <div class="orbit">
+                            <div class="moon"></div>
+                        </div>
+                    </div>
+                    <div class="solar-system">
+                        <div id="sun"></div>
+
+                        <div class="orbit mercury-orbit"></div>
+                        <div class="mercury-spin">
+                            <div id="mercury"></div>
+                        </div>
+
+                        <div class="orbit venus-orbit"></div>
+                        <div class="venus-spin">
+                            <div id="venus"></div>
+                        </div>
+
+                        <div class="orbit earth-orbit"></div>
+                        <div class="earth-spin">
+                            <div class="orbit moon-orbit"></div>
+                            <div class="moon-spin">
+                                <div id="moon"></div>
+                            </div>
+
+                            <img id="earth" alt="Earth"
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/150px-The_Earth_seen_from_Apollo_17.jpg" />
+                        </div>
+
+                        <div class="orbit mars-orbit"></div>
+                        <div class="mars-spin">
+                            <div id="mars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <nav>
+                <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                    <li class="mobile-only"><button class="btn go-premium-btn"><i class="fas fa-crown"></i> Go
+                            Premium</button></li>
+                    <li class="mobile-only"><button class="btn login-btn"><i class="fas fa-sign-in-alt"></i>
+                            LOGIN</button></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;"
+                        aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+                <div class="theme-toggle-mobile">
+                    <label class="switch" for="input">
+                        <input id="input" type="checkbox" aria-label="Toggle dark mode" />
+                        <div class="slider round">
+                            <div class="sun-moon">
+                                <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                            </div>
+                            <div class="stars">
+                                <svg id="star-1" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-2" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-3" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-4" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn go-premium-btn"><i class="fas fa-crown"></i> Go Premium</button>
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="pricing-hero">
+            <div class="hero-background-effects">
+                <div class="floating-orbs">
+                    <div class="orb orb-1"></div>
+                    <div class="orb orb-2"></div>
+                    <div class="orb orb-3"></div>
+                    <div class="orb orb-4"></div>
+                </div>
+                <div class="gradient-mesh"></div>
+            </div>
+            <div class="container">
+                <div class="pricing-hero-content">
+                    <span class="eyebrow-label animate-fade-up"><i class="fas fa-sparkles"></i> Plans & Pricing</span>
+                    <h2 class="animate-fade-up animation-delay-1">Choose Your <span class="gradient-text">Perfect
+                            Plan</span></h2>
+                    <p class="animate-fade-up animation-delay-2">Transform your content workflow with lightning-fast
+                        downloads, powerful editing tools, and industry-leading security. Scale from personal projects
+                        to enterprise operations seamlessly.</p>
+
+                    <div class="hero-metrics animate-fade-up animation-delay-3">
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <strong>700K+</strong>
+                            <span>creators trust FastPast monthly</span>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <strong>120M+</strong>
+                            <span>clips exported this year</span>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-icon">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <strong>4.9 / 5</strong>
+                            <span>average satisfaction score</span>
+                        </div>
+                    </div>
+
+                    <p class="billing-note animate-fade-up animation-delay-5" style="margin-top: 20px;">
+                        <span class="billing-pill">✨ Simple Pricing</span> Choose the plan that fits your workflow.
+                        Upgrade anytime for more power.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="pricing-tiers">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="animate-fade-up">Choose Your Power Level</h2>
+                    <p class="animate-fade-up animation-delay-1">From creative exploration to enterprise-scale
+                        operations</p>
+                </div>
+
+                <div class="promo-bar" style="margin-top: 20px;">
+                    <div class="promo-content">
+                        <span class="promo-text">Don't miss this limited-time Anniversary deal!</span>
+                        <span class="promo-offer">Get Lifetime Access for <span class="original-price">$199</span> <span
+                                class="sale-price">$99</span></span>
+                        <span class="promo-urgency">Offer expires soon.</span>
+                        <button class="promo-btn"
+                            onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=lifetime'">Get
+                            now</button>
+                    </div>
+                </div>
+
+                <div class="tier-grid">
+                    <!-- Free Plan -->
+                    <div class="pricing-card free-plan animate-slide-up" data-plan="starter">
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/free plan dragon.png" alt="Free Plan Dragon" class="dragon-image">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge free-badge">Free Forever</span>
+                            <h3>Starter</h3>
+                            <p class="plan-caption">Perfect for personal downloads & exploring FastPast</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="0" data-annual="0">0</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Always free — explore FastPast basics"
+                                data-annual-text="Always free — explore FastPast basics">Always free — explore FastPast
+                                basics</p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Standard Downloads</strong>
+                                    <span>HD MP4 or MP3 conversions without watermarks</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>FastClip Editor</strong>
+                                    <span>Minimum 3 minutes per video clip</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Privacy-First Queue</strong>
+                                    <span>Encrypted processing with auto clean-up</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No 2K/4K Support</strong>
+                                    <span>HD quality only - upgrade for higher resolutions</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Includes Ads</strong>
+                                    <span>Ad-free experience available with premium plans</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Lower Priority</strong>
+                                    <span>Slower processing during peak times</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Batch Processing</strong>
+                                    <span>Upgrade for workflow automation</span>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-outline" onclick="window.location.href='index.html';">Get Started
+                                Free</button>
+                            <p class="plan-footnote">No credit card required</p>
+                        </div>
+                    </div>
+
+                    <!-- Creator Plan -->
+                    <div class="pricing-card creator-plan featured animate-slide-up animation-delay-1"
+                        data-plan="creator">
+                        <div class="popular-badge">
+                            <i class="fas fa-crown"></i>
+                            Most Popular
+                        </div>
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/basic plan dragon.png" alt="Creator Plan Dragon" class="dragon-image">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                                <div class="sparkle sparkle-4"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge creator-badge">Most Loved</span>
+                            <h3>Creator</h3>
+                            <p class="plan-caption">Daily creators & indie teams that need speed</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="10" data-annual="100">10</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Billed monthly — pause anytime"
+                                data-annual-text="Billed $100 yearly (save ~15%)">Billed monthly — pause anytime</p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Ads</strong>
+                                    <span>Clean, ad-free experience</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-infinity"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Unlimited Downloads</strong>
+                                    <span>No caps on MP4, MP3, or playlist imports</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>4K & HDR Support</strong>
+                                    <span>Preserve studio-grade formats and subtitles</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>H.265 Re-encode</strong>
+                                    <span>Efficient compression without quality loss</span>
+                                </div>
+                            </li>
+
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Early Access</strong>
+                                    <span>Try new features before anyone else</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Single Device Access</strong>
+                                    <span>Can only be connected on one device at a time</span>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-primary"
+                                onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=creator'">Start
+                                Creator
+                                Plan</button>
+                            <p class="plan-footnote">Cancel anytime • No commitment</p>
+                        </div>
+                    </div>
+
+                    <!-- Studio Plan -->
+                    <div class="pricing-card studio-plan animate-slide-up animation-delay-2" data-plan="studio">
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/pro plan dragon.png" alt="Studio Plan Dragon" class="dragon-image">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                                <div class="sparkle sparkle-4"></div>
+                                <div class="sparkle sparkle-5"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge studio-badge">Studios & Teams</span>
+                            <h3>Studio</h3>
+                            <p class="plan-caption">Agencies, publishers, and batching professionals</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="20" data-annual="200">20</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Billed monthly per seat"
+                                data-annual-text="Billed $200 yearly per seat (save ~15%)">Billed monthly per seat
+                            </p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-list-check" style="color: #FFD700 !important;"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong
+                                        style="color: #FFD700 !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);">Approve
+                                        Playlist Downloads</strong>
+                                    <span style="color: #FFD700 !important;">Exclusive access to download full
+                                        playlists</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Ads</strong>
+                                    <span>Premium ad-free experience</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Unlimited Everything</strong>
+                                    <span>Parallel downloads, playlists, clips & timelines</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>H.265 Re-encode</strong>
+                                    <span>Advanced compression for smaller file sizes</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-users-cog"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Team Account Sharing</strong>
+                                    <span>Share account with 2 team members (3 users total)</span>
+                                </div>
+                            </li>
+
+
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>4K & HDR Support</strong>
+                                    <span>Preserve studio-grade formats and subtitles</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Early Access</strong>
+                                    <span>Try new features before anyone else</span>
+                                </div>
+                            </li>
+
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-outline-dark"
+                                onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=studio'">Get
+                                Studio Plan</button>
+                            <p class="plan-footnote">Custom invoicing & security reviews</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pricing-addons animate-fade-up animation-delay-3">
+                    <p>Need a custom volume plan or on-prem deployment?
+                    <div class="enterprise-contact-actions">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&tf=1&to=fastpast2025@gmail.com&su=Enterprise%20Inquiry%20-%20FastPast&body=Hello%20FastPast%20Team,%0A%0AI%27d%20like%20to%20learn%20more%20about%20enterprise%20plans.%20Here%20are%20some%20details%20about%20our%20needs:%0A-%20Team%20size:%20%0A-%20Use%20cases:%20%0A-%20Required%20integrations/security:%20%0A%0AThanks!"
+                            class="contact-link" target="_blank" rel="noopener">
+                            <i class="fas fa-envelope"></i> Contact our enterprise team
+                        </a>
+                        <button type="button" class="contact-copy" aria-label="Copy email" title="Copy email"
+                            style="margin-left:8px;">
+                            <i class="fas fa-copy"></i> Copy email
+                        </button>
+                    </div>
+                    </p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleInputs = document.querySelectorAll('.billing-toggle input[name="billing-cycle"]');
+            const priceAmounts = document.querySelectorAll('.price-amount[data-monthly]');
+            const billingLabels = document.querySelectorAll('.billing-cycle[data-month-label]');
+            const savingsTexts = document.querySelectorAll('.savings-text[data-monthly-text]');
+            const toggleOptions = document.querySelectorAll('.toggle-option');
+            const billingPill = document.querySelector('.billing-pill');
+
+            const updateBillingMode = (mode) => {
+                priceAmounts.forEach((amount) => {
+                    const value = amount.dataset[mode];
+                    if (value !== undefined) {
+                        amount.textContent = value;
+                    }
+                });
+
+                billingLabels.forEach((label) => {
+                    const labelText = mode === 'annual' ? label.dataset.annualLabel : label.dataset.monthLabel;
+                    if (labelText) {
+                        label.textContent = labelText;
+                    }
+                });
+
+                savingsTexts.forEach((text) => {
+                    const value = text.dataset[`${mode}Text`];
+                    if (value) {
+                        text.textContent = value;
+                    }
+                });
+
+                toggleOptions.forEach((option) => {
+                    option.classList.toggle('active', option.dataset.mode === mode);
+                });
+
+                if (billingPill) {
+                    billingPill.classList.toggle('active', mode === 'annual');
+                }
+
+                document.body.classList.toggle('annual-billing', mode === 'annual');
+            };
+
+            toggleInputs.forEach((input) => {
+                input.addEventListener('change', (event) => updateBillingMode(event.target.value));
+            });
+
+            const defaultMode = document.querySelector('.billing-toggle input[name="billing-cycle"]:checked')?.value || 'monthly';
+            updateBillingMode(defaultMode);
+        });
+    </script>
+    <script>
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.contact-copy');
+            if (!btn) return;
+            const email = 'fastpast2025@gmail.com';
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(email).then(() => {
+                    btn.textContent = 'Copied!';
+                    setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copy email', 1500);
+                });
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = email;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch { }
+                document.body.removeChild(ta);
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i> Copy email', 1500);
+            }
+        });
+    </script>
+</body>
+
+</html>

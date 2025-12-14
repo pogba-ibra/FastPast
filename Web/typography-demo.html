@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typography and Color Scheme Demo</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <style>
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .color-swatch {
+            height: 120px;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-end;
+            padding: 1rem;
+            color: white;
+            font-weight: 500;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-swatch.light {
+            color: var(--neutral-gray-800);
+        }
+
+        .color-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .color-code {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .typography-example {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .typography-example h1, 
+        .typography-example h2, 
+        .typography-example h3, 
+        .typography-example h4, 
+        .typography-example h5, 
+        .typography-example h6 {
+            margin-bottom: 1rem;
+        }
+
+        .typography-example p {
+            margin-bottom: 1.5rem;
+        }
+
+        .typography-example blockquote {
+            margin: 1.5rem 0;
+        }
+
+        .typography-example ul, 
+        .typography-example ol {
+            margin-bottom: 1.5rem;
+        }
+
+        .typography-example code {
+            margin: 0 0.25rem;
+        }
+
+        .typography-example pre {
+            margin-bottom: 1.5rem;
+        }
+
+        .contrast-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .contrast-example {
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .contrast-example h3 {
+            margin-bottom: 0.5rem;
+        }
+
+        .contrast-example p {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <header class="section">
+            <h1>Typography and Color Scheme</h1>
+            <p class="subtitle">Elegant design system for the FastPast features page</p>
+        </header>
+
+        <section class="section">
+            <h2>Color Palette</h2>
+            <div class="color-palette">
+                <div class="color-swatch" style="background-color: var(--primary-teal);">
+                    <div>
+                        <div class="color-name">Primary Teal</div>
+                        <div class="color-code">#008080</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--primary-teal-light);">
+                    <div>
+                        <div class="color-name">Primary Teal Light</div>
+                        <div class="color-code">#00a0a0</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--primary-teal-dark);">
+                    <div>
+                        <div class="color-name">Primary Teal Dark</div>
+                        <div class="color-code">#006060</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-50);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 50</div>
+                        <div class="color-code">#f8f9fa</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-100);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 100</div>
+                        <div class="color-code">#e9ecef</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-200);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 200</div>
+                        <div class="color-code">#dee2e6</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-300);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 300</div>
+                        <div class="color-code">#ced4da</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-400);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 400</div>
+                        <div class="color-code">#adb5bd</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-500);" class="light">
+                    <div>
+                        <div class="color-name">Neutral Gray 500</div>
+                        <div class="color-code">#6c757d</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-600);">
+                    <div>
+                        <div class="color-name">Neutral Gray 600</div>
+                        <div class="color-code">#495057</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-700);">
+                    <div>
+                        <div class="color-name">Neutral Gray 700</div>
+                        <div class="color-code">#343a40</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-800);">
+                    <div>
+                        <div class="color-name">Neutral Gray 800</div>
+                        <div class="color-code">#212529</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--neutral-gray-900);">
+                    <div>
+                        <div class="color-name">Neutral Gray 900</div>
+                        <div class="color-code">#0a0a0a</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--accent-blue);">
+                    <div>
+                        <div class="color-name">Accent Blue</div>
+                        <div class="color-code">#4facfe</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--accent-blue-light);">
+                    <div>
+                        <div class="color-name">Accent Blue Light</div>
+                        <div class="color-code">#6bb6ff</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--accent-blue-dark);">
+                    <div>
+                        <div class="color-name">Accent Blue Dark</div>
+                        <div class="color-code">#2e8ce6</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--success-green);">
+                    <div>
+                        <div class="color-name">Success Green</div>
+                        <div class="color-code">#28a745</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--warning-yellow);" class="light">
+                    <div>
+                        <div class="color-name">Warning Yellow</div>
+                        <div class="color-code">#ffc107</div>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--error-red);">
+                    <div>
+                        <div class="color-name">Error Red</div>
+                        <div class="color-code">#dc3545</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Typography Hierarchy</h2>
+            <div class="typography-example">
+                <h1>Heading 1 - The largest heading</h1>
+                <h2>Heading 2 - Second level heading</h2>
+                <h3>Heading 3 - Third level heading</h3>
+                <h4>Heading 4 - Fourth level heading</h4>
+                <h5>Heading 5 - Fifth level heading</h5>
+                <h6>Heading 6 - Smallest heading</h6>
+
+                <p class="subtitle">Subtitle with Playfair Display serif font</p>
+
+                <p>This is a paragraph of body text using Roboto sans-serif font. The text is designed to be highly readable with good contrast against the background. This is the primary text style used throughout the features page.</p>
+
+                <p><strong>Bold text</strong> is used for emphasis and to draw attention to important information.</p>
+
+                <p><em>Italic text</em> is used for secondary emphasis or for indicating titles of works.</p>
+
+                <blockquote>This is a blockquote using Playfair Display serif font with italic styling. It's used for highlighting quotes or important statements.</blockquote>
+
+                <ul>
+                    <li>Unordered list item one</li>
+                    <li>Unordered list item two</li>
+                    <li>Unordered list item three</li>
+                </ul>
+
+                <ol>
+                    <li>Ordered list item one</li>
+                    <li>Ordered list item two</li>
+                    <li>Ordered list item three</li>
+                </ol>
+
+                <p>Inline <code>code elements</code> are used for short code snippets.</p>
+
+                <pre><code>function example() {
+    console.log("This is a code block");
+    return true;
+}</code></pre>
+
+                <p><a href="#">This is a link</a> with the primary teal color.</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Contrast Examples</h2>
+            <div class="contrast-examples">
+                <div class="contrast-example" style="background-color: var(--neutral-gray-50);">
+                    <h3 style="color: var(--neutral-gray-800);">Light Background</h3>
+                    <p style="color: var(--neutral-gray-700);">Text on a light background with high contrast for excellent readability.</p>
+                </div>
+                <div class="contrast-example" style="background-color: var(--neutral-gray-800);">
+                    <h3 style="color: white;">Dark Background</h3>
+                    <p style="color: rgba(255, 255, 255, 0.8);">Text on a dark background with appropriate contrast for readability.</p>
+                </div>
+                <div class="contrast-example" style="background-color: var(--primary-teal);">
+                    <h3 style="color: white;">Primary Color Background</h3>
+                    <p style="color: rgba(255, 255, 255, 0.9);">Text on the primary teal color background with sufficient contrast.</p>
+                </div>
+                <div class="contrast-example" style="background-color: var(--gradient-primary);">
+                    <h3 style="color: white;">Gradient Background</h3>
+                    <p style="color: rgba(255, 255, 255, 0.9);">Text on a gradient background with appropriate contrast.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Feature Page Examples</h2>
+            <div class="typography-example">
+                <h2 class="hero-title">Hero Title Example</h2>
+                <p class="hero-subtitle">This is a hero subtitle using Playfair Display serif font with italic styling.</p>
+
+                <h2 class="section-title">Section Title Example</h2>
+                <p class="section-subtitle">This is a section subtitle using Playfair Display serif font.</p>
+
+                <h3 class="card-title">Card Title Example</h3>
+                <p class="card-description">This is a card description using Roboto sans-serif font with appropriate sizing and line height.</p>
+
+                <div>
+                    <span class="feature-tag">Feature Tag 1</span>
+                    <span class="feature-tag">Feature Tag 2</span>
+                    <span class="feature-tag">Feature Tag 3</span>
+                </div>
+
+                <button class="cta-button">Call to Action Button</button>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

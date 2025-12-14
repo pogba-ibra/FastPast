@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Frequently Asked Questions about FastPast. Learn how to download videos, supported sites, and troubleshooting tips.">
+    <title>FastPast - FAQ & Help</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="theme-persistence.js"></script>
+    <script src="../theme-toggle-final.js" defer></script>
+    <script src="script.js" defer></script>
+    <link rel="stylesheet" href="style/profile-dropdown.css">
+    <script src="js/profile-dropdown.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+                <div class="lamp-rope-toggle" id="lamp-rope-toggle" title="Toggle Dark Mode">
+                    <div class="container">
+                        <div class="planet"></div>
+                        <div class="orbit">
+                            <div class="moon"></div>
+                        </div>
+                    </div>
+                    <div class="solar-system">
+                        <div id="sun"></div>
+
+                        <div class="orbit mercury-orbit"></div>
+                        <div class="mercury-spin">
+                            <div id="mercury"></div>
+                        </div>
+
+                        <div class="orbit venus-orbit"></div>
+                        <div class="venus-spin">
+                            <div id="venus"></div>
+                        </div>
+
+                        <div class="orbit earth-orbit"></div>
+                        <div class="earth-spin">
+                            <div class="orbit moon-orbit"></div>
+                            <div class="moon-spin">
+                                <div id="moon"></div>
+                            </div>
+
+                            <img id="earth" alt="Earth"
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/150px-The_Earth_seen_from_Apollo_17.jpg" />
+                        </div>
+
+                        <div class="orbit mars-orbit"></div>
+                        <div class="mars-spin">
+                            <div id="mars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <nav>
+                <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                    <li class="mobile-only button-items"><button class="btn go-premium-btn"
+                            onclick="window.location.href='#pricing-tiers'"><i class="fas fa-crown"></i>
+                            Go
+                            Premium</button></li>
+                    <li class="mobile-only button-items"><button class="btn login-btn"
+                            onclick="window.location.href='login.html'"><i class="fas fa-sign-in-alt"></i>
+                            LOGIN</button></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;"
+                        aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+                <div class="theme-toggle-mobile">
+                    <label class="switch" for="input">
+                        <input id="input" type="checkbox" aria-label="Toggle dark mode" />
+                        <div class="slider round">
+                            <div class="sun-moon">
+                                <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                            </div>
+                            <div class="stars">
+                                <svg id="star-1" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-2" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-3" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-4" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn go-premium-btn" onclick="window.location.href='#pricing-tiers'"><i
+                        class="fas fa-crown"></i> Go Premium</button>
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="faq-hero">
+            <div class="container">
+                <h2>Frequently Asked Questions</h2>
+                <!-- BEAUTIFUL WELCOME SECTION -->
+                <div
+                    style="background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(168,218,220,0.1) 100%); border-radius: 25px; padding: 40px; margin: 30px auto; text-align: center; box-shadow: 0 15px 35px rgba(69,123,157,0.15); border: 2px solid rgba(69,123,157,0.1); position: relative; overflow: hidden; max-width: 800px;">
+
+                    <!-- Lightweight decoration -->
+                    <div
+                        style="position: absolute; top: 20px; left: 30px; width: 50px; height: 50px; background: rgba(69,123,157,0.1); border-radius: 50%;">
+                    </div>
+                    <div
+                        style="position: absolute; bottom: 20px; right: 30px; width: 30px; height: 30px; background: rgba(168,218,220,0.2); border-radius: 50%;">
+                    </div>
+
+                    <!-- Welcome Content -->
+                    <div style="position: relative; z-index: 2;">
+                        <p
+                            style="color: #457b9d; font-size: 1.3rem; line-height: 1.6; margin-bottom: 25px; font-weight: 500;">
+                            🎯 <strong>Everything you need to know about FastPast</strong> - from getting started to
+                            advanced features!
+                        </p>
+
+                        <!-- Quick Stats -->
+                        <div
+                            style="display: flex; justify-content: center; gap: 30px; margin-bottom: 25px; flex-wrap: wrap;">
+                            <div
+                                style="background: rgba(69,123,157,0.1); padding: 15px 25px; border-radius: 15px; border: 2px solid rgba(69,123,157,0.2);">
+                                <div style="color: #1d3557; font-size: 1.8rem; font-weight: bold;">5+</div>
+                                <div style="color: #457b9d; font-size: 0.9rem;">Categories</div>
+                            </div>
+                            <div
+                                style="background: rgba(69,123,157,0.1); padding: 15px 25px; border-radius: 15px; border: 2px solid rgba(69,123,157,0.2);">
+                                <div style="color: #1d3557; font-size: 1.8rem; font-weight: bold;">15+</div>
+                                <div style="color: #457b9d; font-size: 0.9rem;">Questions</div>
+                            </div>
+                            <div
+                                style="background: rgba(69,123,157,0.1); padding: 15px 25px; border-radius: 15px; border: 2px solid rgba(69,123,157,0.2);">
+                                <div style="color: #1d3557; font-size: 1.8rem; font-weight: bold;">24/7</div>
+                                <div style="color: #457b9d; font-size: 0.9rem;">Available</div>
+                            </div>
+                        </div>
+
+                        <!-- Call to Action -->
+                        <a href="#first-faq-category" style="text-decoration: none;">
+                            <div style="background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%); color: white; padding: 15px 30px; border-radius: 25px; display: inline-block; font-weight: 600; font-size: 1.1rem; box-shadow: 0 8px 20px rgba(69,123,157,0.3); transition: all 0.3s ease; cursor: pointer;"
+                                onmouseover="this.style.transform='translateY(-3px)'"
+                                onmouseout="this.style.transform='translateY(0)'">
+                                <i class="fas fa-arrow-down" style="margin-right: 10px;"></i>
+                                All answers displayed below!
+                                <i class="fas fa-arrow-down" style="margin-left: 10px;"></i>
+                            </div>
+                        </a>
+
+                        <p style="color: #457b9d; font-size: 1rem; margin-top: 20px; font-style: italic;">
+                            💡 No clicking required - everything is visible!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="faq-categories">
+            <div class="container">
+                <div class="faq-category" id="first-faq-category">
+                    <h3>General Questions</h3>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-info-circle accordion-icon"></i>What is
+                            FastPast?</button>
+                        <div class="panel">
+                            <p><strong>FastPast</strong> is a powerful, all-in-one online video and audio downloading
+                                service designed for simplicity and speed. Our platform lets you download videos and
+                                extract audio from over 1000+ websites including YouTube, TikTok, Instagram, Facebook,
+                                Twitter, and many more—all in just a few clicks.</p>
+                            <p><strong>Key Features:</strong> Multiple format support (MP4, MP3, WebM), various quality
+                                options (up to 4K for videos), batch downloading for premium users, automatic subtitle
+                                embedding, and cross-platform compatibility. Whether you're on desktop, tablet, or
+                                mobile, FastPast provides a seamless experience for content creators, educators, and
+                                casual users who want to save their favorite media locally.</p>
+                            <p>With our intuitive interface and no complicated setup required, you can start downloading
+                                within seconds of visiting our site—no installations, no registrations needed for basic
+                                use.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-dollar-sign accordion-icon"></i>Is FastPast free to
+                            use?</button>
+                        <div class="panel">
+                            <p><strong>Yes!</strong> FastPast offers a completely free tier that allows you to start
+                                downloading videos and audio immediately without any cost. Our free plan includes access
+                                to all major features with some limitations:</p>
+                            <p><strong>Free Plan Benefits:</strong> Download videos up to 30 minutes long, standard
+                                quality options (up to 1080p), single video downloads (one at a time), basic format
+                                support (MP4, MP3), and no watermarks or ads on downloaded content.</p>
+                            <p><strong>Premium Plans:</strong> For users who need more power, we offer premium
+                                subscriptions starting at just $4.99/month. Premium plans unlock unlimited download
+                                length, 4K quality options, batch downloading (up to 10 concurrent downloads), priority
+                                processing, and priority customer support. <a href="/pricing">View our pricing
+                                    plans</a> to find the perfect fit for your needs.</p>
+                            <p>No credit card required to try FastPast free—just visit, paste a URL, and start
+                                downloading!</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-globe accordion-icon"></i>What platforms does
+                            FastPast support?</button>
+                        <div class="panel">
+                            <p><strong>FastPast supports 1000+ websites!</strong> Our service works with virtually every
+                                major social media platform and video sharing site, including:</p>
+                            <p><strong>Popular Platforms:</strong> YouTube, TikTok, Instagram, Facebook, Twitter/X,
+                                Pinterest, Vimeo, Dailymotion, Reddit, Twitch, Snapchat, LinkedIn, and many more. We
+                                regularly update our platform support to include new and emerging video services.</p>
+                            <p><strong>Easy Compatibility Check:</strong> Simply paste any video URL into our download
+                                field. If the platform is supported, our system will automatically detect it and show
+                                available quality options. If a platform isn't supported yet, you'll receive a helpful
+                                message—and you can request support for it on our contact page.</p>
+                            <p>We continuously expand our platform coverage based on user requests, so if your favorite
+                                site isn't currently supported, let us know and we'll work on adding it!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BRAND NEW WORKING FAQ SECTION -->
+                <div
+                    style="background: white; padding: 40px; border-radius: 15px; margin: 30px 0; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h2 style="color: #333; text-align: center; margin-bottom: 30px; font-size: 2.5rem;">✨ Quick FAQ -
+                        Guaranteed to Work!</h2>
+
+                    <!-- Question 1 - Always Visible -->
+                    <div
+                        style="margin-bottom: 25px; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                        <div
+                            style="background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%); color: white; padding: 25px 30px; font-size: 20px; font-weight: bold; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(69,123,157,0.3);">
+                            <i class="fas fa-info-circle"
+                                style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>What is FastPast?
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 30px; border-radius: 0 0 15px 15px; border-top: 3px solid #457b9d;">
+                            <p
+                                style="line-height: 1.8; margin-bottom: 15px; color: #333; font-size: 16px; position: relative; padding-left: 20px;">
+                                <span
+                                    style="position: absolute; left: 0; top: 0; color: #457b9d; font-weight: bold; font-size: 18px;">▶</span><strong
+                                    style="color: #457b9d; font-weight: 700;">FastPast</strong> is a powerful video
+                                downloading tool that lets you save videos from popular platforms like YouTube, TikTok,
+                                Instagram, and more!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Question 2 - Always Visible -->
+                    <div
+                        style="margin-bottom: 25px; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                        <div
+                            style="background: linear-gradient(135deg, #1d3557 0%, #457b9d 100%); color: white; padding: 25px 30px; font-size: 20px; font-weight: bold; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(29,53,87,0.3);">
+                            <i class="fas fa-globe" style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>What
+                            platforms are supported?
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 30px; border-radius: 0 0 15px 15px; border-top: 3px solid #1d3557;">
+                            <p
+                                style="line-height: 1.8; margin-bottom: 15px; color: #333; font-size: 16px; position: relative; padding-left: 20px;">
+                                <span
+                                    style="position: absolute; left: 0; top: 0; color: #1d3557; font-weight: bold; font-size: 18px;">▶</span>We
+                                support <strong style="color: #1d3557; font-weight: 700;">YouTube, TikTok, Instagram,
+                                    Facebook, Twitter, Vimeo</strong>, and 1000+ other video platforms!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Question 3 - Always Visible -->
+                    <div
+                        style="margin-bottom: 25px; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                        <div
+                            style="background: linear-gradient(135deg, #5a9bd4 0%, #457b9d 100%); color: white; padding: 25px 30px; font-size: 20px; font-weight: bold; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(90,155,212,0.3);">
+                            <i class="fas fa-dollar-sign"
+                                style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>Is FastPast free to use?
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 30px; border-radius: 0 0 15px 15px; border-top: 3px solid #5a9bd4;">
+                            <p
+                                style="line-height: 1.8; margin-bottom: 15px; color: #333; font-size: 16px; position: relative; padding-left: 20px;">
+                                <span
+                                    style="position: absolute; left: 0; top: 0; color: #5a9bd4; font-weight: bold; font-size: 18px;">▶</span><strong
+                                    style="color: #5a9bd4; font-weight: 700;">Yes!</strong> Free tier includes 5
+                                downloads per day. Premium plans available for unlimited downloads with faster speeds!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Question 4 - Always Visible -->
+                    <div
+                        style="margin-bottom: 25px; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                        <div
+                            style="background: linear-gradient(135deg, #457b9d 0%, #5a9bd4 100%); color: white; padding: 25px 30px; font-size: 20px; font-weight: bold; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(69,123,157,0.3);">
+                            <i class="fas fa-download" style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>How
+                            do I download a video?
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 30px; border-radius: 0 0 15px 15px; border-top: 3px solid #457b9d;">
+                            <p
+                                style="line-height: 1.8; margin-bottom: 15px; color: #333; font-size: 16px; position: relative; padding-left: 20px;">
+                                <span
+                                    style="position: absolute; left: 0; top: 0; color: #457b9d; font-weight: bold; font-size: 18px;">▶</span><strong
+                                    style="color: #457b9d; font-weight: 700;">Simple 3 steps:</strong> 1) Copy the video
+                                URL, 2) Paste it in our input box, 3) Click download and select quality!
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Question 5 - Always Visible -->
+                    <div
+                        style="margin-bottom: 25px; background: white; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid rgba(0,0,0,0.05);">
+                        <div
+                            style="background: linear-gradient(135deg, #1d3557 0%, #5a9bd4 100%); color: white; padding: 25px 30px; font-size: 20px; font-weight: bold; border-radius: 15px 15px 0 0; box-shadow: 0 4px 15px rgba(29,53,87,0.3);">
+                            <i class="fas fa-headset"
+                                style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>Having issues or need
+                            support?
+                        </div>
+                        <div
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 30px; border-radius: 0 0 15px 15px; border-top: 3px solid #1d3557;">
+                            <p
+                                style="line-height: 1.8; margin-bottom: 15px; color: #333; font-size: 16px; position: relative; padding-left: 20px;">
+                                <span
+                                    style="position: absolute; left: 0; top: 0; color: #1d3557; font-weight: bold; font-size: 18px;">▶</span><strong
+                                    style="color: #1d3557; font-weight: 700;">Contact us!</strong> Check your internet
+                                connection first, then refresh the page. If problems persist, reach out to our support
+                                team!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-category">
+                    <h3>Downloading & Formats</h3>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-download accordion-icon"></i>How do I download a
+                            video?</button>
+                        <div class="panel">
+                            <p><strong>Simple 4-Step Process:</strong></p>
+                            <p><strong>Step 1 - Copy URL:</strong> Open the video on your preferred platform (YouTube,
+                                TikTok, Instagram, etc.) and copy the video link from your browser's address bar.<br>
+                                <strong>Step 2 - Paste URL:</strong> Come to FastPast.com and paste the URL into our
+                                input field on the homepage.<br>
+                                <strong>Step 3 - Select Format & Quality:</strong> Choose your desired format (MP4 video
+                                or MP3 audio) and quality level (1080p, 720p, 480p, etc.).<br>
+                                <strong>Step 4 - Download:</strong> Click the green "Download" button and your file will
+                                start downloading immediately to your device.
+                            </p>
+                            <p><strong>Typical Download Time:</strong> Most videos download in seconds to a few minutes
+                                depending on file size and your internet speed. Larger videos or lower internet
+                                connections may take longer.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-cogs accordion-icon"></i>Can I download in different
+                            qualities?</button>
+                        <div class="panel">
+                            <p><strong>Yes! Quality Options:</strong> FastPast allows you to choose from multiple
+                                quality settings for every video, giving you full control over file size and video
+                                clarity:</p>
+                            <p><strong>Available Qualities (varies by platform):</strong> 4K (2160p) - Highest quality,
+                                largest file; 1080p Full HD - Excellent quality, standard for most uses; 720p HD - Good
+                                quality, smaller file size; 480p Standard Definition - Quick to download, works on older
+                                devices; 360p Low Quality - Minimal file size for mobile viewing.</p>
+                            <p><strong>Quality Selection Tips:</strong> Choose 1080p for most purposes (great balance of
+                                quality and file size). Select 4K only if you have plenty of storage space. Lower
+                                qualities like 480p are ideal if you're downloading on mobile with limited data. The
+                                specific qualities available depend on what the source platform offers for that
+                                particular video.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-music accordion-icon"></i>Is MP3 audio extraction
+                            available?</button>
+                        <div class="panel">
+                            <p><strong>Absolutely!</strong> FastPast makes it incredibly easy to extract high-quality
+                                audio from any video. Simply select "MP3" as your format, and we'll convert the video's
+                                audio track into a standalone MP3 file.</p>
+                            <p><strong>MP3 Quality Options:</strong> You can choose between 128kbps (good quality,
+                                smaller file), 192kbps (very good quality), and 320kbps (best quality, larger file). The
+                                192kbps option provides an excellent balance of quality and file size for most uses.</p>
+                            <p><strong>Perfect For:</strong> Extracting music from YouTube music videos, saving podcast
+                                episodes, converting music performance videos to audio, backing up audio content, and
+                                creating personal playlists. Use cases are endless—from studying with lecture audio to
+                                enjoying your favorite songs offline.</p>
+                            <p><strong>Legal Note:</strong> Only extract audio from content you have permission to
+                                download. Respect copyright laws and give credit to original creators when sharing
+                                downloaded audio.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-file-video accordion-icon"></i>What video formats are
+                            supported?</button>
+                        <div class="panel">
+                            <p><strong>Video Format Options:</strong> FastPast supports multiple video formats to ensure
+                                compatibility with your devices and needs:</p>
+                            <p><strong>MP4 (Recommended):</strong> Universal format compatible with virtually every
+                                device—phones, tablets, computers, smart TVs. MP4 is the best choice for most users due
+                                to its excellent quality-to-file-size ratio and universal support.<br>
+                                <strong>WebM:</strong> Modern format with excellent compression, ideal for web use and
+                                newer devices. Produces smaller file sizes than MP4.<br>
+                                <strong>FLV (Flash Video):</strong> Legacy format, useful for older systems, less
+                                commonly used today.
+                            </p>
+                            <p><strong>Format Selection Guide:</strong> Choose MP4 unless you have a specific reason to
+                                use another format. It's the most versatile and widely supported. WebM is good if you
+                                want smaller file sizes and are using modern devices. FLV is rarely needed today but
+                                available for compatibility with legacy systems.</p>
+                            <p>If you're unsure, MP4 is always the safe choice—it works everywhere!</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-layer-group accordion-icon"></i>Can I download
+                            multiple videos at once?</button>
+                        <div class="panel">
+                            <p><strong>Feature Availability:</strong> Batch downloading is a premium-only feature. Free
+                                users can download one video at a time, which is perfect for casual use.</p>
+                            <p><strong>Premium Batch Downloading:</strong> Our premium plans unlock the powerful batch
+                                download feature. Premium subscribers can download up to 10 videos simultaneously!
+                                Simply add multiple video URLs, select your preferred format and quality for each, and
+                                let FastPast handle them all at once.</p>
+                            <p><strong>Benefits of Batch Downloading:</strong> Save hours when downloading multiple
+                                videos. Perfect for content creators backing up their work, educators downloading
+                                educational videos, researchers gathering media files, and anyone who needs multiple
+                                videos fast. Premium users experience significantly faster processing due to priority
+                                queue positioning.</p>
+                            <p><strong>Ready to Batch Download?</strong> <a href="/pricing">Upgrade to a premium
+                                    plan</a> starting at just $4.99/month to unlock unlimited batch downloads and many
+                                other premium features!</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-closed-captioning accordion-icon"></i>Are subtitles
+                            included in downloads?</button>
+                        <div class="panel">
+                            <p><strong>Subtitle Support:</strong> Yes! FastPast automatically includes subtitles in your
+                                video downloads whenever they're available from the source platform. This means you can
+                                enjoy videos in any language with built-in captions.</p>
+                            <p><strong>How It Works:</strong> When you download a video that has subtitles available
+                                (common on YouTube, educational platforms, etc.), we automatically embed those subtitles
+                                directly into your video file. You can toggle subtitles on/off using any standard video
+                                player's subtitle controls.</p>
+                            <p><strong>Subtitle File Downloads:</strong> You can also download subtitle files separately
+                                in SRT format (SubRip), which is compatible with virtually all video players, video
+                                editors, and subtitle editing software. This is useful if you want to edit subtitles,
+                                use them in a video editor, or share them separately.</p>
+                            <p><strong>Multiple Languages:</strong> If a video has subtitles in multiple languages, we
+                                provide options to choose which language(s) to download. This is especially helpful for
+                                learning languages or enjoying international content with your preferred subtitle
+                                language.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-category">
+                    <h3>Account & Billing</h3>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-arrow-up accordion-icon"></i>How do I upgrade my
+                            plan?</button>
+                        <div class="panel">
+                            <p><strong>Upgrading is Simple and Instant:</strong> Visit our <a href="/pricing">Pricing
+                                    Page</a> and select the premium plan that best fits your
+                                needs. You can choose between monthly or annual billing, with annual plans offering
+                                significant savings.</p>
+                            <p><strong>Upgrade Process:</strong> Click "Upgrade Now" on your chosen plan, complete the
+                                secure payment process using your preferred method (credit card or PayPal), and your
+                                premium features activate immediately. No waiting, no complications—you'll have instant
+                                access to unlimited downloads, 4K quality, batch downloading, and priority support.</p>
+                            <p><strong>Can I Switch Plans?</strong> Yes! You can upgrade or downgrade your plan at any
+                                time. If you upgrade mid-month, we'll prorate your billing. Changes typically take
+                                effect immediately.</p>
+                            <p><strong>Need Help?</strong> Our support team is available 24/7 for premium users. Contact
+                                us if you have questions about which plan is right for you.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-credit-card accordion-icon"></i>What payment methods
+                            are accepted?</button>
+                        <div class="panel">
+                            <p><strong>Payment Options:</strong> We accept all major payment methods to make it
+                                convenient for you to upgrade:</p>
+                            <p><strong>Credit/Debit Cards:</strong> Visa, Mastercard, American Express, and Discover.
+                                All transactions are processed securely through industry-leading payment processors with
+                                PCI DSS compliance (which means your payment information is protected to the highest
+                                standards).</p>
+                            <p><strong>PayPal:</strong> We also accept PayPal payments, giving you additional security
+                                and buyer protection. Simply choose PayPal during checkout and complete the payment
+                                through your PayPal account.</p>
+                            <p><strong>Payment Security:</strong> All transactions use SSL encryption and are processed
+                                securely. We never store your full credit card information—only necessary billing
+                                details are retained. Your payment information is handled by trusted third-party payment
+                                processors like Stripe to ensure maximum security.</p>
+                            <p><strong>Billing Clarity:</strong> Your receipt and invoice will clearly itemize what
+                                you're paying for. You'll see your subscription details, renewal date, and billing
+                                frequency before confirming payment.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-undo-alt accordion-icon"></i>Can I cancel my
+                            subscription?</button>
+                        <div class="panel">
+                            <p><strong>Yes, Cancel Anytime!</strong> You can cancel your FastPast subscription at any
+                                time—there are no long-term commitments or cancellation fees. Simply log into your
+                                account and manage your subscription settings.</p>
+                            <p><strong>What Happens After Cancellation?</strong> Your premium features remain active
+                                until the end of your current billing period. You'll continue to enjoy unlimited
+                                downloads, batch processing, 4K quality, and priority support through your paid period.
+                                After that, your account reverts to the free tier with standard limitations.</p>
+                            <p><strong>Cancellation Process:</strong> No phone calls, no customer service hassle—just
+                                navigate to your Account Settings, select "Manage Subscription," and click "Cancel." The
+                                cancellation is immediate, though your premium access continues through the end of your
+                                billing cycle.</p>
+                            <p><strong>Want to Re-Subscribe?</strong> If you cancel and change your mind later, you can
+                                reactivate your subscription anytime by choosing a plan on our Pricing page. Your
+                                account data is preserved, so you pick up right where you left off.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-money-bill-wave accordion-icon"></i>Do you offer
+                            refunds?</button>
+                        <div class="panel">
+                            <p>We offer a 30-day money-back guarantee for all premium subscriptions. If you're not
+                                satisfied,
+                                contact our support team for a full refund.</p>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="faq-category">
+                    <h3>Troubleshooting</h3>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-video-slash accordion-icon"></i>Video won't play
+                            after download</button>
+                        <div class="panel">
+                            <p>Try using a different video player like VLC Media Player. If the issue persists,
+                                re-download the video or try a different format. Some videos may have codec
+                                compatibility issues.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-link accordion-icon"></i>URL not recognized
+                            error</button>
+                        <div class="panel">
+                            <p>Ensure you're copying the complete URL from the video platform. Some platforms use
+                                shortened URLs that may not work. Try using the full URL from your browser's address
+                                bar.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-ban accordion-icon"></i>Download blocked by
+                            antivirus</button>
+                        <div class="panel">
+                            <p>Temporarily disable your antivirus during download, or add FastPast to your antivirus
+                                exceptions. Our service is safe and doesn't contain malware.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="faq-category">
+                    <h3>Privacy & Security</h3>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-lock accordion-icon"></i>Is my data secure?</button>
+                        <div class="panel">
+                            <p>Yes, we use SSL encryption for all data transfers and don't store your downloaded files
+                                on our servers. Your privacy and security are our top priorities.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-eye-slash accordion-icon"></i>Do you track my
+                            downloads?</button>
+                        <div class="panel">
+                            <p>We only track anonymous usage statistics to improve our service. We don't log specific
+                                URLs or monitor individual user activity. Your downloads remain completely private.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-user-shield accordion-icon"></i>How do you protect
+                            user data?</button>
+                        <div class="panel">
+                            <p>We implement industry-standard security measures including encryption, regular security
+                                audits, and compliance with data protection regulations like GDPR.</p>
+                        </div>
+                    </div>
+                    <div class="qa-item">
+                        <button class="accordion"><i class="fas fa-cookie-bite accordion-icon"></i>Do you use
+                            cookies?</button>
+                        <div class="panel">
+                            <p>We use essential cookies for website functionality and optional analytics cookies.
+                                You can control cookie preferences in your browser settings.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </main>
+
+    <script>
+        // FAST AND OPTIMIZED FAQ SYSTEM - LIGHTWEIGHT CONVERSION
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('⚡ Optimizing FAQ for speed...');
+
+            const accordions = document.querySelectorAll('.accordion');
+
+            accordions.forEach(function (accordion, index) {
+                const panel = accordion.nextElementSibling;
+
+                if (panel && panel.classList.contains('panel')) {
+                    // ONLY use your website brand colors
+                    const brandColors = ['#457b9d', '#1d3557', '#5a9bd4', '#457b9d', '#1d3557'];
+                    const color = brandColors[index % brandColors.length];
+
+                    // Lightweight styling
+                    const newDiv = document.createElement('div');
+                    // Add dark mode classes and properties
+                    newDiv.className = 'faq-dynamic-card';
+                    newDiv.style.cssText = `
+                        margin-bottom: 20px;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        border: 1px solid rgba(69,123,157,0.1);
+                        transition: all 0.3s ease;
+                    `;
+
+                    const questionHeader = document.createElement('div');
+                    questionHeader.style.cssText = `
+                        background: linear-gradient(135deg, ${color} 0%, #1d3557 100%);
+                        color: white;
+                        padding: 20px 25px;
+                        font-size: 18px;
+                        font-weight: 600;
+                        border-radius: 12px 12px 0 0;
+                    `;
+                    // Ensure every question has an icon and uses brand colors
+                    const questionText = accordion.textContent || accordion.innerText;
+                    let iconClass = '';
+
+                    // Add appropriate icons based on question content
+                    if (questionText.includes('What is') || questionText.includes('what is')) {
+                        iconClass = 'fas fa-info-circle';
+                    } else if (questionText.includes('platform') || questionText.includes('support')) {
+                        iconClass = 'fas fa-globe';
+                    } else if (questionText.includes('free') || questionText.includes('cost') || questionText.includes('price') || questionText.includes('billing')) {
+                        iconClass = 'fas fa-dollar-sign';
+                    } else if (questionText.includes('download') || questionText.includes('save')) {
+                        iconClass = 'fas fa-download';
+                    } else if (questionText.includes('format') || questionText.includes('quality') || questionText.includes('video')) {
+                        iconClass = 'fas fa-file-video';
+                    } else if (questionText.includes('account') || questionText.includes('profile') || questionText.includes('premium')) {
+                        iconClass = 'fas fa-user';
+                    } else if (questionText.includes('cancel') || questionText.includes('refund')) {
+                        iconClass = 'fas fa-times-circle';
+                    } else if (questionText.includes('problem') || questionText.includes('issue') || questionText.includes('error') || questionText.includes('troubleshoot')) {
+                        iconClass = 'fas fa-exclamation-triangle';
+                    } else if (questionText.includes('speed') || questionText.includes('fast') || questionText.includes('slow')) {
+                        iconClass = 'fas fa-tachometer-alt';
+                    } else if (questionText.includes('device') || questionText.includes('mobile') || questionText.includes('phone')) {
+                        iconClass = 'fas fa-mobile-alt';
+                    } else {
+                        iconClass = 'fas fa-question-circle'; // Default icon
+                    }
+
+                    questionHeader.innerHTML = `<i class="${iconClass}" style="margin-right: 12px; color: rgba(255,255,255,0.9);"></i>${questionText}`;
+
+                    const answerSection = document.createElement('div');
+                    answerSection.className = 'faq-answer-section';
+                    answerSection.style.cssText = `
+                        background: #f8f9fa;
+                        padding: 25px;
+                        border-radius: 0 0 12px 12px;
+                        border-top: 2px solid ${color};
+                    `;
+                    answerSection.innerHTML = panel.innerHTML;
+
+                    // Simple paragraph styling
+                    const paragraphs = answerSection.querySelectorAll('p');
+                    paragraphs.forEach(p => {
+                        p.className = 'faq-answer-text';
+                        p.style.cssText = `
+                            line-height: 1.7;
+                            margin-bottom: 12px;
+                            color: #333;
+                            font-size: 15px;
+                        `;
+                    });
+
+                    newDiv.appendChild(questionHeader);
+                    newDiv.appendChild(answerSection);
+
+                    const qaItem = accordion.parentElement;
+                    qaItem.parentNode.replaceChild(newDiv, qaItem);
+                }
+            });
+
+            console.log('✅ FAQ optimized for speed!');
+
+            // Add enhanced dark mode support for dynamically generated elements
+            const style = document.createElement('style');
+            style.textContent = `
+                /* Enhanced Dark Mode for Dynamically Generated FAQ Cards */
+                .dark-mode .faq-dynamic-card {
+                    background: rgba(29,53,87,0.7) !important;
+                    backdrop-filter: blur(10px) !important;
+                    border: 1px solid rgba(168,218,220,0.2) !important;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+                }
+
+                .dark-mode .faq-answer-section {
+                    background: rgba(69,123,157,0.2) !important;
+                    backdrop-filter: blur(5px) !important;
+                }
+
+                .dark-mode .faq-answer-text {
+                    color: #a8dadc !important;
+                }
+
+                /* Dark mode for any remaining elements */
+                .dark-mode .container {
+                    color: #a8dadc;
+                }
+                
+                /* Ensure ALL icons stay visible in dark mode */
+                .dark-mode i.fas {
+                    color: #a8dadc !important;
+                    opacity: 1 !important;
+                    text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+                }
+
+                /* Specific fix for category header icons */
+                .dark-mode .faq-category h3 i.fas,
+                .dark-mode h3 i.fas,
+                .dark-mode h2 i.fas {
+                    color: #a8dadc !important;
+                    opacity: 1 !important;
+                    filter: drop-shadow(1px 1px 3px rgba(0,0,0,0.5)) !important;
+                }
+            `;
+            document.head.appendChild(style);
+        });
+
+        // Lightweight CSS for FAQ optimization plus COMPREHENSIVE DARK MODE
+        const style = document.createElement('style');
+        style.textContent = `
+            .faq-optimized h3 {
+                background: linear-gradient(135deg, #457b9d 0%, #1d3557 100%);
+                color: white;
+                text-align: center;
+                padding: 25px 30px;
+                border-radius: 15px;
+                font-size: 2.2rem;
+                font-weight: 700;
+                margin: 30px 0 20px 0;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+                box-shadow: 0 8px 20px rgba(69,123,157,0.2);
+                transition: transform 0.2s ease;
+            }
+            .faq-optimized h3:hover {
+                transform: translateY(-2px);
+            }
+
+            /* ========================================
+               COMPREHENSIVE DARK MODE SUPPORT FOR FAQ
+               ======================================== */
+
+            /* Dark Mode for FAQ Hero Section */
+            .dark-mode .faq-hero {
+                background: linear-gradient(135deg, rgba(29,53,87,0.95) 0%, rgba(69,123,157,0.95) 100%) !important;
+            }
+
+            .dark-mode .faq-hero h2 {
+                color: #a8dadc !important;
+                text-shadow: 2px 2px 8px rgba(0,0,0,0.5) !important;
+            }
+
+            /* Dark Mode for Welcome Section */
+            .dark-mode div[style*="background: linear-gradient(135deg, rgba(255,255,255,0.95)"] {
+                background: linear-gradient(135deg, rgba(29,53,87,0.8) 0%, rgba(69,123,157,0.6) 100%) !important;
+                backdrop-filter: blur(15px) !important;
+                border: 2px solid rgba(168,218,220,0.2) !important;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.3) !important;
+            }
+
+            .dark-mode div[style*="color: #457b9d; font-size: 1.3rem"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode div[style*="color: #457b9d; font-size: 1rem"] {
+                color: rgba(168,218,220,0.8) !important;
+            }
+
+            /* Dark Mode for Stats Cards */
+            .dark-mode div[style*="background: rgba(69,123,157,0.1)"] {
+                background: rgba(168,218,220,0.15) !important;
+                border: 2px solid rgba(168,218,220,0.25) !important;
+                backdrop-filter: blur(10px) !important;
+            }
+
+            .dark-mode div[style*="color: #1d3557; font-size: 1.8rem"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode div[style*="color: #457b9d; font-size: 0.9rem"] {
+                color: rgba(168,218,220,0.8) !important;
+            }
+
+            /* Dark Mode for FAQ Cards */
+            .dark-mode div[style*="background: white; border-radius: 15px"] {
+                background: rgba(29,53,87,0.6) !important;
+                backdrop-filter: blur(10px) !important;
+                border: 1px solid rgba(168,218,220,0.2) !important;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+            }
+
+            .dark-mode div[style*="background: linear-gradient(135deg, #f8f9fa"] {
+                background: rgba(69,123,157,0.2) !important;
+                backdrop-filter: blur(5px) !important;
+            }
+
+            .dark-mode p[style*="color: #333"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode span[style*="color: #457b9d"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode strong[style*="color: #457b9d"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode span[style*="color: #1d3557"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode strong[style*="color: #1d3557"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode span[style*="color: #5a9bd4"] {
+                color: #a8dadc !important;
+            }
+
+            .dark-mode strong[style*="color: #5a9bd4"] {
+                color: #a8dadc !important;
+            }
+
+            /* Dark Mode for FAQ Category Headers */
+            .dark-mode .faq-category h3 {
+                background: linear-gradient(135deg, rgba(168,218,220,0.2) 0%, rgba(90,155,212,0.3) 100%) !important;
+                color: #a8dadc !important;
+                backdrop-filter: blur(10px) !important;
+                border: 2px solid rgba(168,218,220,0.3) !important;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important;
+            }
+
+
+
+            /* Dark Mode for Main Content */
+            .dark-mode main {
+                background: rgba(29,53,87,0.1) !important;
+            }
+
+            .dark-mode .container {
+                color: #a8dadc;
+            }
+
+            /* Dark Mode for Links */
+            .dark-mode a {
+                color: #5a9bd4 !important;
+            }
+
+            .dark-mode a:hover {
+                color: #a8dadc !important;
+            }
+
+            /* SPECIFIC FIX: Dark Mode for Quick FAQ Section */
+            .dark-mode div[style*="background: white; padding: 40px; border-radius: 15px"] {
+                background: rgba(29,53,87,0.7) !important;
+                backdrop-filter: blur(15px) !important;
+                border: 2px solid rgba(168,218,220,0.2) !important;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.4) !important;
+            }
+
+            .dark-mode h2[style*="color: #333; text-align: center"] {
+                color: #a8dadc !important;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+            }
+
+            /* SPECIFIC FIX: Dark Mode for H3 Category Headers with Icons */
+            .dark-mode h2[style*="color: #1d3557"] {
+                color: #a8dadc !important;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+            }
+
+            .dark-mode h3[style*="color: #1d3557"] {
+                color: #a8dadc !important;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+            }
+
+            /* Make H3 icons visible in dark mode */
+            .dark-mode h3 i {
+                color: #a8dadc !important;
+                opacity: 1 !important;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+            }
+
+            .dark-mode h2 i {
+                color: #a8dadc !important;
+                opacity: 1 !important;
+                text-shadow: 1px 1px 3px rgba(0,0,0,0.5) !important;
+            }
+
+            /* Ensure all category header icons are visible */
+            .dark-mode .faq-category h3 i,
+            .dark-mode .faq-category h2 i {
+                color: #a8dadc !important;
+                opacity: 1 !important;
+                filter: drop-shadow(1px 1px 3px rgba(0,0,0,0.5)) !important;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // FAST AND OPTIMIZED H3 CATEGORY HEADERS
+        document.addEventListener('DOMContentLoaded', function () {
+            const categoryContainer = document.querySelector('.faq-categories .container');
+            if (categoryContainer) {
+                categoryContainer.classList.add('faq-optimized');
+            }
+
+            const categoryHeaders = document.querySelectorAll('.faq-category h3');
+
+            categoryHeaders.forEach(function (header, index) {
+                console.log('Optimizing header:', header.textContent);
+
+                // ONLY use your brand colors for headers
+                const brandColors = ['#457b9d', '#1d3557', '#5a9bd4', '#457b9d'];
+                const color = brandColors[index % brandColors.length];
+
+                // Lightweight styling
+                header.style.cssText = `
+                    background: linear-gradient(135deg, ${color} 0%, #1d3557 100%);
+                    color: white;
+                    text-align: center;
+                    padding: 25px 30px;
+                    border-radius: 15px;
+                    font-size: 2.2rem;
+                    font-weight: 700;
+                    margin: 30px 0 20px 0;
+                    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+                    box-shadow: 0 8px 20px rgba(69,123,157,0.2);
+                    transition: transform 0.2s ease;
+                `;
+
+                // Simple hover effect
+                header.addEventListener('mouseover', function () {
+                    this.style.transform = 'translateY(-2px)';
+                });
+
+                header.addEventListener('mouseout', function () {
+                    this.style.transform = 'translateY(0)';
+                });
+
+                console.log('✅ Optimized header:', header.textContent);
+            });
+        });
+    </script>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 0px;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+</body>
+
+</html>

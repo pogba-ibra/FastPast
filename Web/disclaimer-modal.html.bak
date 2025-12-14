@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsible Download Disclaimer</title>
+    <link rel="stylesheet" href="../style/disclaimer-modal.css?v=20251212-FORCE-V4-OVERLAY">
+</head>
+
+<body>
+    <!-- Overlay -->
+    <div class="modal-overlay" id="disclaimerOverlay">
+        <!-- Modal Container -->
+        <div class="modal-container">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="header-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h1>Important Notice: Responsible Use</h1>
+                <p class="header-subtitle">Please read carefully before proceeding</p>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="modal-content" id="modalContent">
+                <!-- Introduction -->
+                <section class="content-section">
+                    <h2>📋 Purpose of This Platform</h2>
+                    <div class="info-box primary">
+                        <p>FastPast is primarily designed to facilitate <strong>educational downloads</strong>
+                            including:</p>
+                        <ul>
+                            <li>📚 Educational materials and resources</li>
+                            <li>🌍 Language learning content</li>
+                            <li>💻 Programming and coding tutorials</li>
+                            <li>📖 Quranic studies and Islamic educational content</li>
+                            <li>🎓 Academic and scholarly materials</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Moral Responsibility -->
+                <section class="content-section">
+                    <h2>⚖️ Your Moral Responsibility</h2>
+                    <div class="info-box warning">
+                        <p><strong>Important:</strong> While this platform provides downloading capabilities, you
+                            bear full personal responsibility for the content you choose to download.</p>
+                        <p>Downloading music, entertainment content, or adult material is <strong>at your own
+                                discretion and moral responsibility</strong>. We strongly encourage you to reflect
+                            on the ethical implications of your actions.</p>
+                    </div>
+                </section>
+
+                <!-- Islamic Guidance -->
+                <section class="content-section">
+                    <h2>🕌 Guidance from the Quran and Sunnah</h2>
+
+                    <div class="quote-box">
+                        <div class="quote-header">From the Noble Quran</div>
+                        <blockquote>
+                            <p class="arabic">وَلَا تَقْفُ مَا لَيْسَ لَكَ بِهِ عِلْمٌ ۚ إِنَّ السَّمْعَ وَالْبَصَرَ
+                                وَالْفُؤَادَ كُلُّ أُولَٰئِكَ كَانَ عَنْهُ مَسْئُولًا</p>
+                            <p class="translation">"And do not pursue that of which you have no knowledge. Indeed,
+                                the hearing, the sight and the heart - about all those [one] will be questioned."
+                            </p>
+                            <cite>— Surah Al-Isra (17:36)</cite>
+                        </blockquote>
+                    </div>
+
+                    <div class="quote-box">
+                        <div class="quote-header">From the Noble Quran</div>
+                        <blockquote>
+                            <p class="arabic">يَا أَيُّهَا الَّذِينَ آمَنُوا اتَّقُوا اللَّهَ وَقُولُوا قَوْلًا
+                                سَدِيدًا</p>
+                            <p class="translation">"O you who have believed, fear Allah and speak words of
+                                appropriate justice."</p>
+                            <cite>— Surah Al-Ahzab (33:70)</cite>
+                        </blockquote>
+                    </div>
+
+                    <div class="quote-box">
+                        <div class="quote-header">From the Sunnah</div>
+                        <blockquote>
+                            <p class="translation">"The halal is clear and the haram is clear, and between them are
+                                matters unclear that are unknown to most people. Whoever is wary of these unclear
+                                matters has absolved his religion and honor. And whoever indulges in them has
+                                indulged in the haram."</p>
+                            <cite>— Sahih al-Bukhari & Sahih Muslim</cite>
+                        </blockquote>
+                    </div>
+
+                    <div class="quote-box">
+                        <div class="quote-header">From the Sunnah</div>
+                        <blockquote>
+                            <p class="translation">"Part of the perfection of one's Islam is his leaving that which
+                                does not concern him."</p>
+                            <cite>— Jami' at-Tirmidhi</cite>
+                        </blockquote>
+                    </div>
+                </section>
+
+                <!-- Ethical Guidelines -->
+                <section class="content-section">
+                    <h2>🌟 Ethical Guidelines</h2>
+                    <div class="info-box success">
+                        <p>We encourage all users to:</p>
+                        <ul>
+                            <li>✅ Prioritize educational and beneficial content</li>
+                            <li>✅ Respect copyright laws and intellectual property rights</li>
+                            <li>✅ Avoid content that contradicts moral and religious values</li>
+                            <li>✅ Use this platform for knowledge enhancement and self-development</li>
+                            <li>✅ Remember that every action has consequences in this life and the hereafter</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- Final Reminder -->
+                <section class="content-section">
+                    <h2>🔔 Final Reminder</h2>
+                    <div class="info-box alert">
+                        <p><strong>Remember:</strong> You are accountable for your choices. This platform is a tool,
+                            and like any tool, its value depends on how you use it.</p>
+                        <p>We advocate for using FastPast to support your educational journey, enhance your skills,
+                            and broaden your knowledge in ways that align with ethical and moral principles.</p>
+                        <p class="accountability-text">إِنَّ اللَّهَ كَانَ عَلَيْكُمْ رَقِيبًا<br><em>"Indeed, Allah
+                                is ever watchful over you." (Quran 4:1)</em></p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <div class="acknowledgment-text" id="acknowledgmentText">
+                    Scroll through the entire message to enable the button
+                </div>
+                <button class="btn-acknowledge" id="btnAcknowledge" disabled>
+                    <span class="btn-text">I Understand and Acknowledge</span>
+                    <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                        <path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/disclaimer-modal.js"></script>
+</body>
+
+</html>

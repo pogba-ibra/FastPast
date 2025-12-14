@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Secure Checkout - Upgrade to FastPast Premium for unlimited downloads and 4K quality.">
+    <title>FastPast - Upgrade Your Plan</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="stylesheet" href="style/payment.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="script.js" defer></script>
+    <script src="../theme-toggle-final.js" defer></script>
+    <link rel="stylesheet" href="style/profile-dropdown.css">
+    <script src="js/profile-dropdown.js" defer></script>
+    <!-- PayPal SDK -->
+    <script
+        src="https://www.paypal.com/sdk/js?client-id=AR4Hy0tDjEbnG5YfLjDdb4nfx9wgc8PBu4iyPb01fkC0NF13uE_-p-LBetY6ROWs9Obj69SJobRrPOow&currency=USD"></script>
+</head>
+
+<body data-page="payment">
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+            </div>
+            <nav>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="payment-hero">
+            <div class="container">
+                <div class="payment-header">
+                    <span class="eyebrow-label"><i class="fas fa-lock"></i> Secure Checkout</span>
+                    <h2>Upgrade to <span class="gradient-text">Premium</span></h2>
+                    <p>Unlock unlimited downloads, 4K quality, and exclusive features</p>
+                </div>
+
+                <div class="payment-content">
+                    <!-- Plan Selection -->
+                    <div class="plan-selection">
+                        <h3>Choose Your Plan</h3>
+
+                        <div class="plan-cards">
+                            <!-- Creator Plan -->
+                            <div class="plan-card" data-plan="creator" data-price="10">
+                                <div class="plan-icon">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                                <h4>Creator</h4>
+                                <div class="plan-price">
+                                    <span class="currency">$</span>
+                                    <span class="amount">10</span>
+                                    <span class="period">/month</span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="fas fa-check"></i> No Ads</li>
+                                    <li><i class="fas fa-check"></i> Unlimited Downloads</li>
+                                    <li><i class="fas fa-check"></i> 4K & HDR Support</li>
+                                    <li><i class="fas fa-check"></i> Early Access</li>
+                                </ul>
+                                <div class="plan-badge">30 Days Access</div>
+                            </div>
+
+                            <!-- Studio Plan -->
+                            <div class="plan-card featured" data-plan="studio" data-price="20">
+                                <div class="popular-tag"><i class="fas fa-star"></i> Best Value</div>
+                                <div class="plan-icon">
+                                    <i class="fas fa-film"></i>
+                                </div>
+                                <h4>Studio</h4>
+                                <div class="plan-price">
+                                    <span class="currency">$</span>
+                                    <span class="amount">20</span>
+                                    <span class="period">/month</span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="fas fa-check"></i> Everything in Creator</li>
+                                    <li><i class="fas fa-check"></i> Playlist Downloads</li>
+                                    <li><i class="fas fa-check"></i> Team Sharing (3 users)</li>
+                                    <li><i class="fas fa-check"></i> Priority Support</li>
+                                </ul>
+                                <div class="plan-badge">30 Days Access</div>
+                            </div>
+
+                            <!-- Lifetime Plan -->
+                            <div class="plan-card lifetime" data-plan="lifetime" data-price="99">
+                                <div class="lifetime-tag"><i class="fas fa-infinity"></i> Forever</div>
+                                <div class="plan-icon">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <h4>Lifetime</h4>
+                                <div class="plan-price">
+                                    <span class="currency">$</span>
+                                    <span class="amount">99</span>
+                                    <span class="period">one-time</span>
+                                </div>
+                                <ul class="plan-features">
+                                    <li><i class="fas fa-check"></i> Everything in Studio</li>
+                                    <li><i class="fas fa-check"></i> Lifetime Access</li>
+                                    <li><i class="fas fa-check"></i> All Future Updates</li>
+                                    <li><i class="fas fa-check"></i> VIP Support</li>
+                                </ul>
+                                <div class="plan-badge sale">
+                                    <span class="original-price">$199</span> Save 50%!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Section -->
+                    <div class="payment-section">
+                        <div class="order-summary">
+                            <h3>Order Summary</h3>
+                            <div class="summary-row">
+                                <span class="summary-label">Selected Plan:</span>
+                                <span class="summary-value" id="selected-plan-name">Select a plan</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Duration:</span>
+                                <span class="summary-value" id="selected-plan-duration">-</span>
+                            </div>
+                            <div class="summary-divider"></div>
+                            <div class="summary-row total">
+                                <span class="summary-label">Total:</span>
+                                <span class="summary-value" id="selected-plan-price">$0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="paypal-container">
+                            <div id="paypal-button-container"></div>
+                            <p class="payment-note">
+                                <i class="fas fa-shield-alt"></i>
+                                Secure payment powered by PayPal
+                            </p>
+                        </div>
+
+                        <div class="payment-features">
+                            <div class="feature">
+                                <i class="fas fa-lock"></i>
+                                <span>SSL Secured</span>
+                            </div>
+                            <div class="feature">
+                                <i class="fas fa-undo"></i>
+                                <span>Money-back Guarantee</span>
+                            </div>
+                            <div class="feature">
+                                <i class="fas fa-headset"></i>
+                                <span>24/7 Support</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/payment.js"></script>
+</body>
+
+</html>

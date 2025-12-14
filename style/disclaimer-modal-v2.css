@@ -1,0 +1,318 @@
+/* ======================================
+   Disclaimer Modal V2 - Guaranteed Full Width
+   ====================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --modal-bg: #1f2937;
+    --modal-content-bg: #111827;
+    --text-color: #f9fafb;
+    --primary-color: #10b981;
+    --border-color: #374151;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    /* Darker overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 1.25rem;
+    backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* Modal Container - The Main Window */
+.modal-container {
+    width: 100%;
+    max-width: 900px;
+    background: var(--modal-bg);
+    border-radius: 16px;
+    overflow: hidden;
+    /* Clips children */
+    display: flex;
+    flex-direction: column;
+    max-height: 88vh;
+    /* Viewport constraint */
+    box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+    border: 1px solid var(--border-color);
+}
+
+/* Header */
+.modal-header {
+    background: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%);
+    padding: 1.75rem 1.5rem;
+    text-align: center;
+    color: white;
+    flex-shrink: 0;
+    /* Never shrink */
+    position: relative;
+    z-index: 10;
+}
+
+.modal-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.modal-header p {
+    margin: 0.5rem 0 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+/* Scrollable Content Area */
+.modal-content {
+    flex-grow: 1;
+    /* Fills remaining space */
+
+    /* SCROLLBAR MAGIC FIX */
+    overflow-y: overlay;
+    /* Edge/Chrome: Scrollbar sits ON TOP of content */
+    /* Fallback for others */
+    overflow-y: auto;
+
+    background: var(--modal-content-bg);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+
+    /* VITAL: NO PADDING HERE */
+    padding: 0;
+}
+
+/* Custom WebKit Scrollbar (Hidden Track) */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+    /* Transparent track */
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: transparent;
+    /* Content shows through */
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+
+/* Content Sections - Containers for text blocks */
+
+/* Improve overall text contrast inside modal */
+.modal-content, .content-section p, .content-section li {
+    color: #e5e7eb; /* light slate for readability */
+}
+.modal-content a {
+    color: #60a5fa; /* clear link color */
+    text-decoration: underline;
+}
+.modal-content a:hover {
+    color: #93c5fd;
+}
+
+.content-section {
+    width: 100%;
+    background: var(--modal-content-bg);
+    /* No margin/padding on the container itself */
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.content-section:last-child {
+    border-bottom: none;
+}
+
+/* Section Title */
+.content-section h2 {
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+    font-size: 1.25rem;
+    margin: 0;
+    padding: 1.5rem 2rem 1rem 2rem;
+    /* Internal padding for text */
+    background: var(--modal-content-bg);
+}
+
+/* The Colored Boxes - EDGE TO EDGE */
+.full-width-box {
+    width: 100%;
+    padding: 1.5rem 2rem;
+    /* Internal padding for text */
+    padding-right: 2.5rem;
+    /* Extra padding right to avoid text under scrollbar */
+    margin: 0;
+    color: #e5e7eb;
+}
+
+/* Box Variants */
+
+/* Highlight specific emphasized phrases with distinct colors */
+/* "educational downloads" inside the blue box */
+.box-primary p strong {
+    color: #93c5fd; /* light blue for emphasis */
+}
+/* "at your own moral discretion" inside the amber warning box (but not the first Important:) */
+.box-warning p:nth-of-type(2) strong {
+    color: #fbbf24; /* vivid amber for visibility */
+}
+/* "Important:" inside the amber warning box (first paragraph) */
+.box-warning p:first-of-type strong {
+    color: #fb923c; /* bright orange to differentiate from the second line */
+}
+
+.box-primary {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05));
+    border-left: 4px solid #3b82f6;
+}
+
+.box-warning {
+    background: linear-gradient(to right, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+    border-left: 4px solid #f59e0b;
+}
+
+.box-success {
+    background: linear-gradient(to right, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    border-left: 4px solid #10b981;
+}
+
+.box-danger {
+    background: linear-gradient(to right, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+    border-left: 4px solid #ef4444;
+}
+
+/* Quote Box Styling */
+.quote-wrapper {
+    width: 100%;
+    padding: 1.5rem 2rem;
+    padding-right: 2.5rem;
+    /* Extra padding right for scrollbar */
+    border-left: 4px solid #8b5cf6;
+    /* Purple for quotes */
+    background: linear-gradient(to right, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.05));
+    margin-bottom: 1px;
+    /* Separator line effect */
+}
+
+.quote {
+    font-style: italic;
+    color: #d1d5db;
+    margin-bottom: 0.5rem;
+    font-size: 1.05rem;
+}
+
+.arabic-text {
+    font-family: 'Amiri', serif;
+    /* Or system font */
+    font-size: 1.4rem;
+    color: #fbbf24;
+    /* Amber */
+    text-align: right;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.citation {
+    display: block;
+    font-size: 0.85rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.5rem;
+}
+
+/* Footer */
+.modal-footer {
+    background: var(--modal-bg);
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+#acknowledgmentText {
+    margin-bottom: 1rem;
+    color: #9ca3af;
+    font-size: 0.9rem;
+}
+
+/* Subtle divider above footer button */
+.modal-footer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent);
+}
+
+.btn-acknowledge {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.85rem 2.25rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease, opacity 0.2s ease;
+}
+.btn-acknowledge:hover:not(:disabled) {
+    background: #0ea678;
+}
+.btn-acknowledge:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.btn-acknowledge:disabled {
+    background: #4b5563;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Terms page highlights */
+.hl-personal { color: #34d399; font-weight: 700; }
+.hl-restrict { color: #f59e0b; font-weight: 700; }
+.hl-termination { color: #ef4444; font-weight: 700; }
+.hl-edu { color: #93c5fd; font-weight: 700; }
+.hl-important { color: #fb923c; font-weight: 700; }
+
+/* Responsive */
+@media (max-width: 640px) {
+    .modal-container {
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .full-width-box,
+    .quote-wrapper,
+    .content-section h2 {
+        padding-left: 1rem;
+        padding-right: 1.5rem;
+    }
+}

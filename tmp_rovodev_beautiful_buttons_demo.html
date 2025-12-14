@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Download Buttons Demo</title>
+    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: "Montserrat", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .demo-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 800px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .demo-title {
+            color: #333;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .demo-subtitle {
+            color: #666;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .buttons-showcase {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            align-items: center;
+            margin: 40px 0;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .feature-list {
+            text-align: left;
+            max-width: 600px;
+            margin: 40px auto;
+            color: #555;
+            line-height: 1.8;
+        }
+        
+        .feature-list h3 {
+            color: #333;
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        .feature-list li {
+            margin-bottom: 8px;
+        }
+        
+        .feature-list i {
+            color: #4facfe;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">🎉 Beautiful Download Buttons</h1>
+        <p class="demo-subtitle">
+            Experience the enhanced download buttons with stunning gradients, smooth animations, and interactive effects!
+        </p>
+        
+        <div class="buttons-showcase">
+            <div class="button-group">
+                <button class="btn download-btn" id="demo-download-btn">
+                    <span class="btn-content"><i class="fas fa-download"></i> Download</span>
+                </button>
+                
+                <button class="btn download-other-btn" id="demo-download-other-btn">
+                    <span class="btn-content"><i class="fas fa-redo"></i> Download Other Video</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="feature-list">
+            <h3><i class="fas fa-sparkles"></i> Enhanced Features:</h3>
+            <ul>
+                <li><i class="fas fa-palette"></i> <strong>Beautiful Gradients:</strong> Red-orange for Download, Blue gradient for Download Other Video</li>
+                <li><i class="fas fa-magic"></i> <strong>Smooth Animations:</strong> Hover effects with scaling and glow</li>
+                <li><i class="fas fa-lightbulb"></i> <strong>Shimmer Effect:</strong> Animated light sweep on hover</li>
+                <li><i class="fas fa-hand-pointer"></i> <strong>Interactive Icons:</strong> Icons rotate and scale on hover</li>
+                <li><i class="fas fa-heartbeat"></i> <strong>Subtle Pulse:</strong> Gentle pulsing animation when idle</li>
+                <li><i class="fas fa-mobile-alt"></i> <strong>Responsive Design:</strong> Looks great on all screen sizes</li>
+                <li><i class="fas fa-gem"></i> <strong>Premium Feel:</strong> Multiple shadow layers and inset highlights</li>
+            </ul>
+        </div>
+        
+        <p style="color: #888; font-size: 0.9rem; margin-top: 30px;">
+            Hover over the buttons to see the beautiful animations in action!
+        </p>
+    </div>
+    
+    <script>
+        // Add click effects for demo
+        document.getElementById('demo-download-btn').addEventListener('click', function() {
+            alert('Download button clicked! ✨\n\nFeatures:\n• Beautiful red-orange gradient\n• Smooth hover animations\n• Icon rotation effects');
+        });
+        
+        document.getElementById('demo-download-other-btn').addEventListener('click', function() {
+            alert('Download Other Video button clicked! 🎬\n\nFeatures:\n• Stunning blue gradient\n• Enhanced hover effects\n• Subtle pulsing animation');
+        });
+    </script>
+</body>
+</html>

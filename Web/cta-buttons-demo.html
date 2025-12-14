@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTA Buttons Demo</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .button-showcase {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .button-example {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .button-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--neutral-gray-800);
+        }
+
+        .button-description {
+            font-size: 1rem;
+            color: var(--neutral-gray-600);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .feature-card-demo {
+            background-color: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 2rem;
+        }
+
+        .feature-card-demo h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--neutral-gray-800);
+        }
+
+        .feature-card-demo p {
+            font-size: 1rem;
+            color: var(--neutral-gray-600);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .button-variants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <header class="section">
+            <h1>Colorful Call-to-Action Buttons</h1>
+            <p class="subtitle">Visually appealing CTA buttons with gradient fills and micro-animations</p>
+        </header>
+
+        <section class="section">
+            <h2>Button Variations</h2>
+            <div class="button-showcase">
+                <div class="button-example">
+                    <h3 class="button-title">Orange to Red</h3>
+                    <p class="button-description">Warm gradient with a glowing effect on hover</p>
+                    <a href="#" class="cta-button cta-orange-red">Try Now</a>
+                </div>
+
+                <div class="button-example">
+                    <h3 class="button-title">Blue to Purple</h3>
+                    <p class="button-description">Cool gradient with a soft glow on hover</p>
+                    <a href="#" class="cta-button cta-blue-purple">Try Now</a>
+                </div>
+
+                <div class="button-example">
+                    <h3 class="button-title">Green to Teal</h3>
+                    <p class="button-description">Fresh gradient with a bright glow on hover</p>
+                    <a href="#" class="cta-button cta-green-teal">Try Now</a>
+                </div>
+            </div>
+
+            <div class="button-showcase">
+                <div class="button-example">
+                    <h3 class="button-title">Pink to Purple</h3>
+                    <p class="button-description">Playful gradient with a vibrant glow on hover</p>
+                    <a href="#" class="cta-button cta-pink-purple">Try Now</a>
+                </div>
+
+                <div class="button-example">
+                    <h3 class="button-title">Yellow to Orange</h3>
+                    <p class="button-description">Energetic gradient with a warm glow on hover</p>
+                    <a href="#" class="cta-button cta-yellow-orange">Try Now</a>
+                </div>
+
+                <div class="button-example">
+                    <h3 class="button-title">Teal to Blue</h3>
+                    <p class="button-description">Professional gradient with a cool glow on hover</p>
+                    <a href="#" class="cta-button cta-teal-blue">Try Now</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>Button Sizes and States</h2>
+            <div class="button-variants">
+                <a href="#" class="cta-button cta-orange-red cta-small">Small</a>
+                <a href="#" class="cta-button cta-blue-purple">Regular</a>
+                <a href="#" class="cta-button cta-green-teal cta-large">Large</a>
+            </div>
+            <div class="button-variants">
+                <a href="#" class="cta-button cta-pink-purple">Default</a>
+                <a href="#" class="cta-button cta-yellow-orange cta-pulse">With Pulse</a>
+                <a href="#" class="cta-button cta-teal-blue cta-shimmer">With Shimmer</a>
+            </div>
+            <div class="button-variants">
+                <a href="#" class="cta-button cta-orange-red">Enabled</a>
+                <button class="cta-button cta-blue-purple" disabled>Disabled</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>CTA Buttons in Feature Cards</h2>
+            <div class="feature-card-demo">
+                <h3>Video Editing</h3>
+                <p>Edit your downloaded videos with built-in tools for trimming, cropping, and applying filters. Create professional-looking videos with our intuitive editor.</p>
+                <a href="#" class="cta-button cta-orange-red feature-cta">Try Video Editing Now</a>
+            </div>
+
+            <div class="feature-card-demo">
+                <h3>Batch Download</h3>
+                <p>Download entire playlists or multiple videos at once with our powerful batch downloader. Save time with queue management.</p>
+                <a href="#" class="cta-button cta-blue-purple feature-cta">Start Batch Download</a>
+            </div>
+
+            <div class="feature-card-demo">
+                <h3>AI Summarization</h3>
+                <p>Generate concise summaries of video content using advanced AI technology. Get key points without watching the entire video.</p>
+                <a href="#" class="cta-button cta-green-teal feature-cta">Try AI Summarization</a>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>CTA Buttons with Icons</h2>
+            <div class="button-variants">
+                <a href="#" class="cta-button cta-orange-red cta-with-icon">
+                    <i class="fas fa-play cta-icon"></i>
+                    Play Video
+                </a>
+                <a href="#" class="cta-button cta-blue-purple cta-with-icon">
+                    <i class="fas fa-download cta-icon"></i>
+                    Download Now
+                </a>
+                <a href="#" class="cta-button cta-green-teal cta-with-icon">
+                    <i class="fas fa-magic cta-icon"></i>
+                    Try AI Magic
+                </a>
+                <a href="#" class="cta-button cta-pink-purple cta-with-icon">
+                    <i class="fas fa-share-alt cta-icon"></i>
+                    Share Content
+                </a>
+                <a href="#" class="cta-button cta-yellow-orange cta-with-icon">
+                    <i class="fas fa-cloud-upload-alt cta-icon"></i>
+                    Upload to Cloud
+                </a>
+                <a href="#" class="cta-button cta-teal-blue cta-with-icon">
+                    <i class="fas fa-cog cta-icon"></i>
+                    Customize Settings
+                </a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="FastPast Privacy Policy - We prioritize your privacy with SSL encryption, zero tracking, and anonymous usage.">
+    <title>FastPast - Privacy & Security</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="script.js" defer></script>
+    <script src="../theme-toggle-final.js" defer></script>
+    <link rel="stylesheet" href="style/profile-dropdown.css">
+    <script src="js/profile-dropdown.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+                <div class="lamp-rope-toggle" id="lamp-rope-toggle" title="Toggle Dark Mode">
+                    <div class="container">
+                        <div class="planet"></div>
+                        <div class="orbit">
+                            <div class="moon"></div>
+                        </div>
+                    </div>
+                    <div class="solar-system">
+                        <div id="sun"></div>
+
+                        <div class="orbit mercury-orbit"></div>
+                        <div class="mercury-spin">
+                            <div id="mercury"></div>
+                        </div>
+
+                        <div class="orbit venus-orbit"></div>
+                        <div class="venus-spin">
+                            <div id="venus"></div>
+                        </div>
+
+                        <div class="orbit earth-orbit"></div>
+                        <div class="earth-spin">
+                            <div class="orbit moon-orbit"></div>
+                            <div class="moon-spin">
+                                <div id="moon"></div>
+                            </div>
+
+                            <img id="earth" alt="Earth"
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/150px-The_Earth_seen_from_Apollo_17.jpg" />
+                        </div>
+
+                        <div class="orbit mars-orbit"></div>
+                        <div class="mars-spin">
+                            <div id="mars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <nav>
+                <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                    <li class="mobile-only button-items"><button class="btn go-premium-btn"
+                            onclick="window.location.href='#pricing-tiers'"><i class="fas fa-crown"></i>
+                            Go
+                            Premium</button></li>
+                    <li class="mobile-only button-items"><button class="btn login-btn"
+                            onclick="window.location.href='login.html'"><i class="fas fa-sign-in-alt"></i>
+                            LOGIN</button></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;"
+                        aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+                <div class="theme-toggle-mobile">
+                    <label class="switch" for="input">
+                        <input id="input" type="checkbox" aria-label="Toggle dark mode" />
+                        <div class="slider round">
+                            <div class="sun-moon">
+                                <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-4" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-5" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-6" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-7" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-8" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <i class="sun fas fa-sun"></i>
+                                <i class="moon far fa-moon"></i>
+                            </div>
+                            <div class="stars">
+                                <svg id="star-1" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-2" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-3" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-4" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </nav>
+        </div>
+        <div class="header-buttons">
+            <button class="btn go-premium-btn"><i class="fas fa-crown"></i> Go Premium</button>
+            <button class="btn login-btn" onclick="window.location.href='login.html'"><i class="fas fa-sign-in-alt"></i>
+                LOGIN</button>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="privacy-hero">
+            <div class="container">
+                <h2><i class="fas fa-shield-alt"></i> Your Privacy & Security Matters</h2>
+                <p>At FastPast, we are committed to protecting your data and ensuring a secure downloading experience
+                    with industry-leading privacy standards.</p>
+                <div style="margin-top: 2rem;">
+                    <span class="security-badge"><i class="fas fa-lock"></i> SSL Encrypted</span>
+                    <span class="security-badge"><i class="fas fa-eye-slash"></i> Zero Tracking</span>
+                    <span class="security-badge"><i class="fas fa-user-secret"></i> Anonymous</span>
+                    <span class="security-badge"><i class="fas fa-database"></i> No Data Storage</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="privacy-content">
+            <div class="container">
+                <h3><i class="fas fa-lock"></i> Data Encryption & Protection</h3>
+                <p>We employ industry-leading encryption methods to safeguard your data during transmission and storage.
+                    Our comprehensive security measures include:</p>
+                <ul>
+                    <li><i class="fas fa-certificate"></i> <strong>SSL/TLS Encryption:</strong> All data transferred
+                        between your device and our servers is
+                        encrypted using secure socket layer (SSL) or transport layer security (TLS) protocols with
+                        256-bit encryption.</li>
+                    <li><i class="fas fa-server"></i> <strong>Secure Servers:</strong> Our servers are hosted in secure
+                        data centers with robust
+                        physical and digital security protocols, including 24/7 monitoring and biometric access
+                        controls.</li>
+                    <li><i class="fas fa-search"></i> <strong>Regular Audits:</strong> We conduct regular security
+                        audits and vulnerability
+                        assessments to identify and address potential risks, ensuring continuous protection.</li>
+                </ul>
+
+                <h3><i class="fas fa-shield-alt"></i> Enhanced Security Features</h3>
+                <p>Beyond our core privacy commitments, FastPast offers advanced security features to give you peace of
+                    mind and ultimate protection:</p>
+                <ul>
+                    <li><i class="fas fa-bug"></i> <strong>Client-Side Virus Scan:</strong> Before any download starts,
+                        we integrate with the
+                        VirusTotal API to provide a client-side virus scan badge, ensuring your files are completely
+                        safe.</li>
+                    <li><i class="fas fa-vault"></i> <strong>Zero-Knowledge Encrypted Vault:</strong> Store your
+                        sensitive downloads in a secure,
+                        zero-knowledge encrypted "vault" folder, protected by a second password with AES-256 encryption.
+                    </li>
+                    <li><i class="fab fa-tor-project"></i> <strong>Onion-Service Mirror:</strong> For ultimate
+                        anonymity, access FastPast through our
+                        dedicated Onion-service mirror with a QR code for Tor users, ensuring complete privacy.</li>
+                </ul>
+
+                <h3><i class="fas fa-clock"></i> Data Retention Policy</h3>
+                <p>We believe in minimal data retention and maximum privacy protection. Here's what you need to know:
+                </p>
+                <ul>
+                    <li><i class="fas fa-user-times"></i> <strong>No Personal Data Storage:</strong> We do not store any
+                        personally identifiable
+                        information related to your downloads. Your privacy is our priority.</li>
+                    <li><i class="fas fa-history"></i> <strong>Temporary Download Logs:</strong> Non-identifiable logs
+                        of download requests are kept
+                        for a very limited period (maximum 24 hours) for operational purposes, such as troubleshooting
+                        and
+                        abuse prevention, and are then permanently deleted.</li>
+                    <li><i class="fas fa-ban"></i> <strong>No Third-Party Sharing:</strong> We never share, sell, or
+                        rent your data to third
+                        parties. Your information stays with us and is never monetized.</li>
+                </ul>
+
+                <h3><i class="fas fa-user-shield"></i> User Control Over Data</h3>
+                <p>You have complete control over your data when using FastPast. We empower users with full privacy
+                    autonomy:</p>
+                <ul>
+                    <li><i class="fas fa-user-secret"></i> <strong>Anonymous Usage:</strong> Our service is designed for
+                        anonymous use, meaning you don't
+                        need an account to download. No registration, no tracking, no hassle.</li>
+                    <li><i class="fas fa-eye-slash"></i> <strong>No Tracking:</strong> We do not use persistent cookies
+                        or tracking technologies to
+                        monitor your individual downloading activity. Your browsing remains private.</li>
+                    <li><i class="fas fa-trash-alt"></i> <strong>Data Deletion:</strong> Since we don't store personal
+                        download history, there's no
+                        personal data for you to request deletion of. Privacy by design.</li>
+                </ul>
+
+                <h3><i class="fas fa-balance-scale"></i> Transparency & Reports</h3>
+                <p>We are committed to transparency regarding our data practices and believe in open communication with
+                    our users.</p>
+                <p>While we do not currently publish formal transparency reports due to our minimal data collection
+                    approach, we are always open to inquiries
+                    about our security measures and privacy practices. For any questions regarding our privacy and
+                    security protocols, please don't hesitate to check our
+                    <a href="/faq" style="color: #457b9d; text-decoration: none; font-weight: 600;">FAQ section</a>
+                    or contact our support team.
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+</body>
+
+</html>

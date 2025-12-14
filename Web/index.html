@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="js/auth-precheck.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="FastPast - Rapidly download and clip videos from YouTube, TikTok, and more. No account required, free and secure.">
+    <title>FastPast</title>
+    <link rel="preload" as="image"
+        href="/style/a-digital-artwork-featuring-a-majestic-j_rS5L4l23SQGNKFFTOez-4A__l6l2AKfSFu3TnDQ0uuM7Q-removebg-preview.png">
+    <link rel="stylesheet" href="/style/style.css">
+    <link rel="stylesheet" href="style\profile-dropdown.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="icon" href="Images/logo.png">
+
+    <script>
+        // Force reload if cached
+        if (!sessionStorage.getItem('scriptReloaded')) {
+            sessionStorage.setItem('scriptReloaded', 'true');
+            location.reload(true);
+        }
+    </script>
+    <script src="script.js?v=20251208-1640" defer></script>
+    <script src="slider.js" defer></script>
+    <script src="mobile-input.js" defer></script>
+    <script src="js/profile-dropdown.js" defer></script>
+    <script src="/theme-toggle-final.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+                <div class="lamp-rope-toggle" id="lamp-rope-toggle" title="Toggle Dark Mode">
+                    <div class="container">
+                        <div class="planet"></div>
+                        <div class="orbit">
+                            <div class="moon"></div>
+                        </div>
+                    </div>
+                    <div class="solar-system">
+                        <div id="sun"></div>
+
+                        <div class="orbit mercury-orbit"></div>
+                        <div class="mercury-spin">
+                            <div id="mercury"></div>
+                        </div>
+
+                        <div class="orbit venus-orbit"></div>
+                        <div class="venus-spin">
+                            <div id="venus"></div>
+                        </div>
+
+                        <div class="orbit earth-orbit"></div>
+                        <div class="earth-spin">
+                            <div class="orbit moon-orbit"></div>
+                            <div class="moon-spin">
+                                <div id="moon"></div>
+                            </div>
+
+                            <img id="earth" alt="Earth" fetchpriority="high"
+                                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/150px-The_Earth_seen_from_Apollo_17.jpg" />
+                        </div>
+
+                        <div class="orbit mars-orbit"></div>
+                        <div class="mars-spin">
+                            <div id="mars"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <nav>
+                <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                <ul id="nav-menu">
+                    <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                    <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                    <li class="mobile-only button-items"><button class="btn go-premium-btn"
+                            onclick="window.location.href='#pricing-tiers'"><i class="fas fa-crown"></i>
+                            Go
+                            Premium</button></li>
+                    <li class="mobile-only button-items"><button class="btn login-btn"
+                            onclick="window.location.href='login.html'"><i class="fas fa-sign-in-alt"></i>
+                            LOGIN</button></li>
+                </ul>
+                <div id="hamburger-btn" class="hamburger">
+                    <input type="checkbox" id="menu-checkbox" style="display: none;"
+                        aria-label="Toggle navigation menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                        class="hamburger-svg">
+                        <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line1" />
+                        <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line2" />
+                        <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round" class="line line3" />
+                    </svg>
+                </div>
+                <div class="theme-toggle-mobile">
+                    <label class="switch" for="input" aria-label="Toggle dark mode">
+                        <input id="input" type="checkbox" />
+                        <div class="slider round">
+                            <div class="sun-moon">
+                                <svg id="moon-dot-1" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-2" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="moon-dot-3" class="moon-dot" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-1" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-2" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="light-ray-3" class="light-ray" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-1" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-2" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-3" class="cloud-dark" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-4" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-5" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                                <svg id="cloud-6" class="cloud-light" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="50"></circle>
+                                </svg>
+                            </div>
+                            <div class="stars">
+                                <svg id="star-1" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-2" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-3" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                                <svg id="star-4" class="star" viewBox="0 0 20 20">
+                                    <path
+                                        d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z">
+                                    </path>
+                                </svg>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn go-premium-btn" onclick="window.location.href='#pricing-tiers'"><i
+                        class="fas fa-crown"></i> Go Premium</button>
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="hero home-hero">
+            <div class="container">
+                <h2 id="animated-headline">Rapid Download & Clip: Videos & Music in Seconds</h2>
+                <p>Paste your video URL from YouTube, TikTok, Pinterest, Facebook, Instagram, and more to start
+                    downloading in MP4 or MP3 format.</p>
+                <div class="download-form">
+                    <div class="input-group">
+                        <label for="video-url" class="visually-hidden">Video URL</label>
+                        <input type="text" placeholder="Paste video URL here..." class="url-input" id="video-url">
+                        <button class="clear-btn" id="clear-btn" title="Clear input">×</button>
+                        <button class="btn process-btn" id="process-btn">Start</button>
+                    </div>
+                    <div class="processing-status" id="processing-status" style="display: none;">
+                        <div class="spinner"></div>
+                        <div class="processing-text">Processing video...</div>
+                    </div>
+                    <div class="video-preview" id="video-preview" style="display: none;">
+                        <div id="video-container" style="position: relative;">
+                            <iframe id="video-player" src="" frameborder="0" allowfullscreen loading="lazy"
+                                allow="autoplay; encrypted-media; picture-in-picture" style="display: none;"></iframe>
+                            <img id="video-thumbnail" src="" alt="Video Thumbnail" style="display: none;" loading="lazy"
+                                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZmIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiMwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBUaHVtYm5haWw8L3RleHQ+PC9zdmc+';">
+                            <div class="loading-overlay" id="video-loading-overlay" style="display: none;">
+                                <div class="spinner"></div>
+                                <div class="loading-text">Loading video...</div>
+                            </div>
+                            <!-- Playlist Navigation Arrows -->
+                            <button class="playlist-nav-btn prev-btn" id="prev-video-btn" style="display: none;"
+                                title="Previous Video">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="playlist-nav-btn next-btn" id="next-video-btn" style="display: none;"
+                                title="Next Video">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <div id="playlist-indicator" class="playlist-indicator" style="display: none;">
+                                <span id="current-video-index">1</span> / <span id="total-videos">--</span>
+                            </div>
+                        </div>
+                        <h3 id="video-title" style="display: none;">Video Title</h3>
+                        <div class="format-selector">
+                            <label for="format">Format:</label>
+                            <select id="format">
+                                <option value="">Select Format</option>
+                                <option value="mp4">MP4 (Video)</option>
+                                <option value="mp3">MP3 (Audio)</option>
+                            </select>
+                            <label for="quality">Quality:</label>
+                            <select id="quality" disabled>
+                                <option value="">Select Quality</option>
+                            </select>
+                            <div class="clip-option" id="clip-option" style="display: none;">
+                                <div class="section-label">Clip Video (Drag handles or type times):</div>
+                                <div class="dual-range-slider" id="dual-range-slider">
+                                    <div class="slider-track">
+                                        <div class="slider-range"></div>
+                                        <div class="slider-handle start-handle" id="start-handle"></div>
+                                        <div class="slider-handle end-handle" id="end-handle"></div>
+                                    </div>
+                                </div>
+                                <div class="time-inputs">
+                                    <div class="time-input-group">
+                                        <label for="start-time">Start:</label>
+                                        <input type="text" id="start-time" placeholder="00:00">
+                                    </div>
+                                    <div class="time-input-group">
+                                        <label for="end-time">End:</label>
+                                        <input type="text" id="end-time" placeholder="00:00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn download-btn" id="download-btn" style="display: none;">
+                            <span class="btn-content"><i class="fas fa-download"></i> Download</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="download-other-container">
+                    <button class="btn download-other-btn" id="download-other-btn" style="display: none;">
+                        <span class="btn-content"><i class="fas fa-redo"></i> Download Other Video</span>
+                        <div class="queue-status" id="queue-status" style="display: none;">
+                            <div class="queue-indicator pending" id="queue-pending">
+                                <i class="fas fa-clock"></i>
+                                <span>Pending</span>
+                            </div>
+                            <div class="queue-indicator downloading" id="queue-downloading" style="display: none;">
+                                <i class="fas fa-download"></i>
+                                <span>Downloading</span>
+                            </div>
+                            <div class="queue-indicator completed" id="queue-completed" style="display: none;">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Completed</span>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+                <div class="download-progress-text" id="download-progress-text" style="display: none;">
+                    <p>Downloading... <span id="progress-percent">0%</span></p>
+                </div>
+                <div class="success-message" id="success-message" style="display: none;">
+                    <i class="fas fa-check-circle"></i> Download started successfully! Check your downloads folder.
+                </div>
+
+                <!-- Playlist List View -->
+                <div id="playlist-view" style="display: none;">
+                    <div class="playlist-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-video"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="pl-total-videos">0</span>
+                                <span class="stat-label">Videos Found</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="pl-total-duration">00:00:00</span>
+                                <span class="stat-label">Total Duration</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-info">
+                                <span class="stat-value" id="pl-completed">0</span>
+                                <span class="stat-label">Downloads Complete</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="playlist-content-card">
+                        <div class="playlist-header">
+                            <div class="header-text">
+                                <h3><span id="pl-count-ready">0</span> Videos Ready for Download</h3>
+                                <p>Choose your preferred quality.</p>
+                            </div>
+                        </div>
+
+                        <div id="playlist-items" class="playlist-items-container">
+                            <!-- Items injected here by JS -->
+                        </div>
+
+                        <div class="playlist-actions-footer">
+                            <button id="download-selected-btn" class="btn download-btn" disabled>
+                                <span class="btn-content"><i class="fas fa-download"></i> Download Selected (0)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="playlist-reset-container"
+                        style="margin-top: 20px; text-align: center; padding-bottom: 20px;">
+                        <button class="btn btn-outline" onclick="location.reload()">
+                            <i class="fas fa-redo"></i> Download Other Playlist
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hidden Template for Playlist Item Options -->
+                <template id="playlist-item-options-template">
+                    <div class="playlist-item-options">
+                        <div class="loader-container" style="display: none;">
+                            <div class="spinner"></div>
+                            <span>Loading options...</span>
+                        </div>
+                        <div class="options-container" style="display: none;">
+                            <div class="format-row">
+                                <label>FORMAT</label>
+                                <select class="pl-format-select">
+                                    <option value="">Select Format</option>
+                                    <option value="mp4">MP4 (Video)</option>
+                                    <option value="mp3">MP3 (Audio)</option>
+                                </select>
+                            </div>
+
+                            <div class="quality-row">
+                                <label>QUALITY</label>
+                                <select class="pl-quality-select">
+                                    <option value="">Select Quality</option>
+                                </select>
+                            </div>
+
+                            <!-- Clip Tool -->
+                            <div class="pl-clip-option" style="display: none;">
+                                <div class="pl-clip-controls" style="display: none;">
+                                    <div class="pl-slider-container">
+                                        <!-- Slider will be generated by JS -->
+                                        <div class="pl-slider-track"></div>
+                                    </div>
+                                    <div class="pl-time-inputs">
+                                        <input type="text" class="pl-start-time" placeholder="00:00">
+                                        <span>to</span>
+                                        <input type="text" class="pl-end-time" placeholder="00:00">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <section class="supported-sites fade-in">
+            <div class="container">
+                <h2>Supported Platforms</h2>
+                <p>Download videos and music from your favorite platforms</p>
+
+                <div class="supported-content">
+                    <div class="feature-description">
+                        <div class="all-in-one-feature">
+                            <h3><i class="fas fa-link feature-icon"></i> All-in-One URL Input</h3>
+                            <p>Experience the ultimate convenience with our revolutionary single URL input
+                                system.
+                                Simply paste any video or audio link from any of these supported platforms,
+                                and our
+                                intelligent detection technology automatically identifies the source and
+                                optimizes the
+                                download process.</p>
+                            <p>No need to switch between different tools or remember platform-specific
+                                steps. Whether
+                                it's a YouTube video, TikTok clip, Instagram reel, or any other supported
+                                content – one
+                                input field handles them all with precision and speed.</p>
+                            <div class="feature-highlights">
+                                <div class="highlight-item">
+                                    <i class="fas fa-magic"></i>
+                                    <span>Smart Auto-Detection</span>
+                                </div>
+                                <div class="highlight-item">
+                                    <i class="fas fa-bolt"></i>
+                                    <span>Lightning Fast Processing</span>
+                                </div>
+                                <div class="highlight-item">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span>Secure & Private</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sites-grid">
+                        <div class="site-item fade-in">
+                            <i class="fab fa-youtube"></i>
+                            <span>YouTube</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-tiktok"></i>
+                            <span>TikTok</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-facebook"></i>
+                            <span>Facebook</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-instagram"></i>
+                            <span>Instagram</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-pinterest"></i>
+                            <span>Pinterest</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-twitter"></i>
+                            <span>Twitter/X</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-vimeo"></i>
+                            <span>Vimeo</span>
+                            <small style="font-size: 10px; color: #ff6b6b;">*Some videos require
+                                login</small>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-dailymotion"></i>
+                            <span>Dailymotion</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fas fa-play-circle"></i>
+                            <span>Odysee</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-reddit"></i>
+                            <span>Reddit</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-threads"></i>
+                            <span>Threads</span>
+                        </div>
+                        <div class="site-item fade-in">
+                            <i class="fab fa-vk"></i>
+                            <span>VK</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="fastclip-intro fade-in">
+            <div class="container">
+                <h2>Meet FastClip: Your Ultimate Video Editor</h2>
+                <p>Discover FastClip, our powerful, privacy-first video cutter that lets you trim and download YouTube
+                    videos instantly. Trusted by creators worldwide for its lightning speed and intuitive simplicity.
+                </p>
+                <div class="fastclip-tutorial">
+                    <div class="tutorial-step">
+                        <h3>Step 1: Paste Your Video URL
+                            and Choose The Format And Quality
+                        </h3>
+                        <img src="Screenshot (69).png" alt="How to paste YouTube URL" class="tutorial-image">
+                    </div>
+                    <div class="tutorial-step step-reverse">
+                        <h3>Step 2: Cut and Download</h3>
+                        <img src="Screenshot (70).png" alt="How to cut and download video" class="tutorial-image">
+                    </div>
+                </div>
+                <div class="fastclip-conclusion">
+                    <div class="conclusion-particles">
+                        <div class="conclusion-particle"></div>
+                        <div class="conclusion-particle"></div>
+                        <div class="conclusion-particle"></div>
+                        <div class="conclusion-particle"></div>
+                        <div class="conclusion-particle"></div>
+                        <div class="conclusion-particle"></div>
+                    </div>
+                    <p class="conclusion-text">
+                        ✨ <strong>That's it!</strong> In just <em>two simple steps</em>, transform any YouTube video
+                        into your perfect clip.
+                        No complex software, no learning curves—just pure, effortless video editing magic at your
+                        fingertips.
+                        Start creating amazing content today with FastClip's revolutionary simplicity! 🚀
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pricing-tiers" class="pricing-tiers fade-in">
+            <div class="container">
+                <h2>Choose Your Plan</h2>
+                <p>Select the perfect plan for your video downloading needs</p>
+
+                <div class="promo-bar">
+                    <div class="promo-content">
+                        <span class="promo-text">Don't miss this limited-time Anniversary deal!</span>
+                        <span class="promo-offer">Get Lifetime Access for <span class="original-price">$199</span> <span
+                                class="sale-price">$99</span></span>
+                        <span class="promo-urgency">Offer expires soon.</span>
+                        <button class="promo-btn"
+                            onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=lifetime'">Get
+                            now</button>
+                    </div>
+                </div>
+
+                <div class="tier-grid">
+                    <!-- Free Plan -->
+                    <div class="pricing-card free-plan animate-slide-up" data-plan="starter">
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/free plan dragon.png" alt="Free Plan Dragon" class="dragon-image"
+                                    loading="lazy">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge free-badge">Free Forever</span>
+                            <h3>Starter</h3>
+                            <p class="plan-caption">Perfect for personal downloads & exploring FastPast</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="0" data-annual="0">0</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Always free — explore FastPast basics"
+                                data-annual-text="Always free — explore FastPast basics">Always free — explore FastPast
+                                basics</p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Standard Downloads</strong>
+                                    <span>HD MP4 or MP3 conversions without watermarks</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>FastClip Editor</strong>
+                                    <span>Minimum 3 minutes per video clip</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Privacy-First Queue</strong>
+                                    <span>Encrypted processing with auto clean-up</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No 2K/4K Support</strong>
+                                    <span>HD quality only - upgrade for higher resolutions</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Includes Ads</strong>
+                                    <span>Ad-free experience available with premium plans</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Lower Priority</strong>
+                                    <span>Slower processing during peak times</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Batch Processing</strong>
+                                    <span>Upgrade for workflow automation</span>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-outline"
+                                onclick="document.querySelector('.home-hero').scrollIntoView({behavior: 'smooth'});">Get
+                                Started Free</button>
+                            <p class="plan-footnote">No credit card required</p>
+                        </div>
+                    </div>
+
+                    <!-- Creator Plan -->
+                    <div class="pricing-card creator-plan featured animate-slide-up animation-delay-1"
+                        data-plan="creator">
+                        <div class="popular-badge">
+                            <i class="fas fa-crown"></i>
+                            Most Popular
+                        </div>
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/basic plan dragon.png" alt="Creator Plan Dragon" class="dragon-image"
+                                    loading="lazy">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                                <div class="sparkle sparkle-4"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge creator-badge">Most Loved</span>
+                            <h3>Creator</h3>
+                            <p class="plan-caption">Daily creators & indie teams that need speed</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="10" data-annual="100">10</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Billed monthly — pause anytime"
+                                data-annual-text="Billed $100 yearly (save ~15%)">Billed monthly — pause anytime</p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Ads</strong>
+                                    <span>Clean, ad-free experience</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-infinity"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Unlimited Downloads</strong>
+                                    <span>No caps on MP4, MP3, or playlist imports</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>4K & HDR Support</strong>
+                                    <span>Preserve studio-grade formats and subtitles</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>H.265 Re-encode</strong>
+                                    <span>Efficient compression without quality loss</span>
+                                </div>
+                            </li>
+
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Early Access</strong>
+                                    <span>Try new features before anyone else</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item disabled">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Single Device Access</strong>
+                                    <span>Can only be connected on one device at a time</span>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-primary"
+                                onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=creator'">Start
+                                Creator
+                                Plan</button>
+                            <p class="plan-footnote">Secure payment • Instant access</p>
+                        </div>
+                    </div>
+
+                    <!-- Studio Plan -->
+                    <div class="pricing-card studio-plan animate-slide-up animation-delay-2" data-plan="studio">
+                        <div class="plan-decoration">
+                            <div class="plan-dragon">
+                                <img src="Images/pro plan dragon.png" alt="Studio Plan Dragon" class="dragon-image"
+                                    loading="lazy">
+                            </div>
+                            <div class="sparkles">
+                                <div class="sparkle sparkle-1"></div>
+                                <div class="sparkle sparkle-2"></div>
+                                <div class="sparkle sparkle-3"></div>
+                                <div class="sparkle sparkle-4"></div>
+                                <div class="sparkle sparkle-5"></div>
+                            </div>
+                        </div>
+                        <div class="plan-header">
+                            <span class="plan-badge studio-badge">Studios & Teams</span>
+                            <h3>Studio</h3>
+                            <p class="plan-caption">Agencies, publishers, and batching professionals</p>
+                        </div>
+                        <div class="price-section">
+                            <div class="price-wrap">
+                                <span class="currency">$</span>
+                                <span class="price-amount" data-monthly="20" data-annual="200">20</span>
+                                <span class="billing-cycle" data-month-label="/month"
+                                    data-annual-label="/year">/month</span>
+                            </div>
+                            <p class="savings-text" data-monthly-text="Billed monthly per seat"
+                                data-annual-text="Billed $200 yearly per seat (save ~15%)">Billed monthly per seat
+                            </p>
+                        </div>
+                        <ul class="plan-benefits">
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-list-check" style="color: #FFD700 !important;"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong
+                                        style="color: #FFD700 !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);">Approve
+                                        Playlist Downloads</strong>
+                                    <span style="color: #FFD700 !important;">Exclusive access to download full
+                                        playlists</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-ban"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>No Ads</strong>
+                                    <span>Premium ad-free experience</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-crown"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Unlimited Everything</strong>
+                                    <span>Parallel downloads, playlists, clips & timelines</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-compress-alt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>H.265 Re-encode</strong>
+                                    <span>Advanced compression for smaller file sizes</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-users-cog"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Team Account Sharing</strong>
+                                    <span>Share account with 2 team members (3 users total)</span>
+                                </div>
+                            </li>
+
+
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>4K & HDR Support</strong>
+                                    <span>Preserve studio-grade formats and subtitles</span>
+                                </div>
+                            </li>
+                            <li class="benefit-item">
+                                <div class="benefit-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="benefit-content">
+                                    <strong>Early Access</strong>
+                                    <span>Try new features before anyone else</span>
+                                </div>
+                            </li>
+
+                        </ul>
+                        <div class="plan-cta">
+                            <button class="btn btn-outline-dark"
+                                onclick="window.location.href=localStorage.getItem('sessionToken') ? 'payment.html' : 'login.html?mode=signup&plan=studio'">Get
+                                Studio Plan</button>
+                            <p class="plan-footnote">Custom invoicing & security reviews</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="standout-features magical-reveal">
+            <div class="container">
+                <h2 class="magical-title">Why Choose FastPast?</h2>
+                <div class="particles-bg">
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                    <div class="particle"></div>
+                </div>
+                <!-- Mobile Slider View -->
+                <div class="feature-slider-container">
+                    <div class="slider-aura"></div>
+                    <div class="slider-glow-orb"></div>
+                    <div class="slider-header">
+                        <p class="slider-subcopy">Swipe or tap to explore what makes FastPast feel magical.</p>
+                    </div>
+                    <div class="slider-meteors" aria-hidden="true">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="feature-slider">
+                        <div class="feature-item-standout morphing-card" data-delay="0">
+                            <div class="card-glow"></div>
+                            <div class="card-content">
+                                <i class="fas fa-bolt feature-icon"></i>
+                                <h3>Lightning Fast</h3>
+                                <p>Download videos and music in seconds with our optimized servers.</p>
+                            </div>
+                            <div class="card-shine"></div>
+                        </div>
+                        <div class="feature-item-standout morphing-card" data-delay="200">
+                            <div class="card-glow"></div>
+                            <div class="card-content">
+                                <i class="fas fa-shield-alt feature-icon"></i>
+                                <h3>Secure & Private</h3>
+                                <p>Your downloads are safe and your privacy is protected.</p>
+                            </div>
+                            <div class="card-shine"></div>
+                        </div>
+                        <div class="feature-item-standout morphing-card" data-delay="400">
+                            <div class="card-glow"></div>
+                            <div class="card-content">
+                                <i class="fas fa-headphones feature-icon"></i>
+                                <h3>High Quality</h3>
+                                <p>Get the best audio and video quality available.</p>
+                            </div>
+                            <div class="card-shine"></div>
+                        </div>
+                        <div class="feature-item-standout morphing-card" data-delay="600">
+                            <div class="card-glow"></div>
+                            <div class="card-content">
+                                <i class="fas fa-hand-pointer feature-icon"></i>
+                                <h3>Easy to Use</h3>
+                                <p>Simple interface for hassle-free downloads.</p>
+                            </div>
+                            <div class="card-shine"></div>
+                        </div>
+                    </div>
+                    <div class="slider-dots">
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                    <div class="slider-progress" aria-hidden="true">
+                        <div class="slider-progress-track">
+                            <div class="slider-progress-thumb"></div>
+                        </div>
+                    </div>
+                    <p class="slider-tip"><i class="fas fa-hand-sparkles"></i> Drag or swipe to explore</p>
+                </div>
+                <!-- Desktop Grid View -->
+                <div class="feature-grid-standout">
+                    <div class="feature-item-standout morphing-card" data-delay="0">
+                        <div class="card-glow"></div>
+                        <div class="card-content">
+                            <i class="fas fa-bolt feature-icon"></i>
+                            <h3>Lightning Fast</h3>
+                            <p>Download videos and music in seconds with our optimized servers.</p>
+                        </div>
+                        <div class="card-shine"></div>
+                    </div>
+                    <div class="feature-item-standout morphing-card" data-delay="200">
+                        <div class="card-glow"></div>
+                        <div class="card-content">
+                            <i class="fas fa-shield-alt feature-icon"></i>
+                            <h3>Secure & Private</h3>
+                            <p>Your downloads are safe and your privacy is protected.</p>
+                        </div>
+                        <div class="card-shine"></div>
+                    </div>
+                    <div class="feature-item-standout morphing-card" data-delay="400">
+                        <div class="card-glow"></div>
+                        <div class="card-content">
+                            <i class="fas fa-headphones feature-icon"></i>
+                            <h3>High Quality</h3>
+                            <p>Get the best audio and video quality available.</p>
+                        </div>
+                        <div class="card-shine"></div>
+                    </div>
+                    <div class="feature-item-standout morphing-card" data-delay="600">
+                        <div class="card-glow"></div>
+                        <div class="card-content">
+                            <i class="fas fa-hand-pointer feature-icon"></i>
+                            <h3>Easy to Use</h3>
+                            <p>Simple interface for hassle-free downloads.</p>
+                        </div>
+                        <div class="card-shine"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn">
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+    <script src="js/scroll-animations.js"></script>
+
+    <!-- Real-time Session Handling -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize Socket.IO
+            const socket = io();
+
+            // Listen for session invalidation event
+            socket.on('session-invalidated', (data) => {
+                console.log('Received session invalidation event', data);
+                const currentSessionToken = localStorage.getItem('sessionToken');
+
+                // If my session is in the list of invalidated tokens
+                if (currentSessionToken && data.sessionTokens && data.sessionTokens.includes(currentSessionToken)) {
+                    // Clear local storage
+                    localStorage.removeItem('sessionToken');
+                    localStorage.removeItem('currentUser');
+
+                    // Alert user
+                    alert('You have logged in on another device. This session has been terminated.');
+
+                    // Redirect to login or reload
+                    window.location.href = 'index.html';
+                }
+            });
+        });
+    </script>
+    <script>
+        // Magical Morphing Cards Animation
+        document.addEventListener('DOMContentLoaded', function () {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const cards = entry.target.querySelectorAll('.morphing-card');
+                        cards.forEach((card, index) => {
+                            const delay = card.dataset.delay || index * 200;
+                            setTimeout(() => {
+                                card.classList.add('visible');
+                            }, delay);
+                        });
+                    }
+                });
+            }, {
+                threshold: 0.3,
+                rootMargin: '0px 0px -100px 0px'
+            });
+
+            const magicalSection = document.querySelector('.standout-features.magical-reveal');
+            if (magicalSection) {
+                observer.observe(magicalSection);
+            }
+        });
+    </script>
+
+    <!-- Disclaimer Modal Integration -->
+    <link rel="stylesheet" href="../style/disclaimer-modal-v2.css?v=V2-OVERLAY-FIX">
+
+    <!-- Disclaimer Modal Container (loaded from disclaimer-modal.html) -->
+    <div id="disclaimerModalContainer"></div>
+
+    <script>
+        // Load disclaimer modal content dynamically
+        (function () {
+            try {
+                const acknowledged = localStorage.getItem('fastpast_disclaimer_acknowledged') === 'true';
+                if (acknowledged) {
+                    console.log('Disclaimer already acknowledged; skipping modal.');
+                    return;
+                }
+            } catch (e) {
+                // If localStorage not available (e.g., cookies disabled), proceed to load modal
+                console.warn('LocalStorage access failed, proceeding with modal load:', e);
+            }
+
+            fetch('disclaimer-modal-v2.html')
+                .then(response => response.text())
+                .then(html => {
+                    // Extract only the modal overlay content
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const modalOverlay = doc.querySelector('.modal-overlay');
+
+                    if (modalOverlay) {
+                        document.getElementById('disclaimerModalContainer').appendChild(modalOverlay);
+
+                        // Load disclaimer JS
+                        const script = document.createElement('script');
+                        script.src = 'scripts/disclaimer-modal.js';
+                        document.body.appendChild(script);
+                    }
+                })
+                .catch(err => console.error('Error loading disclaimer modal:', err));
+        })();
+    </script>
+</body>
+
+</html>

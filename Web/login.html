@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Sign in or Sign up for FastPast. Create an account to access premium features like batch downloading and higher quality.">
+    <title>Sign in/up Form</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css">
+    <link rel="stylesheet" href="../style/login.css">
+    <link rel="icon" href="Images/logo.png" type="image/png">
+</head>
+
+<body>
+    <div class="container right-panel-active" id="container">
+        <div class="form-container sign-up-container">
+            <form action="#">
+                <h1>Create Account</h1>
+                <div class="social-container">
+                    <a href="/auth/google" class="social" title="Sign up with Google"><i
+                            class="fab fa-google-plus-g"></i></a>
+                </div>
+                <span id="registration-text">or use your email for registration</span>
+
+                <!-- Normal Inputs (Default) -->
+                <div id="email-signup-inputs">
+                    <label for="signup-name" class="visually-hidden">Name</label>
+                    <input type="text" placeholder="Name" id="signup-name" name="name" autocomplete="name" />
+                    <label for="signup-email" class="visually-hidden">Email</label>
+                    <input type="email" placeholder="Email" id="signup-email" name="email" autocomplete="email" />
+                    <label for="signup-password" class="visually-hidden">Password</label>
+                    <input type="password" placeholder="Password" id="signup-password" name="password"
+                        autocomplete="new-password" />
+                </div>
+
+                <!-- Google Profile Display (Hidden by default) -->
+                <div id="google-profile-container" style="display: none; text-align: center; margin-bottom: 20px;">
+                    <img id="google-profile-pic" src="" alt="Profile"
+                        style="width: 80px; height: 80px; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin-bottom: 10px;"
+                        onerror="this.src='Images/user-avatar.png'">
+                    <h3 id="google-username" style="margin: 0; color: #333; font-size: 1.2rem;">Username</h3>
+                    <p style="margin: 5px 0 0; color: #666; font-size: 0.9rem;">Account Verified via Google</p>
+                </div>
+
+                <!-- Subscription Plan Selection -->
+                <div class="subscription-plans">
+                    <div class="plan-row">
+                        <div class="plan-option">
+                            <label class="plan-select" data-plan="creator">
+                                <input type="radio" name="subscription-plan" value="creator" class="visually-hidden">
+                                <span class="plan-name">Creator</span>
+                                <span class="plan-price">$10<small>/mo</small></span>
+                            </label>
+                        </div>
+                        <div class="plan-option">
+                            <label class="plan-select" data-plan="studio">
+                                <input type="radio" name="subscription-plan" value="studio" class="visually-hidden">
+                                <span class="plan-name">Studio</span>
+                                <span class="plan-price">$20<small>/mo</small></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="plan-option plan-lifetime">
+                        <label class="plan-select" data-plan="lifetime">
+                            <input type="radio" name="subscription-plan" value="lifetime" class="visually-hidden">
+                            <span class="plan-name">Lifetime Access</span>
+                            <span class="plan-price">$99</span>
+                            <small class="old-price"><del>$199</del></small>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Terms Agreement Checkbox -->
+                <div class="terms-agreement">
+                    <input type="checkbox" id="terms-checkbox" name="terms" />
+                    <label for="terms-checkbox">I agree to the <a href="/terms" class="terms-link">FASTPAST
+                            terms</a></label>
+                </div>
+
+                <button type="submit" id="desktop-payment-btn" disabled>Continue with Payment</button>
+            </form>
+        </div>
+        <div class="form-container sign-in-container">
+            <form action="#">
+                <h1>Sign in</h1>
+                <div class="social-container">
+                    <a href="/auth/google" class="social" title="Sign in with Google"><i
+                            class="fab fa-google-plus-g"></i></a>
+                </div>
+                <span>or use your account</span>
+                <label for="signin-email" class="visually-hidden">Email</label>
+                <input type="email" placeholder="Email" id="signin-email" name="email" autocomplete="email" />
+                <label for="signin-password" class="visually-hidden">Password</label>
+                <input type="password" placeholder="Password" id="signin-password" name="password"
+                    autocomplete="current-password" />
+                <a href="#">Forgot your password?</a>
+                <button type="submit">Sign In</button>
+            </form>
+        </div>
+        <div class="overlay-container">
+            <div class="overlay">
+                <div class="overlay-panel overlay-left">
+                    <h1>Welcome Back!</h1>
+                    <p>To keep connected with us please login with your personal info</p>
+                    <button class="ghost" id="signIn">Sign In</button>
+                </div>
+                <div class="overlay-panel overlay-right">
+                    <h1>Hello, Friend!</h1>
+                    <p>Enter your personal details and start journey with us</p>
+                    <button class="ghost" id="signUp">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Login Form -->
+    <img src="Images/logo.png" alt="Logo" class="mobile-logo-bg">
+    <div class="mobile-login">
+        <div class="background">
+            <div class="shape"></div>
+            <div class="shape"></div>
+        </div>
+        <form class="mobile-form" style="display: none;">
+            <h3><img src="Images/logo.png" alt="Logo" class="mobile-logo">Login Here</h3>
+
+            <label for="username">Username</label>
+            <input type="text" placeholder="Email or Phone" id="username" name="username" autocomplete="username">
+
+            <label for="password">Password</label>
+            <input type="password" placeholder="Password" id="password" name="password" autocomplete="current-password">
+
+            <button type="submit"><span>Log In</span></button>
+            <div class="social">
+                <div class="go" onclick="window.location.href='/auth/google'"><span>Google</span></div>
+            </div>
+            <p class="register-text">Register Now</p>
+        </form>
+
+        <!-- Registration Form -->
+        <form class="mobile-form mobile-register-form">
+            <h3><img src="Images/logo.png" alt="Logo" class="mobile-logo">Register</h3>
+
+            <!-- Normal Inputs -->
+            <div id="mobile-email-signup-inputs">
+                <label for="reg-username">Username</label>
+                <input type="text" placeholder="Username" id="reg-username" name="username" autocomplete="username">
+
+                <label for="reg-email">Email</label>
+                <input type="email" placeholder="Email" id="reg-email" name="email" autocomplete="email">
+
+                <label for="reg-password">Password</label>
+                <input type="password" placeholder="Password" id="reg-password" name="password"
+                    autocomplete="new-password">
+            </div>
+
+            <!-- Google Profile Display Mobile -->
+            <div id="mobile-google-profile-container" style="display: none; text-align: center; margin-bottom: 20px;">
+                <img id="mobile-google-profile-pic" src="" alt="Profile"
+                    style="width: 80px; height: 80px; border-radius: 50%; box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin-bottom: 10px;">
+                <h3 id="mobile-google-username" style="margin: 0; color: #333; font-size: 1.2rem;">Username</h3>
+                <p style="margin: 5px 0 0; color: #666; font-size: 0.9rem;">Account Verified via Google</p>
+            </div>
+
+            <!-- Subscription Plan Selection -->
+            <div class="subscription-plans-mobile">
+                <div class="plan-row-mobile">
+                    <div class="plan-option-mobile">
+                        <label class="plan-select-mobile" data-plan="creator">
+                            <input type="radio" name="subscription-plan-mobile" value="creator" class="visually-hidden">
+                            <span class="plan-name">Creator</span>
+                            <span class="plan-price">$10<small>/mo</small></span>
+                        </label>
+                    </div>
+                    <div class="plan-option-mobile">
+                        <label class="plan-select-mobile" data-plan="studio">
+                            <input type="radio" name="subscription-plan-mobile" value="studio" class="visually-hidden">
+                            <span class="plan-name">Studio</span>
+                            <span class="plan-price">$20<small>/mo</small></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="plan-option-mobile plan-lifetime-mobile">
+                    <label class="plan-select-mobile" data-plan="lifetime">
+                        <input type="radio" name="subscription-plan-mobile" value="lifetime" class="visually-hidden">
+                        <span class="plan-name">Lifetime Access</span>
+                        <span class="plan-price">$99 <small class="old-price">$199</small></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Terms Agreement Checkbox Mobile -->
+            <div class="terms-agreement-mobile">
+                <input type="checkbox" id="terms-checkbox-mobile" name="terms" />
+                <label class="terms-label" for="terms-checkbox-mobile">I agree to the <a href="/terms"
+                        class="terms-link">FASTPAST
+                        terms</a></label>
+            </div>
+
+            <button type="submit" id="mobile-payment-btn" disabled><span>Continue with Payment</span></button>
+            <div class="social">
+                <div class="go" onclick="window.location.href='/auth/google'"><span>Google</span></div>
+            </div>
+            <p class="login-text">Already have an account? <span class="login-link">Login Here</span></p>
+        </form>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+
+</html>

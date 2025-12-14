@@ -1,0 +1,44 @@
+<!-- Disclaimer Modal Container -->
+<div id="disclaimerModalContainer"></div>
+
+<script>
+    // Load disclaimer modal content dynamically
+    try {
+        const acknowledged = localStorage.getItem('fastpast_disclaimer_acknowledged') === 'true';
+        if (acknowledged) {
+            console.log('Disclaimer already acknowledged; skipping modal.');
+            throw new Error('SKIP_FETCH');
+        }
+    } catch (e) {
+        if (e && e.message === 'SKIP_FETCH') { throw e; }
+        // If localStorage not available, proceed to load modal
+    }
+    (function () {
+        fetch('disclaimer-modal.html')
+            .then(response => response.text())
+            .then(html => {
+                // Extract only the modal content (not html/head/body tags)
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const modalOverlay = doc.querySelector('.modal-overlay');
+
+                if (modalOverlay) {
+                    document.getElementById('disclaimerModalContainer').appendChild(modalOverlay);
+
+                    // Load disclaimer CSS if not already loaded
+                    if (!document.querySelector('link[href*="disclaimer-modal.css"]')) {
+                        const link = document.createElement('link');
+                        link.rel = 'stylesheet';
+                        link.href = 'style/disclaimer-modal.css';
+                        document.head.appendChild(link);
+                    }
+
+                    // Load disclaimer JS
+                    const script = document.createElement('script');
+                    script.src = 'scripts/disclaimer-modal.js';
+                    document.body.appendChild(script);
+                }
+            })
+            .catch(err => console.error('Error loading disclaimer modal:', err));
+    })();
+</script>

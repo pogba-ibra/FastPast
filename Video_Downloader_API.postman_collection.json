@@ -1,0 +1,237 @@
+{
+  "info": {
+    "name": "Video Downloader API",
+    "description": "API collection for testing the Video Downloader service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3002",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Video Qualities",
+      "item": [
+        {
+          "name": "YouTube Video Qualities (MP4)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp4\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/get-qualities",
+              "host": ["{{base_url}}"],
+              "path": ["get-qualities"]
+            }
+          }
+        },
+        {
+          "name": "YouTube Video Qualities (MP3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp3\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/get-qualities",
+              "host": ["{{base_url}}"],
+              "path": ["get-qualities"]
+            }
+          }
+        },
+        {
+          "name": "Invalid URL Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://invalid-url.com/video\",\n  \"format\": \"mp4\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/get-qualities",
+              "host": ["{{base_url}}"],
+              "path": ["get-qualities"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Download Videos",
+      "item": [
+        {
+          "name": "Download YouTube MP4 (720p)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp4\",\n  \"quality\": \"720p\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        },
+        {
+          "name": "Download YouTube MP3 (128kbps)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp3\",\n  \"quality\": \"128kbps\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        },
+        {
+          "name": "Download with Clipping",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp4\",\n  \"quality\": \"720p\",\n  \"startTime\": \"00:30\",\n  \"endTime\": \"01:30\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        },
+        {
+          "name": "Download with Accelerator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\",\n  \"format\": \"mp4\",\n  \"quality\": \"720p\",\n  \"downloadAccelerator\": \"true\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Error Testing",
+      "item": [
+        {
+          "name": "Missing Parameters",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://youtu.be/V2mNLEhWjXc?si=ry5tuH6497I9Cjej\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        },
+        {
+          "name": "Invalid Video URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"videoUrl\": \"https://example.com\",\n  \"format\": \"mp4\",\n  \"quality\": \"720p\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/download",
+              "host": ["{{base_url}}"],
+              "path": ["download"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Server Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": ["/"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

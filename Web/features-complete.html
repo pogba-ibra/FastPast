@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastPast - Features</title>
+    <link rel="stylesheet" href="../style/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="script.js" defer></script>
+    <script src="slider.js" defer></script>
+    <script src="js/parallax.js" defer></script>
+    <script src="js/scroll-reveal.js" defer></script>
+    <script src="js/features-grid.js" defer></script>
+    <script src="js/features-interactive-short.js" defer></script>
+    <script src="js/mobile-themes.js" defer></script>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <a href="/">
+                    <h1>FastPast</h1>
+                </a>
+            </div>
+            <nav>
+                <div class="nav-wrapper" id="nav-wrapper">
+                    <div class="wave-animation"><span></span><span></span><span></span><span></span><span></span></div>
+                    <ul id="nav-menu">
+                        <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+                        <li><a href="/features"><i class="fas fa-star"></i> Features</a></li>
+                        <li><a href="/pricing"><i class="fas fa-dollar-sign"></i> Pricing</a></li>
+                        <li><a href="/faq"><i class="fas fa-question-circle"></i> FAQ</a></li>
+                        <li class="mobile-only"><button class="btn go-premium-btn"><i class="fas fa-crown"></i> Go
+                                Premium</button></li>
+                        <li class="mobile-only"><button class="btn login-btn"><i class="fas fa-sign-in-alt"></i>
+                                LOGIN</button></li>
+                    </ul>
+                    <div id="hamburger-btn" class="hamburger">
+                        <input type="checkbox" id="menu-checkbox" style="display: none;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+                            class="hamburger-svg">
+                            <path d="M3 6h18" stroke="white" stroke-width="2" stroke-linecap="round"
+                                class="line line1" />
+                            <path d="M3 12h18" stroke="white" stroke-width="2" stroke-linecap="round"
+                                class="line line2" />
+                            <path d="M3 18h18" stroke="white" stroke-width="2" stroke-linecap="round"
+                                class="line line3" />
+                        </svg>
+                    </div>
+                </div>
+            </nav>
+            <div class="header-buttons">
+                <button class="btn go-premium-btn"><i class="fas fa-crown"></i> Go Premium</button>
+                <button class="btn login-btn" onclick="window.location.href='login.html'"><i
+                        class="fas fa-sign-in-alt"></i> LOGIN</button>
+            </div>
+        </div>
+    </header>
+
+    <div id="blur-overlay"></div>
+
+    <main>
+        <section class="features-hero">
+            <div class="parallax-element"></div>
+            <div class="parallax-element"></div>
+            <div class="parallax-element"></div>
+
+            <div class="floating-icons">
+                <i class="fab fa-youtube floating-icon"></i>
+                <i class="fab fa-tiktok floating-icon"></i>
+                <i class="fab fa-instagram floating-icon"></i>
+                <i class="fab fa-twitter floating-icon"></i>
+                <i class="fab fa-facebook floating-icon"></i>
+                <i class="fab fa-pinterest floating-icon"></i>
+            </div>
+
+            <div class="container">
+                <h2>Unlock Powerful Tools</h2>
+                <p>Discover the amazing features that make Fast Past the ultimate video downloader for all your favorite
+                    platforms</p>
+                <a href="#features" class="cta-button">Explore Features</a>
+            </div>
+        </section>
+
+        <section class="standout-features">
+            <div class="container">
+                <div class="feature-slider-container">
+                    <div class="feature-slider">
+                        <div class="feature-item-standout reveal">
+                            <div class="sparkle sparkle-1"></div>
+                            <div class="sparkle sparkle-2"></div>
+                            <div class="sparkle sparkle-3"></div>
+                            <div class="sparkle sparkle-4"></div>
+                            <i class="fas fa-rocket fa-4x"></i>
+                            <h3>Blazing Fast Downloads</h3>
+                            <p>Experience unparalleled download speeds, saving you time and effort.</p>
+                        </div>
+                        <div class="feature-item-standout reveal">
+                            <div class="sparkle sparkle-1"></div>
+                            <div class="sparkle sparkle-2"></div>
+                            <div class="sparkle sparkle-3"></div>
+                            <div class="sparkle sparkle-4"></div>
+                            <i class="fas fa-shield-alt fa-4x"></i>
+                            <h3>Secure & Private</h3>
+                            <p>Your privacy is our priority. Download content securely without any tracking.</p>
+                        </div>
+                        <div class="feature-item-standout reveal">
+                            <div class="sparkle sparkle-1"></div>
+                            <div class="sparkle sparkle-2"></div>
+                            <div class="sparkle sparkle-3"></div>
+                            <div class="sparkle sparkle-4"></div>
+                            <i class="fas fa-cogs fa-4x"></i>
+                            <h3>Advanced Customization</h3>
+                            <p>Choose from various formats, qualities, and even batch process your downloads.</p>
+                        </div>
+                        <div class="feature-item-standout reveal">
+                            <div class="sparkle sparkle-1"></div>
+                            <div class="sparkle sparkle-2"></div>
+                            <div class="sparkle sparkle-3"></div>
+                            <div class="sparkle sparkle-4"></div>
+                            <i class="fas fa-hand-pointer fa-4x"></i>
+                            <h3>Easy to Use</h3>
+                            <p>Simple and intuitive interface designed for users of all skill levels.</p>
+                        </div>
+                    </div>
+                    <div class="slider-dots">
+                        <span class="dot active"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
+                <!-- Desktop grid view -->
+                <div class="feature-grid-standout">
+                    <div class="feature-item-standout">
+                        <i class="fas fa-rocket fa-4x"></i>
+                        <h3>Blazing Fast Downloads</h3>
+                        <p>Experience unparalleled download speeds, saving you time and effort.</p>
+                    </div>
+                    <div class="feature-item-standout">
+                        <i class="fas fa-shield-alt fa-4x"></i>
+                        <h3>Secure & Private</h3>
+                        <p>Your privacy is our priority. Download content securely without any tracking.</p>
+                    </div>
+                    <div class="feature-item-standout">
+                        <i class="fas fa-cogs fa-4x"></i>
+                        <h3>Advanced Customization</h3>
+                        <p>Choose from various formats, qualities, and even batch process your downloads.</p>
+                    </div>
+                    <div class="feature-item-standout">
+                        <i class="fas fa-hand-pointer fa-4x"></i>
+                        <h3>Easy to Use</h3>
+                        <p>Simple and intuitive interface designed for users of all skill levels.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="secondary-features">
+            <div class="container">
+                <h3 class="section-title reveal">More Great Features</h3>
+                <div class="feature-grid">
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-ad fa-3x"></i>
+                        <h4>No Ads</h4>
+                        <p>Enjoy an ad-free downloading experience.</p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-file-audio fa-3x"></i>
+                        <h4>MP3 Extraction</h4>
+                        <p>Easily convert videos to high-quality MP3 audio files.</p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-video fa-3x"></i>
+                        <h4>HD Video Support</h4>
+                        <p>Download videos in stunning high-definition quality.</p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-globe fa-3x"></i>
+                        <h4>Wide Platform Support</h4>
+                        <p>Download from YouTube, TikTok, Pinterest, Facebook, Instagram, and other popular platforms.
+                        </p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-microphone-alt fa-3x"></i>
+                        <h4>Voice-Search URL Field</h4>
+                        <p>Use voice commands to paste URLs and initiate downloads.</p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-network-wired fa-3x"></i>
+                        <h4>Multi-Segment Download</h4>
+                        <p>Faster downloads with multi-segment technology and merged progress rings.</p>
+                    </div>
+                    <div class="feature-item reveal">
+                        <div class="sparkle sparkle-1"></div>
+                        <div class="sparkle sparkle-2"></div>
+                        <div class="sparkle sparkle-3"></div>
+                        <i class="fas fa-compress-alt fa-3x"></i>
+                        <h4>H.265 Re-encode</h4>
+                        <p>Shrink file size by 40% with optional H.265 re-encoding before delivery.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Animated Icons Section -->
+        <section class="animated-icons-section">
+            <div class="container">
+                <h3 class="section-title reveal">Visual Feature Showcase</h3>
+                <p class="section-subtitle reveal">Explore our animated icons that represent each powerful feature</p>
+
+                <div class="icons-grid">
+                    <!-- Scissors to Video Player Icon -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#scissors-to-video"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">Video Editing</h4>
+                        <p class="icon-description">Scissors morphing into a video player, symbolizing transformation
+                            from cutting to playing videos.</p>
+                    </div>
+
+                    <!-- Download Arrow with Progress Rings -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#download-progress"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">Batch Download</h4>
+                        <p class="icon-description">Pulsing download arrow with animated progress rings, representing
+                            ongoing downloads.</p>
+                    </div>
+
+                    <!-- Brain Icon with Lighting Effect -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#brain-ai"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">AI Summarization</h4>
+                        <p class="icon-description">Brain icon with lighting effects, symbolizing AI-powered content
+                            analysis.</p>
+                    </div>
+
+                    <!-- Format Conversion Icon -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#format-conversion"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">Format Conversion</h4>
+                        <p class="icon-description">Rotating file icons with an animated arrow, showing transformation
+                            between formats.</p>
+                    </div>
+
+                    <!-- Audio Extraction Icon -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#audio-extraction"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">Audio Extraction</h4>
+                        <p class="icon-description">Video to audio conversion with animated sound waves, representing
+                            audio extraction.</p>
+                    </div>
+
+                    <!-- Cloud Storage Icon -->
+                    <div class="icon-card reveal">
+                        <div class="icon-container">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#cloud-storage"></use>
+                            </svg>
+                        </div>
+                        <h4 class="icon-title">Cloud Storage</h4>
+                        <p class="icon-description">Cloud with upload animation and data particles, symbolizing cloud
+                            storage integration.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid Section -->
+        <section id="features-grid" class="features-grid-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Our Features</h2>
+                    <p class="section-subtitle">Everything you need to download and manage your favorite content</p>
+                </div>
+
+                <div class="features-grid">
+                    <!-- Video Editing Feature -->
+                    <div class="feature-card interactive-card" data-feature="video-editing">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#scissors-to-video"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Video Editing</h3>
+                        <p class="card-description">Edit your downloaded videos with built-in tools for trimming,
+                            cropping, and applying filters.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">Trim & Cut</span>
+                            <span class="feature-tag">Filters</span>
+                            <span class="feature-tag">Effects</span>
+                        </div>
+                        <a href="#" class="cta-button cta-orange-red feature-cta">Try Video Editing Now</a>
+                    </div>
+
+                    <!-- Batch Download Feature -->
+                    <div class="feature-card interactive-card" data-feature="batch-download">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#download-progress"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Batch Download</h3>
+                        <p class="card-description">Download entire playlists or multiple videos at once with our
+                            powerful batch downloader.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">Queue Manager</span>
+                            <span class="feature-tag">Playlists</span>
+                            <span class="feature-tag">Speed Control</span>
+                        </div>
+                        <a href="#" class="cta-button cta-blue-purple feature-cta">Start Batch Download</a>
+                    </div>
+
+                    <!-- AI Summarization Feature -->
+                    <div class="feature-card interactive-card" data-feature="ai-summarization">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#brain-ai"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">AI Summarization</h3>
+                        <p class="card-description">Generate concise summaries of video content using advanced AI
+                            technology.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">Key Points</span>
+                            <span class="feature-tag">Transcripts</span>
+                            <span class="feature-tag">Analysis</span>
+                        </div>
+                        <a href="#" class="cta-button cta-green-teal feature-cta">Try AI Summarization</a>
+                    </div>
+
+                    <!-- Format Conversion Feature -->
+                    <div class="feature-card interactive-card" data-feature="format-conversion">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#format-conversion"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Format Conversion</h3>
+                        <p class="card-description">Convert videos between different formats with support for all major
+                            file types.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">MP4, AVI, MOV</span>
+                            <span class="feature-tag">Quality Control</span>
+                            <span class="feature-tag">Presets</span>
+                        </div>
+                        <a href="#" class="cta-button cta-pink-purple feature-cta">Convert Videos Now</a>
+                    </div>
+
+                    <!-- Audio Extraction Feature -->
+                    <div class="feature-card interactive-card" data-feature="audio-extraction">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#audio-extraction"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Audio Extraction</h3>
+                        <p class="card-description">Extract high-quality audio tracks from videos and save them in
+                            various audio formats.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">MP3, WAV, FLAC</span>
+                            <span class="feature-tag">High Quality</span>
+                            <span class="feature-tag">Metadata</span>
+                        </div>
+                        <a href="#" class="cta-button cta-yellow-orange feature-cta">Extract Audio Now</a>
+                    </div>
+
+                    <!-- Cloud Storage Feature -->
+                    <div class="feature-card interactive-card" data-feature="cloud-storage">
+                        <div class="card-icon">
+                            <svg viewBox="0 0 100 100">
+                                <use href="svg/animated-icons.svg#cloud-storage"></use>
+                            </svg>
+                        </div>
+                        <h3 class="card-title">Cloud Storage</h3>
+                        <p class="card-description">Save your downloads directly to your preferred cloud storage
+                            service.</p>
+                        <div class="card-features">
+                            <span class="feature-tag">Google Drive</span>
+                            <span class="feature-tag">Dropbox</span>
+                            <span class="feature-tag">OneDrive</span>
+                        </div>
+                        <a href="#" class="cta-button cta-teal-blue feature-cta">Sync to Cloud Now</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Button Showcase -->
+        <section class="cta-showcase-section">
+            <div class="container">
+                <h3 class="section-title reveal">Call-to-Action Buttons</h3>
+                <p class="section-subtitle reveal">Visually appealing CTA buttons with gradient fills and
+                    micro-animations</p>
+
+                <div class="button-showcase">
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Orange to Red</h4>
+                        <p class="button-description">Warm gradient with a glowing effect on hover</p>
+                        <a href="#" class="cta-button cta-orange-red">Try Now</a>
+                    </div>
+
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Blue to Purple</h4>
+                        <p class="button-description">Cool gradient with a soft glow on hover</p>
+                        <a href="#" class="cta-button cta-blue-purple">Try Now</a>
+                    </div>
+
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Green to Teal</h4>
+                        <p class="button-description">Fresh gradient with a bright glow on hover</p>
+                        <a href="#" class="cta-button cta-green-teal">Try Now</a>
+                    </div>
+                </div>
+
+                <div class="button-showcase">
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Pink to Purple</h4>
+                        <p class="button-description">Playful gradient with a vibrant glow on hover</p>
+                        <a href="#" class="cta-button cta-pink-purple">Try Now</a>
+                    </div>
+
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Yellow to Orange</h4>
+                        <p class="button-description">Energetic gradient with a warm glow on hover</p>
+                        <a href="#" class="cta-button cta-yellow-orange">Try Now</a>
+                    </div>
+
+                    <div class="button-example reveal">
+                        <h4 class="button-title">Teal to Blue</h4>
+                        <p class="button-description">Professional gradient with a cool glow on hover</p>
+                        <a href="#" class="cta-button cta-teal-blue">Try Now</a>
+                    </div>
+                </div>
+
+                <div class="button-variants reveal">
+                    <a href="#" class="cta-button cta-orange-red cta-small">Small</a>
+                    <a href="#" class="cta-button cta-blue-purple">Regular</a>
+                    <a href="#" class="cta-button cta-green-teal cta-large">Large</a>
+                </div>
+                <div class="button-variants reveal">
+                    <a href="#" class="cta-button cta-pink-purple">Default</a>
+                    <a href="#" class="cta-button cta-yellow-orange cta-pulse">With Pulse</a>
+                    <a href="#" class="cta-button cta-teal-blue cta-shimmer">With Shimmer</a>
+                </div>
+                <div class="button-variants reveal">
+                    <a href="#" class="cta-button cta-orange-red">Enabled</a>
+                    <button class="cta-button cta-blue-purple" disabled>Disabled</button>
+                </div>
+
+                <div class="button-variants reveal">
+                    <a href="#" class="cta-button cta-orange-red cta-with-icon">
+                        <i class="fas fa-play cta-icon"></i>
+                        Play Video
+                    </a>
+                    <a href="#" class="cta-button cta-blue-purple cta-with-icon">
+                        <i class="fas fa-download cta-icon"></i>
+                        Download Now
+                    </a>
+                    <a href="#" class="cta-button cta-green-teal cta-with-icon">
+                        <i class="fas fa-magic cta-icon"></i>
+                        Try AI Magic
+                    </a>
+                    <a href="#" class="cta-button cta-pink-purple cta-with-icon">
+                        <i class="fas fa-share-alt cta-icon"></i>
+                        Share Content
+                    </a>
+                    <a href="#" class="cta-button cta-yellow-orange cta-with-icon">
+                        <i class="fas fa-cloud-upload-alt cta-icon"></i>
+                        Upload to Cloud
+                    </a>
+                    <a href="#" class="cta-button cta-teal-blue cta-with-icon">
+                        <i class="fas fa-cog cta-icon"></i>
+                        Customize Settings
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography and Color Scheme Section -->
+        <section class="typography-section">
+            <div class="container">
+                <h3 class="section-title reveal">Typography and Color Scheme</h3>
+                <p class="section-subtitle reveal">Explore our design system for consistent visual language</p>
+
+                <div class="color-palette reveal">
+                    <div class="color-swatch" style="background-color: #FF5722;">
+                        <div class="color-name">Primary Orange</div>
+                        <div class="color-code">#FF5722</div>
+                    </div>
+                    <div class="color-swatch" style="background-color: #3F51B5;">
+                        <div class="color-name">Primary Blue</div>
+                        <div class="color-code">#3F51B5</div>
+                    </div>
+                    <div class="color-swatch" style="background-color: #4CAF50;">
+                        <div class="color-name">Primary Green</div>
+                        <div class="color-code">#4CAF50</div>
+                    </div>
+                    <div class="color-swatch" style="background-color: #9C27B0;">
+                        <div class="color-name">Primary Purple</div>
+                        <div class="color-code">#9C27B0</div>
+                    </div>
+                    <div class="color-swatch" style="background-color: #FFC107;">
+                        <div class="color-name">Primary Yellow</div>
+                        <div class="color-code">#FFC107</div>
+                    </div>
+                    <div class="color-swatch" style="background-color: #00BCD4;">
+                        <div class="color-name">Primary Teal</div>
+                        <div class="color-code">#00BCD4</div>
+                    </div>
+                </div>
+
+                <div class="typography-samples reveal">
+                    <div class="typography-sample">
+                        <h1>Heading 1</h1>
+                        <p>Primary heading with large font size and bold weight</p>
+                    </div>
+                    <div class="typography-sample">
+                        <h2>Heading 2</h2>
+                        <p>Secondary heading with medium font size and semi-bold weight</p>
+                    </div>
+                    <div class="typography-sample">
+                        <h3>Heading 3</h3>
+                        <p>Tertiary heading with small font size and medium weight</p>
+                    </div>
+                    <div class="typography-sample">
+                        <h4>Heading 4</h4>
+                        <p>Quaternary heading with smaller font size and regular weight</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Mobile Features Section -->
+        <section class="mobile-features-section">
+            <div class="container">
+                <h3 class="section-title reveal">Mobile-Optimized Features</h3>
+                <p class="section-subtitle reveal">Swipe to explore different feature categories</p>
+
+                <div class="features-container" id="features-container">
+                    <!-- Video Editing Feature -->
+                    <div class="feature-section reveal">
+                        <div class="feature-card">
+                            <div class="card-icon">
+                                <svg viewBox="0 0 100 100">
+                                    <use href="svg/animated-icons.svg#scissors-to-video"></use>
+                                </svg>
+                            </div>
+                            <h3 class="card-title">Video Editing</h3>
+                            <p class="card-description">Edit your downloaded videos with built-in tools for trimming,
+                                cropping, and applying filters.</p>
+                            <div class="card-features">
+                                <span class="feature-tag">Trim & Cut</span>
+                                <span class="feature-tag">Filters</span>
+                                <span class="feature-tag">Effects</span>
+                            </div>
+                            <a href="#" class="cta-button cta-orange-red feature-cta">Try Video Editing Now</a>
+                        </div>
+                        <div class="swipe-indicator">
+                            <i class="fas fa-chevron-left"></i>
+                            <span>Swipe for more</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Theme Toggle -->
+        <div class="theme-toggle" id="theme-toggle">
+            <i class="fas fa-palette"></i>
+        </div>
+
+        <!-- Theme Options Menu -->
+        <div class="theme-options" id="theme-options">
+            <div class="theme-option" id="light-theme">
+                <i class="fas fa-sun"></i>
+                <span>Light Mode</span>
+            </div>
+            <div class="theme-option" id="dark-theme">
+                <i class="fas fa-moon"></i>
+                <span>Dark Mode</span>
+            </div>
+            <div class="theme-option" id="minimalist-theme">
+                <i class="fas fa-circle"></i>
+                <span>Minimalist</span>
+            </div>
+        </div>
+
+        <!-- Demo Modal -->
+        <div id="demo-modal" class="demo-modal">
+            <div class="modal-content">
+                <button class="close-modal">&times;</button>
+                <div id="demo-container" class="demo-container">
+                    <!-- Demo content will be dynamically loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tooltip Container -->
+        <div id="tooltip"></div>
+
+        <!-- Call-to-Action Booster Section -->
+        <section class="cta-section">
+            <div class="cta-container">
+                <h2 class="cta-title reveal">Ready to Experience FastPast?</h2>
+                <p class="cta-subtitle reveal">Join thousands of users who are already enjoying lightning-fast downloads
+                    and seamless media conversion.</p>
+                <a href="../index.html" class="cta-button reveal">Get Started Now</a>
+
+                <div class="social-proof reveal">
+                    <div class="trust-badge">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Secure & Private</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-users"></i>
+                        <span>50,000+ Happy Users</span>
+                    </div>
+                    <div class="trust-badge">
+                        <i class="fas fa-star"></i>
+                        <span>4.8/5 Rating</span>
+                    </div>
+                </div>
+
+                <div class="testimonial reveal">
+                    <p class="testimonial-text">"FastPast has completely changed how I download media. It's incredibly
+                        fast, easy to use, and the quality is always perfect. I can't imagine using anything else!"</p>
+                    <div class="testimonial-author">
+                        <img src="https://picsum.photos/seed/user123/40/40.jpg" alt="User" class="testimonial-avatar">
+                        <div>
+                            <div class="testimonial-name">Alex Johnson</div>
+                            <div class="testimonial-title">Content Creator</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FastPast. All rights reserved.</p>
+            <div class="donation-buttons"
+                style="display: flex; gap: 15px; justify-content: center; align-items: center; margin: 15px 0;">
+                <a href="https://ko-fi.com/fastpast" target="_blank" class="kofi-btn"
+                   
+                   >
+                    <i class="fas fa-mug-hot"></i> Ko-fi
+                </a>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy"><i class="fas fa-shield-alt"></i> <u>Privacy Policy</u></a>
+                <a href="/terms"><i class="fas fa-file-contract"></i> <u>Terms of Service</u></a>
+            </div>
+        </div>
+    </footer>
+
+    <button class="back-to-top" id="back-to-top" aria-label="Back to top" type="button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+</body>
+
+</html>
