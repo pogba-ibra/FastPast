@@ -28,6 +28,11 @@ const mongoSanitize = require('mongo-sanitize');
 // Structure: { [id]: { status: 'pending'|'processing'|'completed'|'failed', progress: 0, filePath: '', error: '' } }
 const zipJobs = new Map();
 
+// Helper to get platform-specific python command
+const getPythonCommand = () => {
+  return process.platform === 'win32' ? 'py' : 'python3';
+};
+
 // Storage mode flag
 let USE_MONGODB = false;
 let USERS_DATA = [];
@@ -419,7 +424,8 @@ const downloadQueue = new Queue(function (task, cb) {
   logger.info("Spawn yt-dlp args:", { args });
 
   // Use correct command for OS
-  const command = process.platform === 'win32' ? 'py' : 'python3';
+  const command = getPythonCommand();
+  logger.info("Spawning batch yt-dlp", { command, args });
   const ytDlp = spawn(command, ["-m", "yt_dlp", ...args]);
 
   let stderr = "";
@@ -2297,7 +2303,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
           try {
             await new Promise((resolve, reject) => {
               // Use correct command for OS
-              const command = process.platform === 'win32' ? 'py' : 'python3';
+              const command = getPythonCommand();
               const p = spawn(command, ["-m", "yt_dlp", ...args], { stdio: 'ignore' });
               p.on('close', (code) => {
                 if (code === 0) resolve();
@@ -2417,7 +2423,8 @@ app.get("/video-info", async (req, res) => {
   logger.info("Fetching video info for:", { url });
 
   try {
-    const command = process.platform === 'win32' ? 'py' : 'python3';
+    const command = getPythonCommand();
+    logger.info("Spawning info fetch", { command, url });
     const ytDlp = spawn(command, ["-m", "yt_dlp", "-J", url]);
     let stdoutData = "";
     let stderrData = "";
@@ -2858,7 +2865,9 @@ app.post("/get-qualities", async (req, res) => {
       const baseProcessArgs = ["-m", "yt_dlp", ...args];
 
       // Spawn unified process
-      const command = process.platform === "win32" ? "py" : "python3";
+      // Spawn unified process
+      const command = getPythonCommand();
+      logger.info("Spawning executeFetch", { command, args: baseProcessArgs });
       const ytDlpProcess = spawn(command, baseProcessArgs, {
         stdio: ["pipe", "pipe", "pipe"],
       });
@@ -3140,7 +3149,7 @@ app.post("/download", async (req, res) => {
 
       const fetchTitle = async (args, isRetry = false) => {
         return new Promise((resolve, reject) => {
-          const command = process.platform === "win32" ? "py" : "python3";
+          const command = getPythonCommand();
           const titleProcess = spawn(command, args, {
             stdio: ["pipe", "pipe", "pipe"],
           });
@@ -3334,7 +3343,7 @@ app.post("/download", async (req, res) => {
 
 
       // Spawn unified process
-      const command = process.platform === 'win32' ? 'py' : 'python3';
+      const command = getPythonCommand();
       const ytDlpProcess = spawn(command, ["-m", "yt_dlp", ...args], {
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -3389,6 +3398,25 @@ app.post("/download", async (req, res) => {
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
+});
+
+app.get("/debug-env", (req, res) => {
+  const info = {
+    platform: process.platform,
+    arch: process.arch,
+    node: process.version,
+    pythonCommand: getPythonCommand(),
+    cwd: process.cwd()
+  };
+
+  exec(`${getPythonCommand()} --version`, (err, stdout) => {
+    info.pythonVersion = err ? err.message : stdout.trim();
+
+    exec(`${getPythonCommand()} -m yt_dlp --version`, (err2, stdout2) => {
+      info.ytDlpVersion = err2 ? err2.message : stdout2.trim();
+      res.json(info);
+    });
+  });
 });
 
 
