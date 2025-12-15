@@ -398,9 +398,7 @@ const downloadQueue = new Queue(function (task, cb) {
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     args.push("--force-ipv4");
-    args.push("--extractor-args", "youtube:player_client=ios");
-    args.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
-    args.push("--referer", "https://www.youtube.com/");
+    args.push("--extractor-args", "youtube:player_client=android");
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -2441,8 +2439,7 @@ app.get("/video-info", async (req, res) => {
     const infoArgs = ["-m", "yt_dlp", "-J"];
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       infoArgs.push("--force-ipv4");
-      infoArgs.push("--extractor-args", "youtube:player_client=ios");
-      infoArgs.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
+      infoArgs.push("--extractor-args", "youtube:player_client=android");
     }
     infoArgs.push(url);
 
@@ -3152,10 +3149,10 @@ app.post("/download", async (req, res) => {
 
       // Add YouTube-specific workaround for JS runtime issue
       // Add YouTube-specific workaround for JS runtime issue
+      // Add YouTube-specific workaround for JS runtime issue
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
         titleArgs.push("--force-ipv4");
-        titleArgs.push("--extractor-args", "youtube:player_client=ios");
-        titleArgs.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
+        titleArgs.push("--extractor-args", "youtube:player_client=android");
       }
 
       // Add Vimeo-specific handling
