@@ -24,6 +24,8 @@ const emailService = require('./utils/email.service');
 const archiver = require('archiver');
 const mongoSanitize = require('mongo-sanitize');
 
+console.log("Starting Server...", { platform: process.platform, arch: process.arch, node: process.version });
+
 // In-memory store for zip jobs
 // Structure: { [id]: { status: 'pending'|'processing'|'completed'|'failed', progress: 0, filePath: '', error: '' } }
 const zipJobs = new Map();
