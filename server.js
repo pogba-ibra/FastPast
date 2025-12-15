@@ -399,6 +399,8 @@ const downloadQueue = new Queue(function (task, cb) {
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     args.push("--force-ipv4");
     args.push("--extractor-args", "youtube:player_client=android");
+    // Masquerade as a real Android device to bypass DC IP blocks
+    args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -2440,6 +2442,7 @@ app.get("/video-info", async (req, res) => {
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       infoArgs.push("--force-ipv4");
       infoArgs.push("--extractor-args", "youtube:player_client=android");
+      infoArgs.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
     }
     infoArgs.push(url);
 
@@ -3163,10 +3166,10 @@ app.post("/download", async (req, res) => {
         ffmpeg,
       ];
 
-      // Add YouTube-specific workaround for JS runtime issue
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
         titleArgs.push("--force-ipv4");
         titleArgs.push("--extractor-args", "youtube:player_client=android");
+        titleArgs.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
       }
 
       // Add Vimeo-specific handling
