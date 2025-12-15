@@ -2523,9 +2523,25 @@ app.get("/video-info", async (req, res) => {
 
         // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
         // Bypass proxy for YouTube to avoid server blocks - client loads directly
-        let proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
-        if (thumbUrl && (thumbUrl.includes("ytimg.com") || thumbUrl.includes("youtube.com"))) {
-          proxiedThumbnail = thumbUrl;
+
+        let proxiedThumbnail = null;
+
+        // Standard YouTube Thumbnail Fallback (Like other sites)
+        // If it's YouTube, force the standard high-res URL format
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          // Try to find the Video ID from the info or URL
+          const videoId = info.id;
+          if (videoId) {
+            // Use the reliable standard endpoint (hqdefault or maxresdefault)
+            // hqdefault is safest (always exists), maxresdefault is better quality but sometimes missing
+            thumbUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+            proxiedThumbnail = thumbUrl; // Direct load, no proxy
+          }
+        }
+
+        if (!proxiedThumbnail) {
+          // For non-YouTube, keep existing logic
+          proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
         }
 
         logger.info("Sent proxied thumbnail", {
