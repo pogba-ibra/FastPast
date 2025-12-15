@@ -272,17 +272,15 @@ const logger = winston.createLogger({
   ],
 });
 
-// If we're not in production then log to the console with a simple format
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    })
-  );
-}
+// Always log to console (Critical for Cloud/Docker environments where stdout is the only log viewer)
+logger.add(
+  new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    ),
+  })
+);
 
 // Function to parse MM:SS to seconds
 function parseTime(timeStr) {
