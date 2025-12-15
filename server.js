@@ -2417,7 +2417,8 @@ app.get("/video-info", async (req, res) => {
   logger.info("Fetching video info for:", { url });
 
   try {
-    const ytDlp = spawn("yt-dlp", ["-J", url]);
+    const command = process.platform === 'win32' ? 'py' : 'python3';
+    const ytDlp = spawn(command, ["-m", "yt_dlp", "-J", url]);
     let stdoutData = "";
     let stderrData = "";
 
