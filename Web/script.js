@@ -1563,6 +1563,15 @@ document.addEventListener("DOMContentLoaded", () => {
           this.src = rawUrl;
           return;
         }
+
+        // Fallback 2: Try Public Proxy (wsrv.nl) if direct/raw failed
+        if (rawUrl && !this.dataset.triedWsrv) {
+          console.log("Direct load failed, trying wsrv.nl proxy...", rawUrl);
+          this.dataset.triedWsrv = "true";
+          this.referrerPolicy = "no-referrer";
+          this.src = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}`;
+          return;
+        }
         if (
           videoUrl.includes("instagram.com") ||
           videoUrl.includes("threads.net") ||
@@ -1684,12 +1693,26 @@ document.addEventListener("DOMContentLoaded", () => {
       // Also set the src immediately so it's ready when needed
       // Use proxy for all external thumbnails except YouTube (which is whitelisted in CSP)
       // to avoid CSP violations and CORS issues
-      if (
-        videoUrl.includes("youtube.com") ||
-        videoUrl.includes("youtu.be")
-      ) {
-        // YouTube thumbnails are from i.ytimg.com which is whitelisted in CSP
+      const directDomains = [
+        "youtube.com", "youtu.be",
+        "instagram.com", "cdninstagram.com",
+        "facebook.com", "fbcdn.net",
+        "threads.net",
+        "reddit.com", "redditmedia.com",
+        "pinterest.com", "pinimg.com",
+        "odysee.com"
+      ];
+
+      const shouldUseDirect = directDomains.some(d =>
+        videoUrl.includes(d) || (mp4Data.thumbnail && mp4Data.thumbnail.includes(d))
+      );
+
+      if (shouldUseDirect) {
+        // Direct load for whitelisted domains (bypassing local proxy which gets blocked)
         videoThumbnail.src = mp4Data.thumbnail;
+        // Reset fallback flags
+        delete videoThumbnail.dataset.triedRaw;
+        delete videoThumbnail.dataset.triedWsrv;
       } else {
         // All other platforms: route through proxy to bypass CSP restrictions
         videoThumbnail.src = `/proxy-image?url=${encodeURIComponent(
