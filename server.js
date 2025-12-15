@@ -2537,6 +2537,10 @@ async function fetchPageMetadata(url) {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Upgrade-Insecure-Requests': '1',
       }
     });
 
@@ -2779,10 +2783,31 @@ app.post("/get-qualities", async (req, res) => {
           }
         }
 
-        // Generic Metadata Fallback for all platforms if still no thumbnail
-        if (!finalThumbnail) {
-          logger.info("Thumb missing after yt-dlp, attempting metadata fallback", { url: videoUrl });
-          finalThumbnail = await fetchPageMetadata(videoUrl);
+        // List of domains where yt-dlp thumbnails are often broken (403/Expires) or missing
+        // For these, we PREFER the metadata scraped thumbnail if available.
+        const UNRELIABLE_THUMB_DOMAINS = [
+          "instagram.com",
+          "facebook.com",
+          "fb.watch",
+          "threads.net",
+          "reddit.com",
+          "pinterest.com",
+          "odysee.com",
+          "youtube.com/shorts"
+        ];
+
+        const isUnreliable = UNRELIABLE_THUMB_DOMAINS.some(d => videoUrl.includes(d));
+
+        // Generic Metadata Fallback for all platforms if still no thumbnail OR if domain is unreliable
+        if (!finalThumbnail || isUnreliable) {
+          logger.info("Attempting robust metadata thumbnail extraction", { url: videoUrl, forced: isUnreliable });
+          const metadataThumb = await fetchPageMetadata(videoUrl);
+          // If we found a metadata thumb, use it. 
+          // Logic: If original was missing, use new. If original existed but is unreliable, overwrite it.
+          if (metadataThumb) {
+            finalThumbnail = metadataThumb;
+            logger.info("Overwrote/Set thumbnail from metadata", { url: videoUrl, thumbnail: finalThumbnail });
+          }
         }
 
         logger.info("Qualities thumbnail extracted", {
