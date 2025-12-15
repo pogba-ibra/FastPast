@@ -113,6 +113,10 @@ function configureAntiBlockingArgs(args, url) {
       args.push("--proxy", process.env.PROXY_URL);
     }
   }
+
+  // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
+  // Silence "No supported JavaScript runtime" warning by explicitly using 'node'
+  args.push("--js-runtimes", "node");
 }
 
 // Helper: Robust JSON parser that handles polluted stdout (warnings, etc.)
