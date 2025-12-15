@@ -1413,42 +1413,61 @@ app.get("/proxy-image", async (req, res) => {
   if (!url) {
     return res.status(400).send("URL required");
   }
+
+  // Helper to determine best headers for specific domains
+  const getHeadersForUrl = (targetUrl) => {
+    const headers = {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "Accept-Encoding": "gzip, deflate, br"
+    };
+
+    if (targetUrl.includes("instagram.com") || targetUrl.includes("cdninstagram")) {
+      headers["Referer"] = "https://www.instagram.com/";
+    } else if (targetUrl.includes("facebook.com") || targetUrl.includes("fbcdn")) {
+      headers["Referer"] = "https://www.facebook.com/";
+    } else if (targetUrl.includes("tiktok.com") || targetUrl.includes("byteoversea")) {
+      headers["Referer"] = "https://www.tiktok.com/";
+    } else if (targetUrl.includes("reddit.com") || targetUrl.includes("redditmedia")) {
+      headers["Referer"] = "https://www.reddit.com/";
+    } else if (targetUrl.includes("threads.net")) {
+      headers["Referer"] = "https://www.threads.net/";
+    } else {
+      // Default to origin or no referer 
+      // headers["Referer"] = new URL(targetUrl).origin; // Sometimes improved privacy is better
+    }
+    return headers;
+  };
+
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Referer": new URL(url).origin
-      }
-    });
+    // 1. Try with specific headers
+    let response = await fetch(url, { headers: getHeadersForUrl(url) });
+
+    // 2. If blocked (403/404), try basic fetch (no headers)
+    if (!response.ok) {
+      // console.log(`Proxy retry: ${url}`);
+      response = await fetch(url);
+    }
 
     if (!response.ok) {
-      // Try fallback without referer if first attempt fails
-      const fallbackResponse = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-      });
-
-      if (!fallbackResponse.ok) {
-        throw new Error("Failed to fetch image");
-      }
-
-      const buffer = await fallbackResponse.arrayBuffer();
-      res.set("Content-Type", fallbackResponse.headers.get("content-type") || "image/jpeg");
-      res.set("Cache-Control", "public, max-age=86400"); // Cache for 24h
-      return res.send(Buffer.from(buffer));
+      throw new Error(`Failed to fetch image: ${response.status}`);
     }
 
     const buffer = await response.arrayBuffer();
-    res.set(
-      "Content-Type",
-      response.headers.get("content-type") || "image/jpeg"
-    );
+
+    // Forward content-type or default to jpeg
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    res.set("Content-Type", contentType);
     res.set("Cache-Control", "public, max-age=86400"); // Cache for 24h
     res.send(Buffer.from(buffer));
+
   } catch (error) {
-    console.error("Proxy image error:", error.message, url);
-    res.status(500).send("Error fetching image");
+    console.error("Proxy image failed:", error.message); // Log error but don't break UI
+    // Return a 1x1 transparent GIF to prevent broken image icon in UI
+    const transparentGif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+    res.set("Content-Type", "image/gif");
+    res.set("Cache-Control", "public, max-age=3600");
+    res.send(transparentGif);
   }
 });
 
