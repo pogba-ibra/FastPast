@@ -397,7 +397,6 @@ const downloadQueue = new Queue(function (task, cb) {
   ];
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    args.push("--impersonate", "Chrome-131");
     // Use Android/TV clients which are often less restricted in data centers
     args.push("--extractor-args", "youtube:player_client=android");
   }
@@ -3140,15 +3139,6 @@ app.post("/download", async (req, res) => {
         // titleArgs.push("--cookies-from-browser", "chrome"); // Disabled
       }
 
-      // Add impersonation for YouTube and Vimeo
-      if (
-        url.includes("youtube.com") ||
-        url.includes("youtu.be") ||
-        url.includes("vimeo.com")
-      ) {
-        titleArgs.push("--impersonate", "Chrome-131");
-      }
-
       titleArgs.push(url);
 
       const fetchTitle = async (args, isRetry = false) => {
@@ -3282,7 +3272,7 @@ app.post("/download", async (req, res) => {
     // Add impersonation globally for all platforms to avoid blocking
     // Add impersonation globally for all platforms (except VK where it causes 400 Bad Request)
     if (!url.includes("vk.com") && !url.includes("vk.ru")) {
-      ytDlpArgs.push("--impersonate", "Chrome-131");
+      // yt-dlp standard doesn't support --impersonate, relying on default user-agent
     }
 
     if (url.includes("vimeo.com")) {
