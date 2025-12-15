@@ -2528,7 +2528,60 @@ app.get("/video-info", async (req, res) => {
   }
 });
 
+
+// Helper to fetch page metadata for thumbnail fallback
+async function fetchPageMetadata(url) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      }
+    });
+
+    if (!response.ok) return null;
+    const html = await response.text();
+
+    // Regex for Open Graph and Twitter Card images (handling single/double quotes and attribute order variability is hard with regex, assuming standard format or use cheerio if needed. Keeping it simple but slightly more flexible)
+    // improved to handle single or double quotes for content
+    const ogImage = html.match(/<meta\s+(?:property|name)=["']og:image["']\s+content=["']([^"']+)["']/i)?.[1];
+    const twitterImage = html.match(/<meta\s+(?:property|name)=["']twitter:image["']\s+content=["']([^"']+)["']/i)?.[1];
+    const itemPropImage = html.match(/<meta\s+itemprop=["']image["']\s+content=["']([^"']+)["']/i)?.[1];
+
+    // Schema.org JSON-LD extraction
+    let jsonLdImage = null;
+    const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i);
+    if (jsonLdMatch && jsonLdMatch[1]) {
+      try {
+        const data = JSON.parse(jsonLdMatch[1]);
+        if (data.thumbnailUrl) jsonLdImage = Array.isArray(data.thumbnailUrl) ? data.thumbnailUrl[0] : data.thumbnailUrl;
+        if (data.image) {
+          if (typeof data.image === 'string') jsonLdImage = data.image;
+          else if (Array.isArray(data.image)) jsonLdImage = data.image[0];
+          else if (data.image.url) jsonLdImage = data.image.url;
+        }
+      } catch {
+        // Ignore JSON parse errors
+      }
+    }
+
+    const foundThumbnail = ogImage || twitterImage || itemPropImage || jsonLdImage || null;
+
+    if (foundThumbnail) {
+      logger.info('Fetched metadata fallback thumbnail', { url, thumbnail: foundThumbnail });
+    }
+
+    return foundThumbnail;
+
+  } catch (error) {
+    logger.warn("Metadata fetch failed", { url, error: error.message });
+    return null;
+  }
+}
+
 app.post("/get-qualities", async (req, res) => {
+
   const startTime = Date.now();
   let { videoUrl, format } = req.body;
 
@@ -2581,6 +2634,12 @@ app.post("/get-qualities", async (req, res) => {
           title: threadsData.title,
           duration: threadsData.duration,
         };
+
+        // Fallback if Threads extractor failed to find thumbnail
+        if (!result.thumbnail) {
+          logger.info("Threads internal thumb missing, attempting metadata fallback", { url: videoUrl });
+          result.thumbnail = await fetchPageMetadata(videoUrl);
+        }
 
 
         logger.info("Threads video qualities fetched successfully", {
@@ -2656,7 +2715,7 @@ app.post("/get-qualities", async (req, res) => {
     ytDlpInfoArgs.push(videoUrl);
 
     // Helper to process valid JSON output
-    const processVideoInfo = (jsonString, stderrString) => {
+    const processVideoInfo = async (jsonString, stderrString) => {
       try {
         const videoInfo = JSON.parse(jsonString);
 
@@ -2718,6 +2777,12 @@ app.post("/get-qualities", async (req, res) => {
           } catch (e) {
             logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
           }
+        }
+
+        // Generic Metadata Fallback for all platforms if still no thumbnail
+        if (!finalThumbnail) {
+          logger.info("Thumb missing after yt-dlp, attempting metadata fallback", { url: videoUrl });
+          finalThumbnail = await fetchPageMetadata(videoUrl);
         }
 
         logger.info("Qualities thumbnail extracted", {
