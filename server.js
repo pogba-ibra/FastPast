@@ -96,13 +96,16 @@ function configureAntiBlockingArgs(args, url) {
     args.push("--force-ipv4");
 
     // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
-    // This looks like a real mobile app traffic
-    args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+    // Only apply to NON-YouTube platforms, as yt-dlp Nightly handles YouTube better primarily
+    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+      args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+    }
 
     // 3. Platform specific extractor args
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      args.push("--extractor-args", "youtube:player_client=android");
-    }
+    // YouTube: relying on Nightly default behavior which is proven to work manually
+    // if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    //   args.push("--extractor-args", "youtube:player_client=android");
+    // }
 
     // 4. Proxy Support (Critical for Cloud Deployments)
     // If user has defined PROXY_URL in environment, use it.
