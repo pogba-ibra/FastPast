@@ -28,8 +28,11 @@ RUN npm install
 # Copy app source
 COPY . .
 
+# Install pm2 globally
+RUN npm install pm2 -g
+
 # Expose port
 EXPOSE 8000
 
-# Start command
-CMD [ "npm", "start" ]
+# Start command using pm2-runtime (Docker-ready process manager)
+CMD [ "pm2-runtime", "server.js" ]

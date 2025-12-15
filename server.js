@@ -41,7 +41,7 @@ function spawnYtDlp(args, options = {}) {
   const isYoutube = args.some(arg => typeof arg === 'string' && (arg.includes("youtube.com") || arg.includes("youtu.be")));
 
   // Use Nightly binary if it's YouTube AND the binary exists (e.g. in Docker)
-  // We check /usr/local/bin/yt-dlp-nightly which we install in Dockerfile
+  // We check /usr/local/bin/yt-dlp-nightly which we install in Dockerfile as a python zipapp
   const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
   const useNightly = isYoutube && fs.existsSync(nightlyPath);
 
@@ -49,16 +49,21 @@ function spawnYtDlp(args, options = {}) {
   let finalArgs = [...args];
 
   if (useNightly) {
-    command = nightlyPath;
-    // Remove "-m" and "yt_dlp" if they are the first arguments (since we use binary directly)
+    // Invoke via python3 explicitly to ensure execution
+    command = getPythonCommand(); // "python3" or "py"
+
+    // Remove "-m" and "yt_dlp" if they are the first arguments
     if (finalArgs[0] === '-m' && finalArgs[1] === 'yt_dlp') {
       finalArgs.splice(0, 2);
     }
-    logger.info("Using yt-dlp Nightly binary for YouTube", { command });
+
+    // Prepend the path to the nightly script
+    finalArgs.unshift(nightlyPath);
+
+    logger.info("Using yt-dlp Nightly (python3 invoked) for YouTube", { nightlyPath });
   } else {
     command = getPythonCommand();
     // Ensure -m yt_dlp is present if using python command (it usually is passed in args)
-    // But verify to be safe? The caller usually provides it. We assume caller provides correct args for python module usage.
     logger.info("Using yt-dlp Stable (pip)", { command });
   }
 
