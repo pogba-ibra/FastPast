@@ -2495,7 +2495,7 @@ app.get("/video-info", async (req, res) => {
         }
 
         logger.info("Raw thumbnail extracted", {
-          url: videoUrl,
+          url: url,
           rawThumbnail: thumbUrl || "null"
         });
 
@@ -2503,7 +2503,7 @@ app.get("/video-info", async (req, res) => {
         const proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
 
         logger.info("Sent proxied thumbnail", {
-          url: videoUrl,
+          url: url,
           proxied: proxiedThumbnail
         });
 
@@ -2705,6 +2705,12 @@ app.post("/get-qualities", async (req, res) => {
 
         // Special handling for Instagram and Threads thumbnails
         let finalThumbnail = videoInfo.thumbnail;
+
+        // Fallback to thumbnails array if top-level thumbnail is missing
+        if (!finalThumbnail && videoInfo.thumbnails && videoInfo.thumbnails.length > 0) {
+          finalThumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
+        }
+
         if (videoUrl.includes("instagram.com") && !finalThumbnail) {
           try {
             // eslint-disable-next-line no-useless-escape
@@ -2717,6 +2723,11 @@ app.post("/get-qualities", async (req, res) => {
             logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
           }
         }
+
+        logger.info("Qualities thumbnail extracted", {
+          url: videoUrl,
+          thumbnail: finalThumbnail || "null"
+        });
 
         const result = {
           qualities,
