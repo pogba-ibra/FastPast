@@ -397,10 +397,10 @@ const downloadQueue = new Queue(function (task, cb) {
   ];
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    // force-ipv4 ONLY for YouTube
     args.push("--force-ipv4");
-    // Use Android/TV clients which are often less restricted in data centers
-    args.push("--extractor-args", "youtube:player_client=android");
+    args.push("--extractor-args", "youtube:player_client=ios");
+    args.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
+    args.push("--referer", "https://www.youtube.com/");
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -2441,7 +2441,8 @@ app.get("/video-info", async (req, res) => {
     const infoArgs = ["-m", "yt_dlp", "-J"];
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       infoArgs.push("--force-ipv4");
-      infoArgs.push("--extractor-args", "youtube:player_client=android");
+      infoArgs.push("--extractor-args", "youtube:player_client=ios");
+      infoArgs.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
     }
     infoArgs.push(url);
 
@@ -3152,10 +3153,9 @@ app.post("/download", async (req, res) => {
       // Add YouTube-specific workaround for JS runtime issue
       // Add YouTube-specific workaround for JS runtime issue
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        // force-ipv4 ONLY for YouTube
         titleArgs.push("--force-ipv4");
-        // Use Android client for title/info fetching as it's more robust
-        titleArgs.push("--extractor-args", "youtube:player_client=android");
+        titleArgs.push("--extractor-args", "youtube:player_client=ios");
+        titleArgs.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1");
       }
 
       // Add Vimeo-specific handling
