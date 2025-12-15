@@ -2857,7 +2857,8 @@ app.post("/get-qualities", async (req, res) => {
       const baseProcessArgs = ["-m", "yt_dlp", ...args];
 
       // Spawn unified process
-      const ytDlpProcess = spawn("py", baseProcessArgs, {
+      const command = process.platform === "win32" ? "py" : "python3";
+      const ytDlpProcess = spawn(command, baseProcessArgs, {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -3138,7 +3139,8 @@ app.post("/download", async (req, res) => {
 
       const fetchTitle = async (args, isRetry = false) => {
         return new Promise((resolve, reject) => {
-          const titleProcess = spawn("py", args, {
+          const command = process.platform === "win32" ? "py" : "python3";
+          const titleProcess = spawn(command, args, {
             stdio: ["pipe", "pipe", "pipe"],
           });
           let titleStdout = "";
