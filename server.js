@@ -119,7 +119,7 @@ function tryParseJson(stdout) {
   // 1. Try strict parse first
   try {
     return JSON.parse(stdout);
-  } catch (_e) {
+  } catch {
     // 2. Fallback: Line-by-line check
     // yt-dlp might output warnings before the JSON
     const lines = stdout.split('\n');
@@ -128,7 +128,7 @@ function tryParseJson(stdout) {
       if ((trimmed.startsWith('{') && trimmed.endsWith('}'))) {
         try {
           return JSON.parse(trimmed);
-        } catch (_ignored) {
+        } catch {
           // Continue to next line if parse fails
         }
       }
