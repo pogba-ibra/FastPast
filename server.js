@@ -60,18 +60,18 @@ function spawnYtDlp(args, options = {}) {
   let finalArgs = [...args];
 
   if (useNightly) {
-    // Invoke via python3 explicitly to ensure execution
-    command = getPythonCommand(); // "python3" or "py"
+    // Invoke the binary directly (User Request: "Use Binary Instead of Module")
+    // This often handles runtime detection better than `python3 path/to/zipapp`
+    command = nightlyPath;
 
     // Remove "-m" and "yt_dlp" if they are the first arguments
     if (finalArgs[0] === '-m' && finalArgs[1] === 'yt_dlp') {
       finalArgs.splice(0, 2);
     }
 
-    // Prepend the path to the nightly script
-    finalArgs.unshift(nightlyPath);
+    // Note: We do NOT prepend nightlyPath to args, because it IS the command now.
 
-    logger.info("Using yt-dlp Nightly (python3 invoked) for YouTube", { nightlyPath });
+    logger.info("Using yt-dlp Nightly (Binary invocation) for YouTube", { nightlyPath });
   } else {
     command = getPythonCommand();
     // Ensure -m yt_dlp is present if using python command (it usually is passed in args)

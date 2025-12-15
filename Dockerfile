@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     ffmpeg \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && ln -s $(which node) /usr/local/bin/node || true
 
 # Install yt-dlp regarding PEP 668 (Stable Version)
 RUN pip3 install yt-dlp --break-system-packages
