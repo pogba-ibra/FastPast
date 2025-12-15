@@ -418,7 +418,9 @@ const downloadQueue = new Queue(function (task, cb) {
   console.log("Spawn yt-dlp args:", args.join(" ")); // Debug logging
   logger.info("Spawn yt-dlp args:", { args });
 
-  const ytDlp = spawn("py", ["-m", "yt_dlp", ...args]);
+  // Use correct command for OS
+  const command = process.platform === 'win32' ? 'py' : 'python3';
+  const ytDlp = spawn(command, ["-m", "yt_dlp", ...args]);
 
   let stderr = "";
 
@@ -2256,7 +2258,9 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
 
           try {
             await new Promise((resolve, reject) => {
-              const p = spawn("py", ["-m", "yt_dlp", ...args], { stdio: 'ignore' });
+              // Use correct command for OS
+              const command = process.platform === 'win32' ? 'py' : 'python3';
+              const p = spawn(command, ["-m", "yt_dlp", ...args], { stdio: 'ignore' });
               p.on('close', (code) => {
                 if (code === 0) resolve();
                 else reject(new Error(`Exit code ${code}`));
@@ -2447,7 +2451,7 @@ app.get("/video-info", async (req, res) => {
           // Get the best quality thumbnail (usually the last one)
           thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
         }
-        
+
         // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
         const proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
 
@@ -3161,7 +3165,8 @@ app.post("/download", async (req, res) => {
       const baseProcessArgs = ["-m", "yt_dlp", ...args];
 
       // Spawn unified process
-      const ytDlpProcess = spawn("py", baseProcessArgs, {
+      const command = process.platform === 'win32' ? 'py' : 'python3';
+      const ytDlpProcess = spawn(command, ["-m", "yt_dlp", ...args], {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
@@ -3213,6 +3218,13 @@ app.post("/download", async (req, res) => {
     res.status(500).json({ error: "An unexpected error occurred." });
   }
 });
+
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+// Use 'yt-dlp' directly or 'python3' for Linux environment (Koyeb)
+const pythonCommand = process.platform === 'win32' ? 'py' : 'python3';
 
 server.listen(port, () => {
   logger.info(`Server started successfully`, {
