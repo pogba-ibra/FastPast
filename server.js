@@ -2480,18 +2480,77 @@ app.get("/queue-status", (req, res) => {
   res.json(stats);
 });
 
-app.get("/open-downloads-folder", (req, res) => {
-  const cmd = os.platform() === 'win32' ? `start "" "${downloadDir}"`
-    : os.platform() === 'darwin' ? `open "${downloadDir}"`
-      : `xdg-open "${downloadDir}"`;
+// Endpoint to debug network connectivity and yt-dlp execution on the server
+app.get("/debug-network", async (req, res) => {
+  const { url } = req.query;
+  const targetUrl = url || "https://www.youtube.com/watch?v=dQw4w9WgXcQ"; // Default to Rick Roll for test
 
-  exec(cmd, (err) => {
-    if (err) {
-      logger.error("Failed to open folder", { error: err.message });
-      return res.status(500).json({ error: "Failed to open folder" });
-    }
-    res.json({ message: "Folder opened" });
-  });
+  const results = {
+    connectivity: {},
+    binary: {},
+    extraction: {}
+  };
+
+  try {
+    // 1. Connectivity Test (curl)
+    await new Promise((resolve) => {
+      exec(`curl -I -m 5 https://www.youtube.com`, (err, stdout, stderr) => {
+        results.connectivity = {
+          success: !err,
+          error: err ? err.message : null,
+          http_code: stdout ? stdout.split('\n')[0] : "No output",
+          details: stderr || stdout
+        };
+        resolve();
+      });
+    });
+
+    // 2. Binary Check (Nightly)
+    await new Promise((resolve) => {
+      const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
+      if (!fs.existsSync(nightlyPath)) {
+        results.binary = { exists: false, error: "Binary not found at " + nightlyPath };
+        resolve();
+        return;
+      }
+
+      const cmd = `python3 ${nightlyPath} --version`;
+      exec(cmd, (err, stdout, stderr) => {
+        results.binary = {
+          exists: true,
+          success: !err,
+          version: stdout ? stdout.trim() : "Unknown",
+          error: err ? err.message : null,
+          stderr: stderr
+        };
+        resolve();
+      });
+    });
+
+    // 3. Extraction Test (Dry Run)
+    await new Promise((resolve) => {
+      const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
+      // Construct command manually to mimic spawnYtDlp but capturing output cleanly for JSON
+      // Use Android UA as per our fix
+      const ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
+      const cmd = `python3 ${nightlyPath} --dump-json --no-playlist --no-check-certificate --user-agent "${ua}" "${targetUrl}"`;
+
+      exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+        results.extraction = {
+          success: !err,
+          title: stdout ? JSON.parse(stdout).title : null, // Try to parse title
+          error: err ? err.message : null,
+          stderr_preview: stderr ? stderr.substring(0, 500) : null
+        };
+        resolve();
+      });
+    });
+
+    res.json(results);
+
+  } catch (globalError) {
+    res.status(500).json({ error: globalError.message, partial_results: results });
+  }
 });
 
 // Endpoint to get detailed video info (formats, qualities, duration)
