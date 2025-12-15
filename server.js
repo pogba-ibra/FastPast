@@ -96,8 +96,9 @@ function configureAntiBlockingArgs(args, url) {
     args.push("--force-ipv4");
 
     // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
-    // Only apply to NON-YouTube platforms, as yt-dlp Nightly handles YouTube better primarily
-    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+    // Only apply to NON-YouTube and NON-Instagram platforms.
+    // YouTube & Instagram handlers in yt-dlp Nightly work best with their defaults.
+    if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("instagram.com")) {
       args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
     }
 
