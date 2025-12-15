@@ -2566,7 +2566,7 @@ app.get("/debug-network", async (req, res) => {
       const ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
       const cmd = `python3 ${nightlyPath} --dump-json --no-playlist --no-check-certificate --user-agent "${ua}" "${targetUrl}"`;
 
-      exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+      exec(cmd, { timeout: 30000, maxBuffer: 1024 * 1024 * 10 }, (err, stdout, stderr) => {
         const parsed = tryParseJson(stdout);
         results.extraction = {
           success: !err && !!parsed,
