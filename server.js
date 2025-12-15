@@ -395,7 +395,7 @@ const downloadQueue = new Queue(function (task, cb) {
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-    args.push("--cookies-from-browser", "chrome");
+    // args.push("--cookies-from-browser", "chrome"); // Disabled
   }
 
   if (format) {
@@ -2702,16 +2702,15 @@ app.post("/get-qualities", async (req, res) => {
 
 
     // Add Vimeo-specific handling
-    // Add Vimeo-specific handling
     if (videoUrl.includes("vimeo.com")) {
       ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-      ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
+      // ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     }
 
     // Add VK-specific handling (use cookies for private/wall posts)
-    if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
-      ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
-    }
+    // if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
+    //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
+    // }
 
     // Use standard User-Agent for all platforms (Koyeb/Linux compatible)
     ytDlpInfoArgs.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
@@ -3123,7 +3122,7 @@ app.post("/download", async (req, res) => {
       // Add Vimeo-specific handling
       if (url.includes("vimeo.com")) {
         titleArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-        titleArgs.push("--cookies-from-browser", "chrome");
+        // titleArgs.push("--cookies-from-browser", "chrome"); // Disabled
       }
 
       // Add impersonation for YouTube and Vimeo
@@ -3276,9 +3275,9 @@ app.post("/download", async (req, res) => {
     }
 
     // Add VK cookies
-    if (url.includes("vk.com") || url.includes("vk.ru")) {
-      ytDlpArgs.push("--cookies-from-browser", "chrome");
-    }
+    // if (url.includes("vk.com") || url.includes("vk.ru")) {
+    //   ytDlpArgs.push("--cookies-from-browser", "chrome"); // Disabled
+    // }
 
     let formatArgs = [];
     if (fmt === "mp4") {
@@ -3345,8 +3344,7 @@ app.post("/download", async (req, res) => {
           if (!isRetry && (stderrText.includes("Could not copy") || stderrText.includes("cookie database") || stderrText.includes("Failed to decrypt"))) {
             logger.warn("Chrome cookies locked during download, retrying...", { url });
             // Remove cookie args
-            const cleanArgs = args.filter(a => a !== "--cookies-from-browser" && a !== "chrome");
-            performDownload(cleanArgs, true);
+            performDownload(args, true);
             return true;
           }
           return false;
