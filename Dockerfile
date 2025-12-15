@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp
-RUN pip3 install yt-dlp
+# Install yt-dlp regarding PEP 668
+RUN pip3 install yt-dlp --break-system-packages
 
 # Create app directory
 WORKDIR /usr/src/app
