@@ -2654,8 +2654,8 @@ app.post("/get-qualities", async (req, res) => {
       ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
     }
 
-    // Add impersonation globally for all platforms to avoid blocking
-    ytDlpInfoArgs.push("--impersonate", "Chrome-131");
+    // Use standard User-Agent for all platforms (Koyeb/Linux compatible)
+    ytDlpInfoArgs.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
     ytDlpInfoArgs.push(videoUrl);
 
