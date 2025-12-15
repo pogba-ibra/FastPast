@@ -398,7 +398,8 @@ const downloadQueue = new Queue(function (task, cb) {
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     args.push("--impersonate", "Chrome-131");
-    args.push("--extractor-args", "youtube:player_client=default,ios");
+    // Use Android/TV clients which are often less restricted in data centers
+    args.push("--extractor-args", "youtube:player_client=android");
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -3129,7 +3130,8 @@ app.post("/download", async (req, res) => {
 
       // Add YouTube-specific workaround for JS runtime issue
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        titleArgs.push("--extractor-args", "youtube:player_client=default,ios");
+        // Use Android client for title/info fetching as it's more robust
+        titleArgs.push("--extractor-args", "youtube:player_client=android");
       }
 
       // Add Vimeo-specific handling
