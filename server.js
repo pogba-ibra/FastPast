@@ -2441,9 +2441,19 @@ app.get("/video-info", async (req, res) => {
           mp4Qualities.push({ quality: "Best Available", format_id: "bestvideo+bestaudio", note: "Auto" });
         }
 
+        // Robust thumbnail extraction
+        let thumbUrl = info.thumbnail;
+        if (!thumbUrl && info.thumbnails && info.thumbnails.length > 0) {
+          // Get the best quality thumbnail (usually the last one)
+          thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
+        }
+        
+        // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
+        const proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
+
         res.json({
           title: info.title,
-          thumbnail: info.thumbnail,
+          thumbnail: proxiedThumbnail,
           duration: info.duration, // in seconds
           mp4Data: {
             qualities: mp4Qualities,
