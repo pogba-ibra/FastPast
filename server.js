@@ -115,8 +115,8 @@ function configureAntiBlockingArgs(args, url) {
   }
 
   // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
-  // Silence "No supported JavaScript runtime" warning by explicitly using 'node'
-  args.push("--js-runtimes", "node");
+  // Silence "No supported JavaScript runtime" warning by explicitly using current node executable
+  args.push("--js-runtimes", "node:" + process.execPath);
 }
 
 // Helper: Robust JSON parser that handles polluted stdout (warnings, etc.)
