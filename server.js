@@ -2504,6 +2504,47 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
   })();
 });
 
+// Helper: Fetch video info from RapidAPI (Fallback)
+async function fetchFromRapidApi(url) {
+  if (!process.env.RAPIDAPI_KEY) return null;
+  console.log("--> API Fallback: Fetching from RapidAPI...");
+  try {
+    const response = await fetch(`https://youtube-downloader-api.p.rapidapi.com/api/info?url=${encodeURIComponent(url)}`, {
+      headers: {
+        'X-RapidAPI-Key': process.env.RAPIDAPI_KEY,
+        'X-RapidAPI-Host': 'youtube-downloader-api.p.rapidapi.com'
+      }
+    });
+
+    if (!response.ok) {
+      console.warn(`RapidAPI returned status ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+
+    // Map API format to FastPast format
+    // Note: RapidAPI usually returns 'formats' array
+    const qualities = (data.formats || []).map(f => ({
+      value: f.url, // CRITICAL: Use the Direct URL as the identifier for the download endpoint
+      text: f.quality || "Unknown",
+      height: parseInt(f.quality) || 0,
+      hasAudio: true, // API usually gives muxed streams or we assume so
+      ext: "mp4",
+      isDirectUrl: true // Flag for download endpoint
+    }));
+
+    return {
+      title: data.title,
+      thumbnail: data.thumbnail,
+      qualities: qualities
+    };
+  } catch (e) {
+    console.error("RapidAPI Error", e);
+    return null;
+  }
+}
+
 // Endpoint to check job status
 app.get("/zip-job-status/:id", (req, res) => {
   const job = zipJobs.get(req.params.id);
@@ -3157,8 +3198,17 @@ app.post("/get-qualities", async (req, res) => {
         processVideoInfo(stdout, stderr);
       });
 
-      ytDlpProcess.on("error", (error) => {
+      ytDlpProcess.on("error", async (error) => {
         if (responseSent) return;
+
+        // 1. Try API Fallback before failing
+        const apiData = await fetchFromRapidApi(videoUrl);
+        if (apiData) {
+          responseSent = true;
+          logger.info("Recovered using RapidAPI Fallback", { url: videoUrl });
+          return res.json(apiData);
+        }
+
         responseSent = true;
 
         logger.error("Spawn error in qualities", {
@@ -3198,6 +3248,38 @@ app.post("/download", async (req, res) => {
   let url = videoUrl || req.body.videoUrl;
   const fmt = format || req.body.format;
   const qual = quality || req.body.quality;
+
+  // RAPIDAPI Support: If 'fmt' is a long URL, it means we got it from the API.
+  // Bypass yt-dlp and stream directly.
+  if (fmt && (fmt.startsWith("http") || fmt.length > 100)) {
+    logger.info("Direct download detected (API Fallback mode)", { url });
+    try {
+      const response = await fetch(fmt);
+      if (!response.ok) throw new Error(`External URL failed: ${response.status}`);
+
+      res.setHeader('Content-Disposition', `attachment; filename="video.mp4"`);
+      res.setHeader('Content-Type', 'video/mp4');
+
+      // Pipe the external stream to the response
+      const { Readable } = require('stream');
+      // Node 18+ fetch returns a web stream, need to handle it or use helper
+      const reader = response.body.getReader();
+      const nodeStream = new Readable({
+        async read() {
+          const { done, value } = await reader.read();
+          if (done) {
+            this.push(null);
+          } else {
+            this.push(Buffer.from(value));
+          }
+        }
+      });
+      nodeStream.pipe(res);
+      return;
+    } catch (e) {
+      return res.status(500).json({ error: "Failed to download from external API", details: e.message });
+    }
+  }
   const formatSelector =
     req.body.formatSelector ||
     req.body.formatId ||
