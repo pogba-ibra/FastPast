@@ -1463,12 +1463,16 @@ document.addEventListener("DOMContentLoaded", () => {
       // NO EMBED: Show only the thumbnail
       videoPlayer.src = "";
       videoPlayer.style.display = "none";
+
+      // ALWAYS show the thumbnail element if we don't have an embed
+      // This ensures either the real thumbnail OR the placeholder visible
+      videoThumbnail.style.display = "block";
+
       const thumbnailSrc = videoThumbnail.getAttribute("data-src") || videoThumbnail.src || "";
 
-      // Only show thumbnail if we have a valid source
+      // Only apply special styling if we have a valid source (not placeholder)
       if (thumbnailSrc && !thumbnailSrc.includes("data:image/svg+xml")) {
         // We have a real thumbnail from the server
-        videoThumbnail.style.display = "block";
 
         // Force height constraints for social media platforms
         if (videoUrl.includes("facebook.com") ||
