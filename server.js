@@ -2714,7 +2714,12 @@ app.post("/get-qualities", async (req, res) => {
         stderr += data.toString();
       });
 
+      let responseSent = false;
+
       ytDlpProcess.on("close", (code) => {
+        if (responseSent) return;
+        responseSent = true;
+
         if (code !== 0) {
           const stderrTrimmed = stderr.trim();
 
@@ -2723,7 +2728,7 @@ app.post("/get-qualities", async (req, res) => {
             logger.warn("Chrome cookies locked, retrying fetch without cookies", { url: videoUrl });
             // Filter out cookie args
             const cleanArgs = args.filter(a => a !== "--cookies-from-browser" && a !== "chrome");
-            return executeFetch(cleanArgs, true);
+            return executeFetch(cleanArgs, true); // This recursively calls a function that handles its own res, which is fine because we set responseSent=true here
           }
 
           logger.error("yt-dlp qualities fetch failed", {
@@ -2750,6 +2755,9 @@ app.post("/get-qualities", async (req, res) => {
       });
 
       ytDlpProcess.on("error", (error) => {
+        if (responseSent) return;
+        responseSent = true;
+
         logger.error("Spawn error in qualities", {
           url: videoUrl,
           error: error.message,
