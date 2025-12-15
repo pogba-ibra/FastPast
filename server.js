@@ -2494,8 +2494,18 @@ app.get("/video-info", async (req, res) => {
           thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
         }
 
+        logger.info("Raw thumbnail extracted", {
+          url: videoUrl,
+          rawThumbnail: thumbUrl || "null"
+        });
+
         // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
         const proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
+
+        logger.info("Sent proxied thumbnail", {
+          url: videoUrl,
+          proxied: proxiedThumbnail
+        });
 
         res.json({
           title: info.title,
