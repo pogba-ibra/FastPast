@@ -103,6 +103,12 @@ function configureAntiBlockingArgs(args, url) {
     }
 
     // 3. Platform specific extractor args
+    // Instagram: Use iPhone User-Agent. "Native" failed (login wall), "Generic Android" failed.
+    // Emulating the specific App often bypasses the "Main webpage locked" error.
+    if (url.includes("instagram.com")) {
+      args.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 142.0.0.22.109");
+    }
+
     // YouTube: relying on Nightly default behavior which is proven to work manually
     // if (url.includes("youtube.com") || url.includes("youtu.be")) {
     //   args.push("--extractor-args", "youtube:player_client=android");
@@ -112,10 +118,13 @@ function configureAntiBlockingArgs(args, url) {
     // If user has defined PROXY_URL in environment, use it.
     if (process.env.PROXY_URL) {
       args.push("--proxy", process.env.PROXY_URL);
+      // Log that we are using a proxy (don't log the full URL for security)
+      console.log("--> Security: Using Proxy for this request");
+    } else {
+      console.log("--> Security: Direct Connection (No Proxy configured)");
     }
   }
 
-  // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
   // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
   // Silence "No supported JavaScript runtime" warning by explicitly using known symlink path
   args.push("--js-runtimes", "node:/usr/local/bin/node");
