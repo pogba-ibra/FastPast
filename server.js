@@ -397,6 +397,8 @@ const downloadQueue = new Queue(function (task, cb) {
   ];
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    // force-ipv4 ONLY for YouTube
+    args.push("--force-ipv4");
     // Use Android/TV clients which are often less restricted in data centers
     args.push("--extractor-args", "youtube:player_client=android");
   }
@@ -2427,7 +2429,16 @@ app.get("/video-info", async (req, res) => {
   try {
     const command = getPythonCommand();
     logger.info("Spawning info fetch", { command, url });
-    const ytDlp = spawn(command, ["-m", "yt_dlp", "-J", url]);
+
+    // Construct args dynamically to allow YouTube-specific flags
+    const infoArgs = ["-m", "yt_dlp", "-J"];
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      infoArgs.push("--force-ipv4");
+      infoArgs.push("--extractor-args", "youtube:player_client=android");
+    }
+    infoArgs.push(url);
+
+    const ytDlp = spawn(command, infoArgs);
     let stdoutData = "";
     let stderrData = "";
 
@@ -3129,6 +3140,8 @@ app.post("/download", async (req, res) => {
 
       // Add YouTube-specific workaround for JS runtime issue
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        // force-ipv4 ONLY for YouTube
+        titleArgs.push("--force-ipv4");
         // Use Android client for title/info fetching as it's more robust
         titleArgs.push("--extractor-args", "youtube:player_client=android");
       }
