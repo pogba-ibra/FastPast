@@ -133,6 +133,19 @@ function tryParseJson(stdout) {
         }
       }
     }
+
+    // 3. Fallback: Substring Search (Deep Search)
+    // Sometimes warning and JSON are on the same line or mixed heavily
+    const firstBrace = stdout.indexOf('{');
+    const lastBrace = stdout.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      try {
+        const candidate = stdout.substring(firstBrace, lastBrace + 1);
+        return JSON.parse(candidate);
+      } catch {
+        // Substring parse failed
+      }
+    }
   }
   return null;
 }
@@ -2625,8 +2638,13 @@ app.get("/video-info", async (req, res) => {
 
       const info = tryParseJson(stdoutData);
 
+      // DEBUG: Log output details to help diagnose specific platform failures
       if (!info) {
-        logger.error("Failed to parse video info JSON", { stdout: stdoutData.substring(0, 500) });
+        logger.error("Failed to parse video info JSON", {
+          length: stdoutData.length,
+          preview: stdoutData.substring(0, 200),
+          lastChars: stdoutData.substring(stdoutData.length - 200)
+        });
         return res.status(500).json({ error: "Failed to parse video metadata" });
       }
 
