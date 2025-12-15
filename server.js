@@ -1446,7 +1446,7 @@ app.get("/proxy-image", async (req, res) => {
     );
     res.set("Cache-Control", "public, max-age=86400"); // Cache for 24h
     res.send(Buffer.from(buffer));
-  } catch (error) { // eslint-disable-line no-unused-vars
+  } catch (error) {
     console.error("Proxy image error:", error.message, url);
     res.status(500).send("Error fetching image");
   }
@@ -2611,209 +2611,206 @@ app.post("/get-qualities", async (req, res) => {
     if (videoUrl.includes("reddit.com")) {
       ytDlpInfoArgs.push("--add-header", "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     }
-    "--add-header",
-      "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      );
+
+
+    // Add Vimeo-specific handling
+    // Add Vimeo-specific handling
+    if (videoUrl.includes("vimeo.com")) {
+      ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
+      ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
     }
 
-// Add Vimeo-specific handling
-// Add Vimeo-specific handling
-if (videoUrl.includes("vimeo.com")) {
-  ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-  ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
-}
-
-// Add VK-specific handling (use cookies for private/wall posts)
-if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
-  ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
-}
-
-// Add impersonation globally for all platforms to avoid blocking
-ytDlpInfoArgs.push("--impersonate", "Chrome-131");
-
-ytDlpInfoArgs.push(videoUrl);
-
-// Helper to process valid JSON output
-const processVideoInfo = (jsonString, stderrString) => {
-  try {
-    const videoInfo = JSON.parse(jsonString);
-
-    let qualities = [];
-
-    if (format === "mp4") {
-      const videoFormats = Array.isArray(videoInfo.formats)
-        ? videoInfo.formats
-        : [];
-
-      logger.info(
-        `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
-      );
-
-      qualities = selectVideoQualities(videoFormats);
-
-      if (qualities.length === 0) {
-        qualities = [
-          buildFallbackQuality(720),
-          buildFallbackQuality(1080),
-          buildFallbackQuality(1440),
-          buildFallbackQuality(2160),
-        ];
-      }
-
-      logger.info(`Selected formats for ${videoUrl}`, {
-        selections: qualities.map((q) => ({
-          height: q.height,
-          selector: q.value,
-          hasAudio: q.hasAudio,
-        })),
-      });
-    } else if (format === "mp3") {
-      // For MP3, return standard audio qualities
-      qualities.push(
-        { value: "128kbps", text: "128 kbps (Standard Quality)" },
-        { value: "192kbps", text: "192 kbps (High Quality)" },
-        { value: "256kbps", text: "256 kbps (Very High Quality)" },
-        { value: "320kbps", text: "320 kbps (Lossless Quality)" }
-      );
+    // Add VK-specific handling (use cookies for private/wall posts)
+    if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
+      ytDlpInfoArgs.push("--cookies-from-browser", "chrome");
     }
 
-    // Special handling for Instagram and Threads thumbnails
-    let finalThumbnail = videoInfo.thumbnail;
-    if (videoUrl.includes("instagram.com") && !finalThumbnail) {
+    // Add impersonation globally for all platforms to avoid blocking
+    ytDlpInfoArgs.push("--impersonate", "Chrome-131");
+
+    ytDlpInfoArgs.push(videoUrl);
+
+    // Helper to process valid JSON output
+    const processVideoInfo = (jsonString, stderrString) => {
       try {
-        // eslint-disable-next-line no-useless-escape
-        const instagramMatch = videoUrl.match(/\/(p|reel)\/([^\/]+)/);
-        if (instagramMatch) {
-          const postId = instagramMatch[2];
-          finalThumbnail = `https://www.instagram.com/p/${postId}/media/?size=l`;
-        }
-      } catch (e) {
-        logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
-      }
-    }
+        const videoInfo = JSON.parse(jsonString);
 
-    const result = {
-      qualities,
-      thumbnail: finalThumbnail,
-      title: videoInfo.title,
-      duration: videoInfo.duration,
+        let qualities = [];
+
+        if (format === "mp4") {
+          const videoFormats = Array.isArray(videoInfo.formats)
+            ? videoInfo.formats
+            : [];
+
+          logger.info(
+            `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
+          );
+
+          qualities = selectVideoQualities(videoFormats);
+
+          if (qualities.length === 0) {
+            qualities = [
+              buildFallbackQuality(720),
+              buildFallbackQuality(1080),
+              buildFallbackQuality(1440),
+              buildFallbackQuality(2160),
+            ];
+          }
+
+          logger.info(`Selected formats for ${videoUrl}`, {
+            selections: qualities.map((q) => ({
+              height: q.height,
+              selector: q.value,
+              hasAudio: q.hasAudio,
+            })),
+          });
+        } else if (format === "mp3") {
+          // For MP3, return standard audio qualities
+          qualities.push(
+            { value: "128kbps", text: "128 kbps (Standard Quality)" },
+            { value: "192kbps", text: "192 kbps (High Quality)" },
+            { value: "256kbps", text: "256 kbps (Very High Quality)" },
+            { value: "320kbps", text: "320 kbps (Lossless Quality)" }
+          );
+        }
+
+        // Special handling for Instagram and Threads thumbnails
+        let finalThumbnail = videoInfo.thumbnail;
+        if (videoUrl.includes("instagram.com") && !finalThumbnail) {
+          try {
+            // eslint-disable-next-line no-useless-escape
+            const instagramMatch = videoUrl.match(/\/(p|reel)\/([^\/]+)/);
+            if (instagramMatch) {
+              const postId = instagramMatch[2];
+              finalThumbnail = `https://www.instagram.com/p/${postId}/media/?size=l`;
+            }
+          } catch (e) {
+            logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
+          }
+        }
+
+        const result = {
+          qualities,
+          thumbnail: finalThumbnail,
+          title: videoInfo.title,
+          duration: videoInfo.duration,
+        };
+
+        if (videoUrl.includes("instagram.com")) {
+          logger.info("Instagram video info", {
+            url: videoUrl,
+            finalThumbnail: finalThumbnail,
+            title: videoInfo.title,
+          });
+        }
+
+        logger.info("Video qualities fetched successfully", {
+          url: videoUrl,
+          format,
+          qualitiesCount: qualities.length,
+        });
+
+        res.json(result);
+      } catch (parseError) {
+        const stderrTrimmed = stderrString ? stderrString.trim() : "";
+        logger.error("JSON parse error in qualities", {
+          url: videoUrl,
+          error: parseError.message,
+          stdoutPreview: jsonString.substring(0, 100),
+          stderr: stderrTrimmed
+        });
+
+        if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
+          return res.status(403).json({ error: "This video is private or age-restricted. Please sign in to VK in Chrome and try again." });
+        }
+        res.status(500).json({ error: "Failed to parse video information." });
+      }
     };
 
-    if (videoUrl.includes("instagram.com")) {
-      logger.info("Instagram video info", {
-        url: videoUrl,
-        finalThumbnail: finalThumbnail,
-        title: videoInfo.title,
-      });
-    }
+    // Helper to execute yt-dlp with retry capability
+    const executeFetch = (args, isRetry = false) => {
+      const baseProcessArgs = ["-m", "yt_dlp", ...args];
 
-    logger.info("Video qualities fetched successfully", {
-      url: videoUrl,
-      format,
-      qualitiesCount: qualities.length,
-    });
-
-    res.json(result);
-  } catch (parseError) {
-    const stderrTrimmed = stderrString ? stderrString.trim() : "";
-    logger.error("JSON parse error in qualities", {
-      url: videoUrl,
-      error: parseError.message,
-      stdoutPreview: jsonString.substring(0, 100),
-      stderr: stderrTrimmed
-    });
-
-    if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
-      return res.status(403).json({ error: "This video is private or age-restricted. Please sign in to VK in Chrome and try again." });
-    }
-    res.status(500).json({ error: "Failed to parse video information." });
-  }
-};
-
-// Helper to execute yt-dlp with retry capability
-const executeFetch = (args, isRetry = false) => {
-  const baseProcessArgs = ["-m", "yt_dlp", ...args];
-
-  // Spawn unified process
-  const ytDlpProcess = spawn("py", baseProcessArgs, {
-    stdio: ["pipe", "pipe", "pipe"],
-  });
-
-  let stdout = "";
-  let stderr = "";
-
-  ytDlpProcess.stdout.on("data", (data) => {
-    stdout += data.toString();
-  });
-
-  ytDlpProcess.stderr.on("data", (data) => {
-    stderr += data.toString();
-  });
-
-  let responseSent = false;
-
-  ytDlpProcess.on("close", (code) => {
-    if (responseSent) return;
-    responseSent = true;
-
-    if (code !== 0) {
-      const stderrTrimmed = stderr.trim();
-
-      // Retry if Chrome cookies are locked
-      if (!isRetry && (stderrTrimmed.includes("Could not copy Chrome cookie database") || stderrTrimmed.includes("Failed to decrypt"))) {
-        logger.warn("Chrome cookies locked, retrying fetch without cookies", { url: videoUrl });
-        // Filter out cookie args
-        const cleanArgs = args.filter(a => a !== "--cookies-from-browser" && a !== "chrome");
-        return executeFetch(cleanArgs, true); // This recursively calls a function that handles its own res, which is fine because we set responseSent=true here
-      }
-
-      logger.error("yt-dlp qualities fetch failed", {
-        url: videoUrl,
-        format,
-        exitCode: code,
-        stderr: stderrTrimmed.substring(0, 500),
+      // Spawn unified process
+      const ytDlpProcess = spawn("py", baseProcessArgs, {
+        stdio: ["pipe", "pipe", "pipe"],
       });
 
-      if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
-        return res.status(403).json({ error: "This video is private. Please close Chrome to allow cookie access for private videos." });
-      }
-      if (stderrTrimmed.includes("Could not copy Chrome cookie database")) {
-        return res.status(503).json({ error: "Chrome is currently locking the cookie database. Please close Chrome completely and try again." });
-      }
+      let stdout = "";
+      let stderr = "";
 
-      return res.status(500).json({
-        error: "Failed to get video info.",
-        details: stderrTrimmed,
+      ytDlpProcess.stdout.on("data", (data) => {
+        stdout += data.toString();
       });
-    }
 
-    processVideoInfo(stdout, stderr);
-  });
+      ytDlpProcess.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
 
-  ytDlpProcess.on("error", (error) => {
-    if (responseSent) return;
-    responseSent = true;
+      let responseSent = false;
 
-    logger.error("Spawn error in qualities", {
+      ytDlpProcess.on("close", (code) => {
+        if (responseSent) return;
+        responseSent = true;
+
+        if (code !== 0) {
+          const stderrTrimmed = stderr.trim();
+
+          // Retry if Chrome cookies are locked
+          if (!isRetry && (stderrTrimmed.includes("Could not copy Chrome cookie database") || stderrTrimmed.includes("Failed to decrypt"))) {
+            logger.warn("Chrome cookies locked, retrying fetch without cookies", { url: videoUrl });
+            // Filter out cookie args
+            const cleanArgs = args.filter(a => a !== "--cookies-from-browser" && a !== "chrome");
+            return executeFetch(cleanArgs, true); // This recursively calls a function that handles its own res, which is fine because we set responseSent=true here
+          }
+
+          logger.error("yt-dlp qualities fetch failed", {
+            url: videoUrl,
+            format,
+            exitCode: code,
+            stderr: stderrTrimmed.substring(0, 500),
+          });
+
+          if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
+            return res.status(403).json({ error: "This video is private. Please close Chrome to allow cookie access for private videos." });
+          }
+          if (stderrTrimmed.includes("Could not copy Chrome cookie database")) {
+            return res.status(503).json({ error: "Chrome is currently locking the cookie database. Please close Chrome completely and try again." });
+          }
+
+          return res.status(500).json({
+            error: "Failed to get video info.",
+            details: stderrTrimmed,
+          });
+        }
+
+        processVideoInfo(stdout, stderr);
+      });
+
+      ytDlpProcess.on("error", (error) => {
+        if (responseSent) return;
+        responseSent = true;
+
+        logger.error("Spawn error in qualities", {
+          url: videoUrl,
+          error: error.message,
+        });
+        res.status(500).json({ error: "Failed to execute yt-dlp." });
+      });
+    };
+
+    // Start execution
+    executeFetch(ytDlpInfoArgs);
+  } catch (error) {
+    logger.error("Server error in qualities endpoint", {
       url: videoUrl,
       error: error.message,
+      stack: error.stack,
     });
-    res.status(500).json({ error: "Failed to execute yt-dlp." });
-  });
-};
-
-// Start execution
-executeFetch(ytDlpInfoArgs);
-  } catch (error) {
-  logger.error("Server error in qualities endpoint", {
-    url: videoUrl,
-    error: error.message,
-    stack: error.stack,
-  });
-  res
-    .status(500)
-    .json({ error: "An unexpected error occurred.", details: error.message });
-}
+    res
+      .status(500)
+      .json({ error: "An unexpected error occurred.", details: error.message });
+  }
 });
 
 app.post("/download", async (req, res) => {
@@ -3206,7 +3203,7 @@ app.post("/download", async (req, res) => {
 
     // Wrapper to handle download and retries
     const performDownload = (args, isRetry = false) => {
-      const baseProcessArgs = ["-m", "yt_dlp", ...args];
+
 
       // Spawn unified process
       const command = process.platform === 'win32' ? 'py' : 'python3';
@@ -3267,8 +3264,7 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
-// Use 'yt-dlp' directly or 'python3' for Linux environment (Koyeb)
-const pythonCommand = process.platform === 'win32' ? 'py' : 'python3';
+
 
 server.listen(port, () => {
   logger.info(`Server started successfully`, {
