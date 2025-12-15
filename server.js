@@ -1414,17 +1414,40 @@ app.get("/proxy-image", async (req, res) => {
     return res.status(400).send("URL required");
   }
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": new URL(url).origin
+      }
+    });
+
     if (!response.ok) {
-      throw new Error("Failed to fetch image");
+      // Try fallback without referer if first attempt fails
+      const fallbackResponse = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      });
+
+      if (!fallbackResponse.ok) {
+        throw new Error("Failed to fetch image");
+      }
+
+      const buffer = await fallbackResponse.arrayBuffer();
+      res.set("Content-Type", fallbackResponse.headers.get("content-type") || "image/jpeg");
+      res.set("Cache-Control", "public, max-age=86400"); // Cache for 24h
+      return res.send(Buffer.from(buffer));
     }
+
     const buffer = await response.arrayBuffer();
     res.set(
       "Content-Type",
       response.headers.get("content-type") || "image/jpeg"
     );
+    res.set("Cache-Control", "public, max-age=86400"); // Cache for 24h
     res.send(Buffer.from(buffer));
   } catch (error) { // eslint-disable-line no-unused-vars
+    console.error("Proxy image error:", error.message, url);
     res.status(500).send("Error fetching image");
   }
 });
