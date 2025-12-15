@@ -112,6 +112,31 @@ function configureAntiBlockingArgs(args, url) {
   }
 }
 
+// Helper: Robust JSON parser that handles polluted stdout (warnings, etc.)
+function tryParseJson(stdout) {
+  if (!stdout) return null;
+
+  // 1. Try strict parse first
+  try {
+    return JSON.parse(stdout);
+  } catch (_e) {
+    // 2. Fallback: Line-by-line check
+    // yt-dlp might output warnings before the JSON
+    const lines = stdout.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+        try {
+          return JSON.parse(trimmed);
+        } catch (_ignored) {
+          // Continue to next line if parse fails
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // Storage mode flag
 let USE_MONGODB = false;
 let USERS_DATA = [];
@@ -2542,10 +2567,12 @@ app.get("/debug-network", async (req, res) => {
       const cmd = `python3 ${nightlyPath} --dump-json --no-playlist --no-check-certificate --user-agent "${ua}" "${targetUrl}"`;
 
       exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+        const parsed = tryParseJson(stdout);
         results.extraction = {
-          success: !err,
-          title: stdout ? JSON.parse(stdout).title : null, // Try to parse title
-          error: err ? err.message : null,
+          success: !err && !!parsed,
+          title: parsed ? parsed.title : null,
+          duration: parsed ? parsed.duration : null,
+          error: err ? err.message : (parsed ? null : "JSON Parse Failed"),
           stderr_preview: stderr ? stderr.substring(0, 500) : null
         };
         resolve();
@@ -2596,112 +2623,113 @@ app.get("/video-info", async (req, res) => {
         return res.status(500).json({ error: "Failed to fetch video info" });
       }
 
-      try {
-        const info = JSON.parse(stdoutData);
+      const info = tryParseJson(stdoutData);
 
-        // Process formats
-        const formats = info.formats || [];
-        const mp4Qualities = [];
-        const mp3Qualities = [
-          { quality: "320kbps", url: "bestaudio", note: "High Quality" },
-          { quality: "192kbps", url: "bestaudio", note: "Medium Quality" },
-          { quality: "128kbps", url: "bestaudio", note: "Standard Quality" }
-        ];
-
-        // Filter unique video qualities
-        const uniqueQualities = new Set();
-
-        // Sort formats by resolution (height) descending
-        formats.sort((a, b) => (b.height || 0) - (a.height || 0));
-
-        formats.forEach(f => {
-          if (f.vcodec !== 'none' && f.height) {
-            const qualityLabel = `${f.height}p`;
-            if (!uniqueQualities.has(qualityLabel)) {
-              uniqueQualities.add(qualityLabel);
-
-              let note = "";
-              if (f.height >= 1080) note = "HD";
-              if (f.height >= 2160) note = "4K";
-
-              // Helper to format filesize
-              const size = f.filesize ? (f.filesize / 1024 / 1024).toFixed(1) + " MB"
-                : f.filesize_approx ? "~" + (f.filesize_approx / 1024 / 1024).toFixed(1) + " MB"
-                  : "";
-
-              mp4Qualities.push({
-                quality: qualityLabel,
-                format_id: f.format_id,
-                note: note,
-                size: size
-              });
-            }
-          }
-        });
-
-        // Always add a "Best Available" option at the top
-        if (mp4Qualities.length === 0) {
-          mp4Qualities.push({ quality: "Best Available", format_id: "bestvideo+bestaudio", note: "Auto" });
-        }
-
-        // Robust thumbnail extraction
-        let thumbUrl = info.thumbnail;
-        if (!thumbUrl && info.thumbnails && info.thumbnails.length > 0) {
-          // Get the best quality thumbnail (usually the last one)
-          thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
-        }
-
-        logger.info("Raw thumbnail extracted", {
-          url: url,
-          rawThumbnail: thumbUrl || "null"
-        });
-
-        // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
-        // Bypass proxy for YouTube to avoid server blocks - client loads directly
-
-        let proxiedThumbnail = null;
-
-        // Standard YouTube Thumbnail Fallback (Like other sites)
-        // If it's YouTube, force the standard high-res URL format
-        if (url.includes("youtube.com") || url.includes("youtu.be")) {
-          // Try to find the Video ID from the info or URL
-          const videoId = info.id;
-          if (videoId) {
-            // Use the reliable standard endpoint (hqdefault or maxresdefault)
-            // hqdefault is safest (always exists), maxresdefault is better quality but sometimes missing
-            thumbUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-            proxiedThumbnail = thumbUrl; // Direct load, no proxy
-          }
-        }
-
-        if (!proxiedThumbnail) {
-          // For non-YouTube, keep existing logic
-          proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
-        }
-
-        logger.info("Sent proxied thumbnail", {
-          url: url,
-          proxied: proxiedThumbnail
-        });
-
-        res.json({
-          title: info.title,
-          thumbnail: proxiedThumbnail,
-          duration: info.duration, // in seconds
-          mp4Data: {
-            qualities: mp4Qualities,
-            duration: info.duration
-          },
-          mp3Data: {
-            qualities: mp3Qualities,
-            duration: info.duration
-          }
-        });
-
-      } catch (parseError) {
-        logger.error("Failed to parse yt-dlp JSON", { error: parseError.message });
-        res.status(500).json({ error: "Failed to parse video info" });
+      if (!info) {
+        logger.error("Failed to parse video info JSON", { stdout: stdoutData.substring(0, 500) });
+        return res.status(500).json({ error: "Failed to parse video metadata" });
       }
+
+      // Process formats
+      const formats = info.formats || [];
+      const mp4Qualities = [];
+      const mp3Qualities = [
+        { quality: "320kbps", url: "bestaudio", note: "High Quality" },
+        { quality: "192kbps", url: "bestaudio", note: "Medium Quality" },
+        { quality: "128kbps", url: "bestaudio", note: "Standard Quality" }
+      ];
+
+      // Filter unique video qualities
+      const uniqueQualities = new Set();
+
+      // Sort formats by resolution (height) descending
+      formats.sort((a, b) => (b.height || 0) - (a.height || 0));
+
+      formats.forEach(f => {
+        if (f.vcodec !== 'none' && f.height) {
+          const qualityLabel = `${f.height}p`;
+          if (!uniqueQualities.has(qualityLabel)) {
+            uniqueQualities.add(qualityLabel);
+
+            let note = "";
+            if (f.height >= 1080) note = "HD";
+            if (f.height >= 2160) note = "4K";
+
+            // Helper to format filesize
+            const size = f.filesize ? (f.filesize / 1024 / 1024).toFixed(1) + " MB"
+              : f.filesize_approx ? "~" + (f.filesize_approx / 1024 / 1024).toFixed(1) + " MB"
+                : "";
+
+            mp4Qualities.push({
+              quality: qualityLabel,
+              format_id: f.format_id,
+              note: note,
+              size: size
+            });
+          }
+        }
+      });
+
+      // Always add a "Best Available" option at the top
+      if (mp4Qualities.length === 0) {
+        mp4Qualities.push({ quality: "Best Available", format_id: "bestvideo+bestaudio", note: "Auto" });
+      }
+
+      // Robust thumbnail extraction
+      let thumbUrl = info.thumbnail;
+      if (!thumbUrl && info.thumbnails && info.thumbnails.length > 0) {
+        // Get the best quality thumbnail (usually the last one)
+        thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
+      }
+
+      logger.info("Raw thumbnail extracted", {
+        url: url,
+        rawThumbnail: thumbUrl || "null"
+      });
+
+      // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
+      // Bypass proxy for YouTube to avoid server blocks - client loads directly
+
+      let proxiedThumbnail = null;
+
+      // Standard YouTube Thumbnail Fallback (Like other sites)
+      // If it's YouTube, force the standard high-res URL format
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        // Try to find the Video ID from the info or URL
+        const videoId = info.id;
+        if (videoId) {
+          // Use the reliable standard endpoint (hqdefault or maxresdefault)
+          // hqdefault is safest (always exists), maxresdefault is better quality but sometimes missing
+          thumbUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+          proxiedThumbnail = thumbUrl; // Direct load, no proxy
+        }
+      }
+
+      if (!proxiedThumbnail) {
+        // For non-YouTube, keep existing logic
+        proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
+      }
+
+      logger.info("Sent proxied thumbnail", {
+        url: url,
+        proxied: proxiedThumbnail
+      });
+
+      res.json({
+        title: info.title,
+        thumbnail: proxiedThumbnail,
+        duration: info.duration, // in seconds
+        mp4Data: {
+          qualities: mp4Qualities,
+          duration: info.duration
+        },
+        mp3Data: {
+          qualities: mp3Qualities,
+          duration: info.duration
+        }
+      });
+
+
     });
   } catch (error) {
     logger.error("Error executing yt-dlp", { error: error.message });
@@ -3165,6 +3193,7 @@ app.post("/download", async (req, res) => {
   const downloadAccelerator = req.body.downloadAccelerator === "true";
   const startTime = req.body.startTime;
   const endTime = req.body.endTime;
+  let duration = 0; // Initialize duration for capture during title fetch
 
   // Helper function to parse time string (HH:MM:SS or MM:SS) to seconds
   function parseTimeToSeconds(timeStr) {
@@ -3349,12 +3378,12 @@ app.post("/download", async (req, res) => {
 
       const finalTitleStdout = await fetchTitle(titleArgs);
 
-      try {
-        const info = JSON.parse(finalTitleStdout);
+      const info = tryParseJson(finalTitleStdout);
+      if (info) {
         videoTitle = info.title || "Unknown Title";
-      } catch (e) {
-        // Only log if it wasn't a retry-able error that failed twice
-        if (finalTitleStdout) console.error("Parse title error:", e);
+        duration = info.duration || 0; // Capture standard duration
+      } else {
+        logger.warn("Failed to parse title JSON", { stdout: finalTitleStdout ? finalTitleStdout.substring(0, 200) : "empty" });
       }
     } catch (e) {
       console.error("Title fetch error:", e);
@@ -3529,7 +3558,8 @@ app.post("/download", async (req, res) => {
             url,
             format: fmt,
             quality: qualityLabel || qual,
-            duration: Date.now() - downloadStartTime,
+            processDuration: Date.now() - downloadStartTime,
+            videoDuration: duration, // Retrieved from metadata
             clipped: !!(startTime && endTime),
           });
         },
