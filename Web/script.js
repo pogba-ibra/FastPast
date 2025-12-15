@@ -1552,6 +1552,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Add error handling for thumbnail loading
       videoThumbnail.onerror = function () {
+        const rawUrl = this.getAttribute("data-src");
+
+        // Smart Fallback: If proxy failed (likely 404/500), try loading the raw URL directly!
+        // This helps if the server is blocked but the user's browser isn't.
+        if (rawUrl && this.src !== rawUrl && !this.dataset.triedRaw) {
+          console.log("Proxy failed, trying raw thumbnail URL...", rawUrl);
+          this.dataset.triedRaw = "true";
+          this.referrerPolicy = "no-referrer"; // Bypass hotlink protection if possible
+          this.src = rawUrl;
+          return;
+        }
         if (
           videoUrl.includes("instagram.com") ||
           videoUrl.includes("threads.net") ||

@@ -1462,12 +1462,8 @@ app.get("/proxy-image", async (req, res) => {
     res.send(Buffer.from(buffer));
 
   } catch (error) {
-    console.error("Proxy image failed:", error.message); // Log error but don't break UI
-    // Return a 1x1 transparent GIF to prevent broken image icon in UI
-    const transparentGif = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
-    res.set("Content-Type", "image/gif");
-    res.set("Cache-Control", "public, max-age=3600");
-    res.send(transparentGif);
+    console.error("Proxy image failed:", error.message);
+    res.status(404).send("Failed to load image");
   }
 });
 
