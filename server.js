@@ -81,6 +81,31 @@ function spawnYtDlp(args, options = {}) {
   return spawn(command, finalArgs, options);
 }
 
+// Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
+function configureAntiBlockingArgs(args, url) {
+  const isRestricted = [
+    "youtube.com", "youtu.be",
+    "instagram.com",
+    "tiktok.com",
+    "facebook.com", "fb.watch",
+    "twitter.com", "x.com"
+  ].some(d => url.includes(d));
+
+  if (isRestricted) {
+    // 1. Force IPv4 (often cleaner for auth/geo)
+    args.push("--force-ipv4");
+
+    // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
+    // This looks like a real mobile app traffic
+    args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+
+    // 3. Platform specific extractor args
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      args.push("--extractor-args", "youtube:player_client=android");
+    }
+  }
+}
+
 // Storage mode flag
 let USE_MONGODB = false;
 let USERS_DATA = [];
@@ -2483,13 +2508,9 @@ app.get("/video-info", async (req, res) => {
     const command = getPythonCommand();
     logger.info("Spawning info fetch", { command, url });
 
-    // Construct args dynamically to allow YouTube-specific flags
+    // Construct args dynamically
     const infoArgs = ["-m", "yt_dlp", "-J"];
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      infoArgs.push("--force-ipv4");
-      infoArgs.push("--extractor-args", "youtube:player_client=android");
-      infoArgs.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
-    }
+    configureAntiBlockingArgs(infoArgs, url); // Apply global anti-blocking (UA, IPv4)
     infoArgs.push(url);
 
     const ytDlp = spawnYtDlp(infoArgs);
@@ -3213,10 +3234,10 @@ app.post("/download", async (req, res) => {
       ];
 
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        titleArgs.push("--force-ipv4");
-        titleArgs.push("--extractor-args", "youtube:player_client=android");
-        titleArgs.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+        // titleArgs.push("--force-ipv4"); // Handled by configureAntiBlockingArgs
       }
+
+      configureAntiBlockingArgs(titleArgs, url); // Apply globally
 
       // Add Vimeo-specific handling
       if (url.includes("vimeo.com")) {
@@ -3289,16 +3310,14 @@ app.post("/download", async (req, res) => {
 
     let ytDlpArgs = ["--no-check-certificate", "--no-playlist", "--ffmpeg-location", ffmpeg];
 
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      ytDlpArgs.push("--extractor-args", "youtube:player_client=default,ios");
-    }
+    // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
+    configureAntiBlockingArgs(ytDlpArgs, url);
 
     if (url.includes("instagram.com")) {
-      ytDlpArgs.push("--extractor-args", "instagram:api=graphql");
-      ytDlpArgs.push(
-        "--add-header",
-        "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-      );
+      // Instagram specific - try generic UA from helper first, or keep GraphQL if absolutely needed
+      // Actually, Nightly usually handles Insta best with just a mobile UA.
+      // We'll trust configureAntiBlockingArgs to set the Android UA.
+      // ytDlpArgs.push("--extractor-args", "instagram:api=graphql"); // Optional, maybe remove if Nightly is good
     }
 
     if (url.includes("threads.net") || url.includes("threads.com")) {
