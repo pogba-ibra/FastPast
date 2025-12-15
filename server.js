@@ -2574,6 +2574,17 @@ app.get("/debug-network", async (req, res) => {
           error: err ? err.message : null,
           stderr: stderr
         };
+      });
+    });
+
+    // 3. Node.js Runtime Check (Verify availability for yt-dlp)
+    await new Promise((resolve) => {
+      exec("node --version", (err, stdout, _stderr) => {
+        results.node_runtime = {
+          success: !err,
+          version: stdout ? stdout.trim() : "Unknown",
+          error: err ? err.message : null
+        };
         resolve();
       });
     });
