@@ -2379,9 +2379,11 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
           const args = [
             "--no-check-certificate",
             "--no-playlist",
-            "--ffmpeg-location", ffmpeg,
-            "--impersonate", "Chrome-131"
+            "--ffmpeg-location", ffmpeg
           ];
+
+          // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
+          configureAntiBlockingArgs(args, url);
 
           // Format-specific arguments
           if (format === 'mp3') {
@@ -2392,9 +2394,9 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             args.push("-o", path.join(fastpastDir, "%(title)s.%(ext)s"));
           }
 
-          if (url.includes("youtube.com") || url.includes("youtu.be")) {
-            args.push("--extractor-args", "youtube:player_client=default,ios");
-          }
+          // if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          // Handled by configureAntiBlockingArgs
+          // }
           if (url.includes("vimeo.com")) {
             args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
             args.push("--cookies-from-browser", "chrome");
@@ -2898,31 +2900,17 @@ app.post("/get-qualities", async (req, res) => {
       ffmpeg,
     ];
 
-    // Add YouTube-specific workaround for JS runtime issue
-    if (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) {
-      ytDlpInfoArgs.push(
-        "--extractor-args",
-        "youtube:player_client=default,ios"
-      );
-      if (videoUrl.includes("shorts")) {
-        ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
-      }
+    // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
+    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl);
+
+    // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
+    // or if they are supplemental referring headers
+    if (videoUrl.includes("shorts")) {
+      ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
     }
 
-    // Add Instagram-specific handling for metadata extraction
     if (videoUrl.includes("instagram.com")) {
-      ytDlpInfoArgs.push("--extractor-args", "instagram:api=graphql");
-      // Add additional headers that might help with Instagram
-      ytDlpInfoArgs.push("--add-header", "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
       ytDlpInfoArgs.push("--add-header", "Referer:https://www.instagram.com/");
-    }
-
-    // Add Facebook/Reddit/Pinterest/Odysee headers
-    if (videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch")) {
-      ytDlpInfoArgs.push("--add-header", "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-    }
-    if (videoUrl.includes("reddit.com")) {
-      ytDlpInfoArgs.push("--add-header", "User-Agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     }
 
 
