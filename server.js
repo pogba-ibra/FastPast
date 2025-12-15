@@ -487,8 +487,8 @@ const io = new Server(server, {
   }
 });
 
-// Use PORT from environment variable (Railway provides this) or default to 443 for local HTTPS
-const port = process.env.PORT || 443;
+// Use PORT from environment variable (Fly.io provides this) or default to 8000
+const port = process.env.PORT || 8000;
 
 const downloadDir = path.join(os.homedir(), 'Downloads', 'FastPast');
 if (!fs.existsSync(downloadDir)) {
