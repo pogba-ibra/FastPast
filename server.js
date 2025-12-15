@@ -2524,7 +2524,11 @@ app.get("/video-info", async (req, res) => {
         });
 
         // Proxy the thumbnail to avoid CORS/Referrer issues (403 Forbidden)
-        const proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
+        // Bypass proxy for YouTube to avoid server blocks - client loads directly
+        let proxiedThumbnail = thumbUrl ? `/proxy-image?url=${encodeURIComponent(thumbUrl)}` : null;
+        if (thumbUrl && (thumbUrl.includes("ytimg.com") || thumbUrl.includes("youtube.com"))) {
+          proxiedThumbnail = thumbUrl;
+        }
 
         logger.info("Sent proxied thumbnail", {
           url: url,
