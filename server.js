@@ -37,13 +37,24 @@ const getPythonCommand = () => {
 
 // Helper to spawn yt-dlp with hybrid logic (Nightly for YouTube, Stable for others)
 function spawnYtDlp(args, options = {}) {
-  // Check if target is YouTube
-  const isYoutube = args.some(arg => typeof arg === 'string' && (arg.includes("youtube.com") || arg.includes("youtu.be")));
+  // Check if target is a platform that requires Nightly (YouTube, Instagram, TikTok, FB, etc.)
+  // These platforms aggressively block cloud IPs or break often, so Stable is unreliable.
+  const restrictedPlatforms = [
+    "youtube.com", "youtu.be",
+    "instagram.com",
+    "tiktok.com",
+    "facebook.com", "fb.watch",
+    "twitter.com", "x.com"
+  ];
+
+  const useNightlyBinary = args.some(arg =>
+    typeof arg === 'string' && restrictedPlatforms.some(platform => arg.includes(platform))
+  );
 
   // Use Nightly binary if it's YouTube AND the binary exists (e.g. in Docker)
   // We check /usr/local/bin/yt-dlp-nightly which we install in Dockerfile as a python zipapp
   const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
-  const useNightly = isYoutube && fs.existsSync(nightlyPath);
+  const useNightly = useNightlyBinary && fs.existsSync(nightlyPath);
 
   let command;
   let finalArgs = [...args];
