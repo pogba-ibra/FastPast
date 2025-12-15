@@ -103,10 +103,10 @@ function configureAntiBlockingArgs(args, url) {
     }
 
     // 3. Platform specific extractor args
-    // Instagram: Use iPhone User-Agent. "Native" failed (login wall), "Generic Android" failed.
-    // Emulating the specific App often bypasses the "Main webpage locked" error.
+    // Instagram: iPhone UA failed. Strategy: Use Facebook Crawler UA.
+    // Meta often whitelists their own crawler to allow link previews.
     if (url.includes("instagram.com")) {
-      args.push("--user-agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 142.0.0.22.109");
+      args.push("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
     }
 
     // YouTube: relying on Nightly default behavior which is proven to work manually
