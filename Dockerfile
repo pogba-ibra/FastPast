@@ -8,8 +8,13 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install yt-dlp from master regarding PEP 668
-RUN pip3 install https://github.com/yt-dlp/yt-dlp/archive/master.zip --break-system-packages
+# Install yt-dlp regarding PEP 668 (Stable Version)
+RUN pip3 install yt-dlp --break-system-packages
+
+# Install yt-dlp Nightly Build (Standalone Binary) for YouTube
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp-nightly && \
+    chmod a+rx /usr/local/bin/yt-dlp-nightly
 
 # Create app directory
 WORKDIR /usr/src/app

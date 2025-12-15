@@ -35,6 +35,36 @@ const getPythonCommand = () => {
   return process.platform === 'win32' ? 'py' : 'python3';
 };
 
+// Helper to spawn yt-dlp with hybrid logic (Nightly for YouTube, Stable for others)
+function spawnYtDlp(args, options = {}) {
+  // Check if target is YouTube
+  const isYoutube = args.some(arg => typeof arg === 'string' && (arg.includes("youtube.com") || arg.includes("youtu.be")));
+
+  // Use Nightly binary if it's YouTube AND the binary exists (e.g. in Docker)
+  // We check /usr/local/bin/yt-dlp-nightly which we install in Dockerfile
+  const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
+  const useNightly = isYoutube && fs.existsSync(nightlyPath);
+
+  let command;
+  let finalArgs = [...args];
+
+  if (useNightly) {
+    command = nightlyPath;
+    // Remove "-m" and "yt_dlp" if they are the first arguments (since we use binary directly)
+    if (finalArgs[0] === '-m' && finalArgs[1] === 'yt_dlp') {
+      finalArgs.splice(0, 2);
+    }
+    logger.info("Using yt-dlp Nightly binary for YouTube", { command });
+  } else {
+    command = getPythonCommand();
+    // Ensure -m yt_dlp is present if using python command (it usually is passed in args)
+    // But verify to be safe? The caller usually provides it. We assume caller provides correct args for python module usage.
+    logger.info("Using yt-dlp Stable (pip)", { command });
+  }
+
+  return spawn(command, finalArgs, options);
+}
+
 // Storage mode flag
 let USE_MONGODB = false;
 let USERS_DATA = [];
@@ -428,9 +458,9 @@ const downloadQueue = new Queue(function (task, cb) {
   logger.info("Spawn yt-dlp args:", { args });
 
   // Use correct command for OS
-  const command = getPythonCommand();
-  logger.info("Spawning batch yt-dlp", { command, args });
-  const ytDlp = spawn(command, ["-m", "yt_dlp", ...args]);
+  // Use hybrid helper
+  logger.info("Spawning batch yt-dlp", { args });
+  const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
   let stderr = "";
 
@@ -2314,8 +2344,8 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
           try {
             await new Promise((resolve, reject) => {
               // Use correct command for OS
-              const command = getPythonCommand();
-              const p = spawn(command, ["-m", "yt_dlp", ...args], { stdio: 'ignore' });
+              // const command = getPythonCommand();
+              const p = spawnYtDlp(["-m", "yt_dlp", ...args], { stdio: 'ignore' });
               p.on('close', (code) => {
                 if (code === 0) resolve();
                 else reject(new Error(`Exit code ${code}`));
@@ -2446,7 +2476,7 @@ app.get("/video-info", async (req, res) => {
     }
     infoArgs.push(url);
 
-    const ytDlp = spawn(command, infoArgs);
+    const ytDlp = spawnYtDlp(infoArgs);
     let stdoutData = "";
     let stderrData = "";
 
@@ -2907,9 +2937,9 @@ app.post("/get-qualities", async (req, res) => {
 
       // Spawn unified process
       // Spawn unified process
-      const command = getPythonCommand();
-      logger.info("Spawning executeFetch", { command, args: baseProcessArgs });
-      const ytDlpProcess = spawn(command, baseProcessArgs, {
+      // const command = getPythonCommand(); // Handled by spawnYtDlp
+      logger.info("Spawning executeFetch", { args: baseProcessArgs });
+      const ytDlpProcess = spawnYtDlp(baseProcessArgs, {
         stdio: ["pipe", "pipe", "pipe"],
       });
 
@@ -3182,8 +3212,8 @@ app.post("/download", async (req, res) => {
 
       const fetchTitle = async (args, isRetry = false) => {
         return new Promise((resolve, reject) => {
-          const command = getPythonCommand();
-          const titleProcess = spawn(command, args, {
+          // const command = getPythonCommand();
+          const titleProcess = spawnYtDlp(args, {
             stdio: ["pipe", "pipe", "pipe"],
           });
           let titleStdout = "";
@@ -3376,8 +3406,8 @@ app.post("/download", async (req, res) => {
 
 
       // Spawn unified process
-      const command = getPythonCommand();
-      const ytDlpProcess = spawn(command, ["-m", "yt_dlp", ...args], {
+      // const command = getPythonCommand();
+      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...args], {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
