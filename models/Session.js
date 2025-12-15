@@ -27,7 +27,7 @@ const sessionSchema = new mongoose.Schema({
 });
 
 // Index for faster lookups
-sessionSchema.index({ sessionToken: 1 });
+// sessionSchema.index({ sessionToken: 1 }); // duplicate: handled by unique: true
 sessionSchema.index({ userId: 1 });
 
 const Session = mongoose.model('Session', sessionSchema);
