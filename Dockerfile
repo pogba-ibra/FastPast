@@ -34,5 +34,8 @@ RUN npm install pm2 -g
 # Expose port
 EXPOSE 8000
 
+# Optional: Set Proxy for yt-dlp to bypass blocking (e.g. http://user:pass@host:port)
+# ENV PROXY_URL=""
+
 # Start command using pm2-runtime (Docker-ready process manager)
 CMD [ "pm2-runtime", "server.js" ]

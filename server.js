@@ -103,6 +103,12 @@ function configureAntiBlockingArgs(args, url) {
     if (url.includes("youtube.com") || url.includes("youtu.be")) {
       args.push("--extractor-args", "youtube:player_client=android");
     }
+
+    // 4. Proxy Support (Critical for Cloud Deployments)
+    // If user has defined PROXY_URL in environment, use it.
+    if (process.env.PROXY_URL) {
+      args.push("--proxy", process.env.PROXY_URL);
+    }
   }
 }
 
