@@ -573,7 +573,7 @@ const downloadQueue = new Queue(function (task, cb) {
   let args = [
     "-o", outputTemplate,
     "--no-check-certificate",
-    "--ffmpeg-location", ffmpeg,
+    // "--ffmpeg-location", ffmpeg, // Removed: using system ffmpeg
     "--progress", // Ensure progress is printed
     "--newline", // Easier to parse
   ];
@@ -2448,7 +2448,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
           const args = [
             "--no-check-certificate",
             "--no-playlist",
-            "--ffmpeg-location", ffmpeg
+            // "--ffmpeg-location", ffmpeg // Removed
           ];
 
           // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
@@ -3017,8 +3017,8 @@ app.post("/get-qualities", async (req, res) => {
       "--no-download",
       "--no-playlist",
       "--no-check-certificate",
-      "--ffmpeg-location",
-      ffmpeg,
+      // "--ffmpeg-location",
+      // ffmpeg,
     ];
 
     // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
@@ -3489,8 +3489,8 @@ app.post("/download", async (req, res) => {
         "--no-download",
         "--no-playlist",
         "--no-check-certificate",
-        "--ffmpeg-location",
-        ffmpeg,
+        // "--ffmpeg-location",
+        // ffmpeg,
       ];
 
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
@@ -3568,7 +3568,8 @@ app.post("/download", async (req, res) => {
     const downloadFilename = `FastPast – ${finalTitle}.${fmt}`;
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
 
-    let ytDlpArgs = ["--no-check-certificate", "--no-playlist", "--ffmpeg-location", ffmpeg];
+    let ytDlpArgs = ["--no-check-certificate", "--no-playlist"]; // "--ffmpeg-location" removed
+
 
     // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
     configureAntiBlockingArgs(ytDlpArgs, url);
