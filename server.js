@@ -132,13 +132,36 @@ function configureAntiBlockingArgs(args, url) {
   // args.push("--js-runtimes", "node:/usr/local/bin/node");
 
   // 6. Authentication & Rate Limiting (User Request)
-  // Check for cookies.txt in the project root
-  const cookiesPath = path.join(__dirname, 'cookies.txt');
+  // Determine specific cookie file based on domain
+  let targetCookieFile = 'cookies.txt'; // Default (YouTube usually)
+
+  if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
+  else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
+  else if (url.includes("facebook.com") || url.includes("fb.watch")) targetCookieFile = "www.facebook.com_cookies.txt";
+  else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
+  else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
+  else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
+  else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
+  else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
+
+  const cookiesPath = path.join(__dirname, targetCookieFile);
+
   if (fs.existsSync(cookiesPath)) {
-    console.log("--> Auth: Using cookies.txt for authentication");
+    console.log(`--> Auth: Using ${targetCookieFile} for authentication`);
     args.push("--cookies", cookiesPath);
   } else {
-    console.log("--> Auth: No cookies.txt found (some restricted content may fail)");
+    // If specific file missing, try generic cookies.txt as fallback for non-YouTube sites? 
+    // Or just log warning. For now, we stick to specific or nothing to avoid using YouTube cookies for TikTok (which might error).
+    if (targetCookieFile !== 'cookies.txt') {
+      // Fallback to main cookies.txt if exists? (Optional, but might be safer not to mix)
+      const mainCookies = path.join(__dirname, 'cookies.txt');
+      if (fs.existsSync(mainCookies)) {
+        // console.log("--> Auth fallback: Using main cookies.txt");
+        // args.push("--cookies", mainCookies); 
+        // Commented out to prevent cross-contamination unless user wants it.
+      }
+    }
+    console.log(`--> Auth: No specific cookies found for this domain (${targetCookieFile} missing)`);
   }
 
   // 7. Rate Limiting for YouTube (Avoid IP blocks)

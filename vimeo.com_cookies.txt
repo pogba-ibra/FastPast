@@ -1,0 +1,26 @@
+# Netscape HTTP Cookie File
+# https://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file! Do not edit.
+
+.vimeo.com	TRUE	/	TRUE	1800456913	vuid	910126085.354485851
+.vimeo.com	TRUE	/	TRUE	1797252244	player	""
+vimeo.com	FALSE	/	FALSE	1797432905	_abexps	%7B%223296%22%3A%22variant%22%2C%223590%22%3A%22variant%22%7D
+.vimeo.com	TRUE	/	FALSE	1798837684	clips	926983242
+vimeo.com	FALSE	/	FALSE	1779829747	g_state	{"i_l":0,"i_ll":1764277701309}
+.vimeo.com	TRUE	/	TRUE	1798837755	auth_redirect	%2F926983242%3Fsu_via%3Dgot
+.vimeo.com	TRUE	/	TRUE	1798837755	vimeo_gdpr_optin	1
+.vimeo.com	TRUE	/	TRUE	1800456926	language	en
+.vimeo.com	TRUE	/	FALSE	1772053761	_gcl_au	1.1.793787594.1764277761
+.vimeo.com	TRUE	/	TRUE	1772054291	_rdt_uuid	1764277760940.b4c67888-9f59-4af7-b0c7-0df4137b4a75
+vimeo.com	FALSE	/	TRUE	1800274284	_gd_visitor	ee9846ee-7f11-4391-8429-3ee35e435a0a
+vimeo.com	FALSE	/	TRUE	1800274285	_gd_svisitor	null
+.vimeo.com	TRUE	/	FALSE	1800456908	_ga	GA1.1.2060355875.1763143797
+.vimeo.com	TRUE	/	TRUE	1765898703	__cf_bm	3K5MchuBi2GJqWVyZP8pJ2064wJc1Z2lVDe7hNQIWTE-1765896905-1.0.1.1-Hl..ef3K7WmUB6F2.D64CPFZI0uyVhJplqvtsMiWGIv_Ja0IW5NIYCiZ8_XKLc3k
+.vimeo.com	TRUE	/	TRUE	0	_cfuvid	QOwTxcq1PZBG85bKsENbWJAChBYbaBs9nNA6oxT30lk-1765896905770-0.0.1.1-604800000
+vimeo.com	FALSE	/	TRUE	1765911308	_gd_session	25c295a4-a5b7-4af1-8fa7-60b040ff28f3
+.vimeo.com	TRUE	/	FALSE	1765983309	_uetsid	371f3070da8f11f0aaab15443f19cbc1|rxvmyd|2|g1w|0|2176
+.vimeo.com	TRUE	/	FALSE	1799592909	_uetvid	20b8ade0c18511f085ea058f3b84fcda|1daa3re|1765896909427|1|1|bat.bing.com/p/insights/c/y
+.vimeo.com	TRUE	/	FALSE	1800456910	_ga_126VYLCXDY	GS2.1.s1765896908$o9$g1$t1765896910$j58$l0$h0
+.vimeo.com	TRUE	/	TRUE	1768488911	vimeo	OHDeLLPX4SPMVHLZXetPXP4tMNVHLZXetPXPLSMxHdcDLdSee3PteX3Bd%2CLacad3Dc3Nac%2CDPtetScaScMw3h_OI3uHLMIHZXt%2CNeXBBtPdtD3X3ZLX4aadttD%2CN3td4acB4ZPaP3S%2CPtNdXBdX%2CtXtcZBNeZLN
+.vimeo.com	TRUE	/	TRUE	1794683052	cf_clearance	8KHSUlerZ8hB6whPfYG6f.EblhuxkqFm0pxCBhOnnow-1763147052-1.2.1.1-avA64zcNVxZNhJYQe1yAjd8pOUfRsQo9vyOS761X8XjC_ZeQEnyE2eL0.bYDEm6yJuGzTBOidfUW.GjjaBD.r4NumWNehWzPevoezs6b8vf2sVp.PUkxwVSGporPl2r3ivQ02R3c_8SDDY9pLi_kj.xdsOEDgHRGelIvxXLR1uc.jyM6aJ7_GILU4Akv6yDdBH7xMDaE_3rj8w1ZnGmT.qrC_BI14lPjIJOe4IRNU0k
+vimeo.com	FALSE	/	TRUE	1797432920	_dd_s	aid=c067ec2a-851f-4dd2-84ce-b8cb7633acb6&rum=2&id=0ef69264-3abd-4078-acd9-4ec6d9a4a17b&created=1765896903322&expire=1765897820523

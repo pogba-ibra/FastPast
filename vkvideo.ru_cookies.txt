@@ -1,0 +1,31 @@
+# Netscape HTTP Cookie File
+# https://curl.haxx.se/rfc/cookie_spec.html
+# This is a generated file! Do not edit.
+
+.vkvideo.ru	TRUE	/	TRUE	1795751112	remixstid	573024319_v2am1Tqvi8jVMePsvx6RcDLPzTaQkz0orJx0vphgxQX
+.vkvideo.ru	TRUE	/	TRUE	1797432962	remixscreen_width	1920
+.vkvideo.ru	TRUE	/	TRUE	1797432962	remixscreen_height	1080
+.vkvideo.ru	TRUE	/	TRUE	1797432962	remixscreen_dpr	1
+.vkvideo.ru	TRUE	/	TRUE	1797432962	remixscreen_depth	24
+.vkvideo.ru	TRUE	/	TRUE	1797432962	remixscreen_winzoom	1
+.vkvideo.ru	TRUE	/	TRUE	1797432964	remixdark_color_scheme	1
+.vkvideo.ru	TRUE	/	TRUE	1797432964	remixcolor_scheme_mode	auto
+.vkvideo.ru	TRUE	/	TRUE	1795815632	remixdt	-7200
+.vkvideo.ru	TRUE	/	TRUE	1795816679	remixstlid	9074411866156156983_SB3qNMefm0tKqEQ9WEhzHzieZPZeaH1izOQZkYZjJH8
+.vkvideo.ru	TRUE	/	TRUE	1773672936	remixdsid	vk1.a.uNyAd_93wt-9B1uct9EmgrAk77IokvG7jXq6_TUZpRG2px9Dy5mkQG9xhwmczWx-tF9h9a37BVuPE9hI4wi46f4QUXsCeudpmeVGJJDc7OV_JblP7wVZxtc68guk8BZthHzKwW_osdna55HrnvtHUomwdISfJX-o3hN_wLfS16w
+.vkvideo.ru	TRUE	/	TRUE	1797558748	remixlang	3
+.vkvideo.ru	TRUE	/	TRUE	1796884624	remixua	43%7C-1%7C215%7C784143727
+.vkvideo.ru	TRUE	/	TRUE	1766501762	remixscreen_orient	1
+.vkvideo.ru	TRUE	/	TRUE	1767192965	remixsf	1
+.vkvideo.ru	TRUE	/	TRUE	1766318954	remixgp	a6c989c40501977e8543fae86a222b91
+.vkvideo.ru	TRUE	/	FALSE	1794570599	tmr_lvid	5ff359d0c043cdd9111d33d4087d90ac
+.vkvideo.ru	TRUE	/	FALSE	1794570599	tmr_lvidTS	1765714156284
+.vkvideo.ru	TRUE	/	FALSE	1766318959	domain_sid	_AZzSGOAztHF94iycmScO%3A1765714159015
+.vkvideo.ru	TRUE	/	TRUE	1765979736	prcl	28229b3377ff76
+vkvideo.ru	FALSE	/	TRUE	0	remix_isCookieSubdomainMigrated	1
+.vkvideo.ru	TRUE	/	TRUE	1765900536	httoken	YUUCBtw7YbWxDiyfaYtx_aqx5n_No99jqpnq1CqBupkxuwPmuJAfN0QlWDKUHtA6M1O2XiBbuz5hbDXridQh29Moj7RVU4OUDTgcPL1bs_0vZfvU2X50BZz6gBOwDBiK6KXY
+.vkvideo.ru	TRUE	/	TRUE	0	remixcurr_audio	null
+.vkvideo.ru	TRUE	/	TRUE	0	remixmaudio	null
+.vkvideo.ru	TRUE	/	TRUE	1767106565	adblock	1
+vkvideo.ru	FALSE	/	TRUE	1765897255	hitw429	1
+.vkvideo.ru	TRUE	/	TRUE	1781708170	video:added_videos_moved_web_hint_views_count	3
