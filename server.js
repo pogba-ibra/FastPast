@@ -3651,20 +3651,27 @@ app.post("/download", async (req, res) => {
               }
               console.error("Title fetch failed, code:", code);
             }
-            resolve(titleStdout);
+            // Resolve with object containing both
+            resolve({ stdout: titleStdout, stderr: titleStderr });
           });
           titleProcess.on("error", reject);
         });
       };
 
-      const finalTitleStdout = await fetchTitle(titleArgs);
+      const result = await fetchTitle(titleArgs);
+      const finalTitleStdout = result.stdout;
+      const finalTitleStderr = result.stderr;
 
       const info = tryParseJson(finalTitleStdout);
       if (info) {
         videoTitle = info.title || "Unknown Title";
         duration = info.duration || 0; // Capture standard duration
       } else {
-        logger.warn("Failed to parse title JSON", { stdout: finalTitleStdout ? finalTitleStdout.substring(0, 200) : "empty" });
+        logger.warn("Failed to parse title JSON", {
+          stdout: finalTitleStdout ? finalTitleStdout.substring(0, 200) : "empty",
+          stderr: finalTitleStderr ? finalTitleStderr.substring(0, 500) : "empty",
+          command: titleArgs.join(" ")
+        });
       }
     } catch (e) {
       console.error("Title fetch error:", e);
