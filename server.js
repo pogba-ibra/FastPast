@@ -3603,7 +3603,10 @@ app.post("/download", async (req, res) => {
       let titleArgs = [
         "-m",
         "yt_dlp",
-        "--print-json",
+        // Option 1 (Robust): Use --print to get exact fields separated by a delimiter
+        // This avoids JSON parsing issues when yt-dlp outputs warnings/garbage.
+        "--print",
+        "%(title)s|||%(duration)s", // Output: "My Video Title|||123" (duration is seconds)
         "--no-download",
         "--no-playlist",
         "--no-check-certificate",
@@ -3665,13 +3668,42 @@ app.post("/download", async (req, res) => {
       const finalTitleStdout = result.stdout;
       const finalTitleStderr = result.stderr;
 
-      const info = tryParseJson(finalTitleStdout);
-      if (info) {
-        videoTitle = info.title || "Unknown Title";
-        duration = info.duration || 0; // Capture standard duration
+      // Robust Parsing for "%(title)s|||%(duration)s"
+      // Handle standard output and potential multi-line confusion
+      if (finalTitleStdout) {
+        const lines = finalTitleStdout.split('\n');
+        let parsed = false;
+        for (const line of lines) {
+          if (line.includes('|||')) {
+            const parts = line.split('|||');
+            videoTitle = parts[0].trim() || "Unknown Title";
+            const durStr = parts[1] ? parts[1].trim() : "0";
+
+            // duration field in yt-dlp is seconds (float or int) or "NA"
+            if (durStr && durStr !== 'NA') {
+              duration = parseFloat(durStr) || 0;
+            }
+            parsed = true;
+            break;
+          }
+        }
+
+        // Fallback if separator not found (maybe just title if format failed?)
+        if (!parsed) {
+          // If we got output but no separator, assume it might be just title if we were lucky, 
+          // but with our format string, it SHOULD have separator.
+          logger.warn("Title fetch: Separator ||| not found in stdout", {
+            stdout: finalTitleStdout.substring(0, 200),
+            stderr: finalTitleStderr ? finalTitleStderr.substring(0, 200) : "empty"
+          });
+          // Try to use whole line as title if it looks valid
+          if (lines[0] && lines[0].trim().length > 0) {
+            videoTitle = lines[0].trim();
+          }
+        }
       } else {
-        logger.warn("Failed to parse title JSON", {
-          stdout: finalTitleStdout ? finalTitleStdout.substring(0, 200) : "empty",
+        logger.warn("Title fetch returned empty stdout", {
+          stdout: "empty",
           stderr: finalTitleStderr ? finalTitleStderr.substring(0, 500) : "empty",
           command: titleArgs.join(" ")
         });
