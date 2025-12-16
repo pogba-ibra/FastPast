@@ -3779,16 +3779,14 @@ app.get("/debug-env", (req, res) => {
 
 
 
-server.listen(port, () => {
+// CRITICAL for Fly.io/Docker: Must listen on 0.0.0.0 to be accessible outside container
+server.listen(port, '0.0.0.0', () => {
   logger.info(`Server started successfully`, {
     port,
+    address: '0.0.0.0',
     environment: process.env.NODE_ENV || "development",
     protocol: httpsOptions ? 'https' : 'http'
   });
 
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`Server is running in production mode on port ${port}`);
-  } else {
-    console.log(`Server is running on ${httpsOptions ? 'https' : 'http'}://localhost:${port}`);
-  }
+  console.log(`🚀 Server is listening on 0.0.0.0:${port} (Accessible externally)`);
 });
