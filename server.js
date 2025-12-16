@@ -160,7 +160,10 @@ function configureAntiBlockingArgs(args, url) {
     // Only apply to NON-YouTube and NON-Instagram and NON-TikTok platforms.
     // YouTube & Instagram handlers in yt-dlp Nightly work best with their defaults.
     // TikTok now uses --impersonate, so we shouldn't override UA there either.
-    if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("instagram.com") && !url.includes("tiktok.com")) {
+    // Facebook: User reported mismatch issues. Best to let yt-dlp choose the default UA.
+    if (!url.includes("youtube.com") && !url.includes("youtu.be") &&
+      !url.includes("instagram.com") && !url.includes("tiktok.com") &&
+      !url.includes("facebook.com") && !url.includes("fb.watch")) {
       args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
     }
 
