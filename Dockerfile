@@ -40,6 +40,9 @@ RUN curl -fsSL https://deno.land/install.sh | sh && \
 # Copy app source
 COPY . .
 
+# Fix permissions for cookie files (Ensure readability)
+RUN chmod 644 *.txt || true
+
 # Install pm2 globally
 RUN npm install pm2 -g
 

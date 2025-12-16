@@ -247,6 +247,23 @@ function configureAntiBlockingArgs(args, url) {
 function verifyYtDlpRuntime() {
   console.log('🔍 Verifying yt-dlp runtime configuration...');
   // We utilize the spawnYtDlp helper but specifically for the version check
+
+  // 1. Verify Cookie Files existence
+  const cookieFiles = [
+    'cookies.txt', 'www.facebook.com_cookies.txt', 'www.tiktok.com_cookies.txt',
+    'www.instagram.com_cookies.txt', 'vimeo.com_cookies.txt'
+  ];
+
+  console.log('🔍 Checking Cookie Files in:', __dirname);
+  cookieFiles.forEach(file => {
+    const p = path.join(__dirname, file);
+    if (fs.existsSync(p)) {
+      console.log(`✅ Found cookie file: ${file} (${fs.statSync(p).size} bytes)`);
+    } else {
+      console.log(`❌ MISSING cookie file: ${file}`);
+    }
+  });
+
   // We can't easily use spawnYtDlp here because it's async/stream based and we want simple output logic.
   // But let's use a simple spawn to be safe and independent.
   const check = spawn(process.platform === 'win32' ? 'py' : 'python3', ['-m', 'yt_dlp', '-vU']);
