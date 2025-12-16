@@ -129,6 +129,23 @@ function configureAntiBlockingArgs(args, url) {
   // We installed Deno in Dockerfile which is yt-dlp's preferred runtime. 
   // It is auto-detected, so we don't need to force modern Node paths anymore.
   // args.push("--js-runtimes", "node:/usr/local/bin/node");
+
+  // 6. Authentication & Rate Limiting (User Request)
+  // Check for cookies.txt in the project root
+  const cookiesPath = path.join(__dirname, 'cookies.txt');
+  if (fs.existsSync(cookiesPath)) {
+    console.log("--> Auth: Using cookies.txt for authentication");
+    args.push("--cookies", cookiesPath);
+  } else {
+    console.log("--> Auth: No cookies.txt found (some restricted content may fail)");
+  }
+
+  // 7. Rate Limiting for YouTube (Avoid IP blocks)
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    console.log("--> Rate Limiting: Active (5-10s sleep)");
+    args.push("--min-sleep-interval", "5");
+    args.push("--max-sleep-interval", "10");
+  }
 }
 
 // Verification: Log yt-dlp version and runtime details on startup
