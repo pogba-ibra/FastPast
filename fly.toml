@@ -19,5 +19,5 @@ primary_region = "ams"
 
 [[vm]]
   size = "shared-cpu-1x"
-  memory = "1gb" # Increased memory for yt-dlp processing
+  memory = "2gb" # Increased memory for yt-dlp processing
   cpus = 1
