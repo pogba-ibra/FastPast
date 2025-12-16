@@ -3821,13 +3821,27 @@ app.post("/download", async (req, res) => {
       if (formatSelector) {
         formatArgs = ["-f", formatSelector, "--merge-output-format", "mp4"];
       } else {
+        // Use robust format selection that ensures both video and audio are downloaded
+        // bv+ba/b = best video + best audio merged, fallback to single best file
         const fallbackHeight = requestedHeight || 720;
-        formatArgs = [
-          "-f",
-          `bestvideo[height<=${fallbackHeight}]+bestaudio/best[height<=${fallbackHeight}]/best`,
-          "--merge-output-format",
-          "mp4",
-        ];
+
+        // Special handling for Facebook/Instagram which often have separate streams
+        if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
+          // Force video+audio merge for Meta platforms
+          formatArgs = [
+            "-f",
+            `bv*[height<=${fallbackHeight}]+ba/b[height<=${fallbackHeight}]/b`,
+            "--merge-output-format",
+            "mp4",
+          ];
+        } else {
+          formatArgs = [
+            "-f",
+            `bestvideo[height<=${fallbackHeight}]+bestaudio/best[height<=${fallbackHeight}]/best`,
+            "--merge-output-format",
+            "mp4",
+          ];
+        }
       }
     } else if (fmt === "mp3") {
       const bitrate = qual.replace("kbps", "K");
