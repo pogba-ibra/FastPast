@@ -180,6 +180,14 @@ function configureAntiBlockingArgs(args, url) {
       // Do NOT set a custom User-Agent when impersonating; it breaks the fingerprint match.
     }
 
+    // Facebook: Also use impersonation to bypass blocking (December 2025 parser fix)
+    // Facebook actively blocks yt-dlp signatures, impersonation helps avoid detection
+    else if (url.includes("facebook.com") || url.includes("fb.watch")) {
+      console.log("--> Facebook: enabling client impersonation (chrome)");
+      args.push("--impersonate", "chrome");
+      // Do NOT set a custom User-Agent when impersonating
+    }
+
     // Instagram: iPhone UA failed. Strategy: Use Facebook Crawler UA.
     // Meta often whitelists their own crawler to allow link previews.
     else if (url.includes("instagram.com")) {
