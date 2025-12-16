@@ -215,24 +215,23 @@ function configureAntiBlockingArgs(args, url) {
   else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
   else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
-  const cookiesPath = path.join(__dirname, targetCookieFile);
+  const cookiesPath = path.resolve(__dirname, targetCookieFile);
 
-  if (fs.existsSync(cookiesPath)) {
-    console.log(`--> Auth: Using ${targetCookieFile} for authentication`);
-    args.push("--cookies", cookiesPath);
-  } else {
-    // If specific file missing, try generic cookies.txt as fallback for non-YouTube sites? 
-    // Or just log warning. For now, we stick to specific or nothing to avoid using YouTube cookies for TikTok (which might error).
-    if (targetCookieFile !== 'cookies.txt') {
-      // Fallback to main cookies.txt if exists? (Optional, but might be safer not to mix)
-      const mainCookies = path.join(__dirname, 'cookies.txt');
-      if (fs.existsSync(mainCookies)) {
-        // console.log("--> Auth fallback: Using main cookies.txt");
-        // args.push("--cookies", mainCookies); 
-        // Commented out to prevent cross-contamination unless user wants it.
+  try {
+    if (fs.existsSync(cookiesPath)) {
+      // Verify Read Permission explicitly
+      fs.accessSync(cookiesPath, fs.constants.R_OK);
+      console.log(`--> Auth: Using cookie file: ${cookiesPath}`);
+      args.push("--cookies", cookiesPath);
+    } else {
+      console.log(`--> Auth: Cookie file NOT FOUND at: ${cookiesPath}`);
+      if (targetCookieFile !== 'cookies.txt') {
+        // Log fallback attempt if needed, but for now just report missing
+        console.warn(`--> Auth Warning: Specific cookie file ${targetCookieFile} missing.`);
       }
     }
-    console.log(`--> Auth: No specific cookies found for this domain (${targetCookieFile} missing)`);
+  } catch (err) {
+    console.error(`--> Auth Error: Cookie file ${cookiesPath} found but NOT READABLE.`, err.message);
   }
 
   // 7. Rate Limiting for YouTube (Avoid IP blocks)
