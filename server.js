@@ -200,6 +200,13 @@ function configureAntiBlockingArgs(args, url) {
     } else {
       console.log("--> Security: Direct Connection (No Proxy configured)");
     }
+
+    // 5. Clear metadata cache for Facebook (fixes "Cannot parse data" errors)
+    // Facebook frequently changes its layout, causing cached extractors to fail
+    if (url.includes("facebook.com") || url.includes("fb.watch")) {
+      args.push("--rm-cache-dir");
+      console.log("--> Cache: Clearing metadata cache for Facebook");
+    }
   }
 
   // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
