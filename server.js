@@ -131,6 +131,38 @@ function configureAntiBlockingArgs(args, url) {
   // args.push("--js-runtimes", "node:/usr/local/bin/node");
 }
 
+// Verification: Log yt-dlp version and runtime details on startup
+function verifyYtDlpRuntime() {
+  console.log('🔍 Verifying yt-dlp runtime configuration...');
+  // We utilize the spawnYtDlp helper but specifically for the version check
+  // We can't easily use spawnYtDlp here because it's async/stream based and we want simple output logic.
+  // But let's use a simple spawn to be safe and independent.
+  const check = spawn(process.platform === 'win32' ? 'py' : 'python3', ['-m', 'yt_dlp', '-vU']);
+
+  // If we are in the Docker container, we might want to check the binary if we were using it, 
+  // but standard python invocation is what our app defaults to for non-nightly.
+  // Let's actually check BOTH or just the one we expect to use.
+  // For simplicity, let's just run the standard command which prints debug info.
+
+  let output = '';
+  check.stdout.on('data', (d) => output += d.toString());
+  check.stderr.on('data', (d) => output += d.toString());
+
+  check.on('close', (code) => {
+    console.log(`🔍 yt-dlp check finished with code ${code}`);
+    const lines = output.split('\n');
+    lines.forEach(line => {
+      if (line.includes('[debug] JS runtimes') || line.includes('[debug] exe versions')) {
+        console.log(`✅ ${line.trim()}`);
+      }
+    });
+  });
+}
+
+// Run verification 5 seconds after startup to allow other logs to settle
+setTimeout(verifyYtDlpRuntime, 5000);
+
+
 // Helper: Robust JSON parser that handles polluted stdout (warnings, etc.)
 function tryParseJson(stdout) {
   if (!stdout) return null;
