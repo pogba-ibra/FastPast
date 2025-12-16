@@ -26,6 +26,12 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Install Deno (Supported JS Runtime for yt-dlp)
+RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://deno.land/install.sh | sh
+ENV DENO_INSTALL="/root/.deno"
+ENV PATH="$DENO_INSTALL/bin:$PATH"
+
 # Copy app source
 COPY . .
 

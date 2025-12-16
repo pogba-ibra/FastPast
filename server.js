@@ -126,8 +126,9 @@ function configureAntiBlockingArgs(args, url) {
   }
 
   // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
-  // Silence "No supported JavaScript runtime" warning by explicitly using known symlink path
-  args.push("--js-runtimes", "node:/usr/local/bin/node");
+  // We installed Deno in Dockerfile which is yt-dlp's preferred runtime. 
+  // It is auto-detected, so we don't need to force modern Node paths anymore.
+  // args.push("--js-runtimes", "node:/usr/local/bin/node");
 }
 
 // Helper: Robust JSON parser that handles polluted stdout (warnings, etc.)
