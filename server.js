@@ -2583,7 +2583,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
           // }
           if (url.includes("vimeo.com")) {
             args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-            args.push("--cookies-from-browser", "chrome");
+            // args.push("--cookies-from-browser", "chrome"); // Disabled: Headless server cannot use browser cookies
           }
 
           // Add clipping if startTime and endTime are provided
@@ -3801,7 +3801,7 @@ app.post("/download", async (req, res) => {
 
     if (url.includes("vimeo.com")) {
       ytDlpArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-      ytDlpArgs.push("--cookies-from-browser", "chrome");
+      // ytDlpArgs.push("--cookies-from-browser", "chrome"); // Disabled: Headless server cannot use browser cookies
     }
 
     // Add VK cookies
