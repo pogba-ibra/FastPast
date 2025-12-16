@@ -14,4 +14,4 @@ Allow: /privacy
 Allow: /terms
 
 # Sitemap location
-Sitemap: https://yourwebsite.com/sitemap.xml
+Sitemap: https://fastpast-app.fly.dev/sitemap.xml

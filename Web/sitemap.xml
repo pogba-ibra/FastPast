@@ -6,73 +6,72 @@
   
   <!-- Main Pages -->
   <url>
-    <loc>https://yourwebsite.com/</loc>
+    <loc>https://fastpast-app.fly.dev/</loc>
     <priority>1.0</priority>
     <changefreq>daily</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/features</loc>
+    <loc>https://fastpast-app.fly.dev/features</loc>
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/pricing</loc>
+    <loc>https://fastpast-app.fly.dev/pricing</loc>
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/gopremium</loc>
+    <loc>https://fastpast-app.fly.dev/gopremium</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <!-- Information Pages -->
   <url>
-    <loc>https://yourwebsite.com/faq</loc>
+    <loc>https://fastpast-app.fly.dev/faq</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/features-complete</loc>
+    <loc>https://fastpast-app.fly.dev/features-complete</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/features-interactive</loc>
+    <loc>https://fastpast-app.fly.dev/features-interactive</loc>
+    <priority>0.7</priority>
+    <changefreq>monthly</changefreq>
+  </url>
+
+  <url>
+    <loc>https://fastpast-app.fly.dev/features-grid</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <!-- Authentication Pages -->
   <url>
-    <loc>https://yourwebsite.com/login</loc>
+    <loc>https://fastpast-app.fly.dev/login</loc>
     <priority>0.6</priority>
     <changefreq>yearly</changefreq>
   </url>
   
   <!-- Legal Pages -->
   <url>
-    <loc>https://yourwebsite.com/privacy</loc>
+    <loc>https://fastpast-app.fly.dev/privacy</loc>
     <priority>0.5</priority>
     <changefreq>yearly</changefreq>
   </url>
   
   <url>
-    <loc>https://yourwebsite.com/terms</loc>
+    <loc>https://fastpast-app.fly.dev/terms</loc>
     <priority>0.5</priority>
     <changefreq>yearly</changefreq>
-  </url>
-  
-  <!-- Payment Pages -->
-  <url>
-    <loc>https://yourwebsite.com/payment</loc>
-    <priority>0.6</priority>
-    <changefreq>monthly</changefreq>
   </url>
   
 </urlset>
