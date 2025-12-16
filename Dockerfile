@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     ffmpeg \
     ca-certificates \
+    build-essential \
+    libffi-dev \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s $(which node) /usr/local/bin/node || true
 
