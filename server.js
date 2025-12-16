@@ -3627,9 +3627,13 @@ app.post("/download", async (req, res) => {
         "--no-download",
         "--no-playlist",
         "--no-check-certificate",
-        // "--ffmpeg-location",
-        // ffmpeg,
       ];
+
+      // Add verbose logging for Facebook to diagnose issues
+      if (url.includes("facebook.com") || url.includes("fb.watch")) {
+        titleArgs.push("-v"); // Verbose mode to capture detailed stderr
+        console.log("📋 Facebook title fetch - URL after resolution:", url);
+      }
 
       if (url.includes("youtube.com") || url.includes("youtu.be")) {
         // titleArgs.push("--force-ipv4"); // Handled by configureAntiBlockingArgs
@@ -3644,6 +3648,11 @@ app.post("/download", async (req, res) => {
       }
 
       titleArgs.push(url);
+
+      // Log the complete command for Facebook debugging
+      if (url.includes("facebook.com") || url.includes("fb.watch")) {
+        console.log("🔍 Facebook title fetch command:", titleArgs.join(" "));
+      }
 
       const fetchTitle = async (args, isRetry = false) => {
         return new Promise((resolve, reject) => {
