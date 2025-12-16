@@ -1,0 +1,5 @@
+yt-dlp[default,curl-cffi]>=2023.01.01
+requests
+pyopenssl
+brotli
+certifi
