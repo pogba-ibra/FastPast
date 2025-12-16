@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require("express");
+const axios = require("axios");
 const cors = require("cors");
 const { spawn, exec } = require("child_process");
 const path = require("path");
@@ -35,6 +36,46 @@ const zipJobs = new Map();
 const getPythonCommand = () => {
   return process.platform === 'win32' ? 'py' : 'python3';
 };
+
+// Helper: Resolve shortened URLs (Facebook/Instagram Share Links)
+async function resolveFacebookUrl(url) {
+  if (url.includes('facebook.com/share') || url.includes('fb.watch') || url.includes('instagram.com/share')) {
+    try {
+      console.log('Recursive URL Resolution: Resolving shortened URL:', url);
+      // Try HEAD first for speed
+      try {
+        const response = await axios.head(url, {
+          maxRedirects: 5,
+          timeout: 5000,
+          validateStatus: (status) => status >= 200 && status < 400
+        });
+        if (response.request && response.request.res && response.request.res.responseUrl) {
+          console.log('Resolved (HEAD) to:', response.request.res.responseUrl);
+          return response.request.res.responseUrl;
+        }
+      } catch {
+        // Ignore HEAD error and try GET
+      }
+
+      // Fallback to GET
+      const response = await axios.get(url, {
+        maxRedirects: 5,
+        timeout: 5000,
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+
+      if (response.request && response.request.res && response.request.res.responseUrl) {
+        console.log('Resolved (GET) to:', response.request.res.responseUrl);
+        return response.request.res.responseUrl;
+      }
+      return url;
+    } catch (error) {
+      console.log('Failed to resolve URL:', error.message);
+      return url;
+    }
+  }
+  return url;
+}
 
 // Helper to spawn yt-dlp with hybrid logic (Nightly for YouTube, Stable for others)
 function spawnYtDlp(args, options = {}) {
@@ -95,6 +136,7 @@ function configureAntiBlockingArgs(args, url) {
   if (isRestricted) {
     // 1. Force IPv4 (often cleaner for auth/geo)
     args.push("--force-ipv4");
+
 
     // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
     // Only apply to NON-YouTube and NON-Instagram and NON-TikTok platforms.
@@ -3331,6 +3373,11 @@ app.post("/download", async (req, res) => {
 
   // Support both JSON and form data
   let url = videoUrl || req.body.videoUrl;
+
+  // Resolve shortened URLs (Facebook/Instagram)
+  if (url) {
+    url = await resolveFacebookUrl(url);
+  }
   const fmt = format || req.body.format;
   const qual = quality || req.body.quality;
 
