@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
     && ln -s $(which node) /usr/local/bin/node || true
 
 # Install yt-dlp regarding PEP 668 (Stable Version) and Impersonation Deps
-RUN pip3 install yt-dlp pyopenssl requests requests-fingerprint --break-system-packages
+RUN pip3 install yt-dlp pyopenssl requests curl-cffi brotli certifi --break-system-packages
 
 # Install yt-dlp Nightly Build (Standalone Binary) for YouTube
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
