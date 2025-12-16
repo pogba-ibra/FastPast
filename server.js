@@ -43,7 +43,7 @@ function spawnYtDlp(args, options = {}) {
   const restrictedPlatforms = [
     "youtube.com", "youtu.be",
     "instagram.com",
-    "tiktok.com",
+    // "tiktok.com", // Removed: use pip version to access impersonation deps (curl-cffi)
     "facebook.com", "fb.watch",
     "twitter.com", "x.com"
   ];
