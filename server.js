@@ -97,16 +97,27 @@ function configureAntiBlockingArgs(args, url) {
     args.push("--force-ipv4");
 
     // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
-    // Only apply to NON-YouTube and NON-Instagram platforms.
+    // Only apply to NON-YouTube and NON-Instagram and NON-TikTok platforms.
     // YouTube & Instagram handlers in yt-dlp Nightly work best with their defaults.
-    if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("instagram.com")) {
+    // TikTok now uses --impersonate, so we shouldn't override UA there either.
+    if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("instagram.com") && !url.includes("tiktok.com")) {
       args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
     }
 
     // 3. Platform specific extractor args
+
+    // TikTok: Use impersonation (requires curl_cffi installed via pip)
+    // We removed TikTok from 'restricted' list in spawnYtDlp to ensure it uses the pip version (which has curl_cffi).
+    // Now we must pass the impersonate target.
+    if (url.includes("tiktok.com")) {
+      console.log("--> TikTok: enabling client impersonation (chrome)");
+      args.push("--impersonate", "chrome");
+      // Do NOT set a custom User-Agent when impersonating; it breaks the fingerprint match.
+    }
+
     // Instagram: iPhone UA failed. Strategy: Use Facebook Crawler UA.
     // Meta often whitelists their own crawler to allow link previews.
-    if (url.includes("instagram.com")) {
+    else if (url.includes("instagram.com")) {
       args.push("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
     }
 
