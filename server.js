@@ -3956,90 +3956,97 @@ app.post("/download", async (req, res) => {
     if ((url.includes("facebook.com") || url.includes("fb.watch")) && req.body._freshCookiePath) {
       console.log(`🍪 Using fresh cookies for download: ${req.body._freshCookiePath}`);
 
-      // Remove any existing cookie args
+      // Remove any existing cookie args and User-Agent args (Impersonate handles UA)
       ytDlpArgs = ytDlpArgs.filter((arg, index, arr) => {
         if (arg === "--cookies") return false;
-        if (index > 0 && arr[index - 1] === "--cookies") return false;
+        if (arg === "--user-agent" && !req.body._userAgent) return false; // Keep synced UA if available, otherwise drop
         return true;
       });
 
-      // Add fresh cookies
-      ytDlpArgs.push("--cookies", req.body._freshCookiePath);
+      // User Request: Use 2025 "Impersonate" Flag to bypass data-center fingerprint
+      // Note: This requires curl-cffi (installed in Dockerfile)
+      ytDlpArgs.push("--impersonate", "chrome");
+      if (index > 0 && arr[index - 1] === "--cookies") return false;
+      return true;
+    });
 
-      // Add User-Agent Sync if available
-      if (req.body._userAgent) {
-        console.log(`🕵️ Syncing User-Agent to yt-dlp: ${req.body._userAgent}`);
-        ytDlpArgs.push("--user-agent", req.body._userAgent);
-      }
+// Add fresh cookies
+ytDlpArgs.push("--cookies", req.body._freshCookiePath);
 
-      // Add robustness flags for 16KB file fix (ensure these aren't duplicated if configured elsewhere)
-      ytDlpArgs.push(
-        "--concurrent-fragments", "16",
-        "--fixup", "warn"
-      );
+// Add User-Agent Sync if available
+if (req.body._userAgent) {
+  console.log(`🕵️ Syncing User-Agent to yt-dlp: ${req.body._userAgent}`);
+  ytDlpArgs.push("--user-agent", req.body._userAgent);
+}
+
+// Add robustness flags for 16KB file fix (ensure these aren't duplicated if configured elsewhere)
+ytDlpArgs.push(
+  "--concurrent-fragments", "16",
+  "--fixup", "warn"
+);
     }
 
-    const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
+const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
 
-    console.log("yt-dlp args:", finalYtDlpArgs);
+console.log("yt-dlp args:", finalYtDlpArgs);
 
-    // Wrapper to handle download and retries
-    const performDownload = (args, isRetry = false) => {
+// Wrapper to handle download and retries
+const performDownload = (args, isRetry = false) => {
 
 
-      // Spawn unified process
-      // const command = getPythonCommand();
-      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...args], {
-        stdio: ["ignore", "pipe", "pipe"],
+  // Spawn unified process
+  // const command = getPythonCommand();
+  const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...args], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  streamProcessToResponse(res, ytDlpProcess, {
+    filename: downloadFilename,
+    contentType,
+    onRetry: (message, stderrText) => {
+      // Robust check for cookie lock
+      if (!isRetry && (stderrText.includes("Could not copy") || stderrText.includes("cookie database") || stderrText.includes("Failed to decrypt"))) {
+        logger.warn("Chrome cookies locked during download, retrying...", { url });
+        // Remove cookie args
+        performDownload(args, true);
+        return true;
+      }
+      return false;
+    },
+    onSuccess: () => {
+      logger.info("Download completed successfully", {
+        url,
+        format: fmt,
+        quality: qualityLabel || qual,
+        processDuration: Date.now() - downloadStartTime,
+        videoDuration: duration, // Retrieved from metadata
+        clipped: !!(startTime && endTime),
       });
-
-      streamProcessToResponse(res, ytDlpProcess, {
-        filename: downloadFilename,
-        contentType,
-        onRetry: (message, stderrText) => {
-          // Robust check for cookie lock
-          if (!isRetry && (stderrText.includes("Could not copy") || stderrText.includes("cookie database") || stderrText.includes("Failed to decrypt"))) {
-            logger.warn("Chrome cookies locked during download, retrying...", { url });
-            // Remove cookie args
-            performDownload(args, true);
-            return true;
-          }
-          return false;
-        },
-        onSuccess: () => {
-          logger.info("Download completed successfully", {
-            url,
-            format: fmt,
-            quality: qualityLabel || qual,
-            processDuration: Date.now() - downloadStartTime,
-            videoDuration: duration, // Retrieved from metadata
-            clipped: !!(startTime && endTime),
-          });
-        },
-        onFailure: (reason, stderrText) => {
-          logger.error("Download failed", {
-            url,
-            format: fmt,
-            quality: qualityLabel || qual,
-            reason,
-            stderr: (stderrText || "").substring(0, 1000),
-          });
-        },
+    },
+    onFailure: (reason, stderrText) => {
+      logger.error("Download failed", {
+        url,
+        format: fmt,
+        quality: qualityLabel || qual,
+        reason,
+        stderr: (stderrText || "").substring(0, 1000),
       });
-    };
+    },
+  });
+};
 
-    performDownload(finalYtDlpArgs);
+performDownload(finalYtDlpArgs);
 
   } catch (error) {
-    logger.error("Server error in download endpoint", {
-      error: error.message,
-      stack: error.stack,
-      url,
-      format: fmt,
-      quality: qualityLabel || qual,
-    });
-    res.status(500).json({ error: "An unexpected error occurred." });
-  }
+  logger.error("Server error in download endpoint", {
+    error: error.message,
+    stack: error.stack,
+    url,
+    format: fmt,
+    quality: qualityLabel || qual,
+  });
+  res.status(500).json({ error: "An unexpected error occurred." });
+}
 });
 
 app.get("/health", (req, res) => {

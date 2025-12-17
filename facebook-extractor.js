@@ -69,28 +69,10 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         }
         console.log(`📝 Page title: ${title}`);
 
-        // Try to find video element with src attribute
-        let videoUrl = await page.evaluate(() => {
-            // PRIORITY 1: Look for video_redirect link (mbasic.facebook.com specific)
-            // This is the direct CDN link that yt-dlp uses
-            const videoRedirectLink = document.querySelector('a[href*="video_redirect"]');
-            if (videoRedirectLink && videoRedirectLink.href) {
-                return videoRedirectLink.href;
-            }
-
-            // PRIORITY 2: Try direct video tag
+        // 1. Try DOM extraction (The "Direct Source" Fix)
+        // Find the actual MP4 link in the page (video tag)
+        const domVideoUrl = await page.evaluate(() => {
             const video = document.querySelector('video');
-            if (video && video.src) {
-                return video.src;
-            }
-
-            // PRIORITY 3: Try video source tag
-            const source = document.querySelector('video source');
-            if (source && source.src) {
-                return source.src;
-            }
-
-            // PRIORITY 4: Try to find any .mp4 links in page
             const links = Array.from(document.querySelectorAll('a'));
             for (const link of links) {
                 const href = link.href || '';
