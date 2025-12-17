@@ -199,9 +199,9 @@ function configureAntiBlockingArgs(args, url) {
       // 1. Multi-threaded downloads (16 parallel connections)
       args.push("-N", "16");
 
-      // 2. Use aria2c external downloader for faster speeds
-      args.push("--external-downloader", "aria2c");
-      args.push("--external-downloader-args", "-x 16 -s 16 -k 1M");
+      // 2. Use native downloader (Native DASH Fix) for better audio handling
+      args.push("--external-downloader", "native");
+      args.push("--hls-prefer-native");
 
       // 3. Throttle detection (restarts if speed drops below 100KB/s)
       args.push("--throttled-rate", "100K");
@@ -209,7 +209,7 @@ function configureAntiBlockingArgs(args, url) {
       // 4. Increase buffer size for efficient data handling
       args.push("--buffer-size", "1M");
 
-      console.log("--> Facebook: concurrent fragments=16, external-downloader=aria2c");
+      console.log("--> Facebook: concurrent fragments=16, external-downloader=native");
     }
 
 
@@ -3462,7 +3462,7 @@ app.post("/download", async (req, res) => {
       try {
         const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
         console.log('🌐 Using Playwright browser extraction for Facebook...');
-        const { videoUrl, title, freshCookiePath } = await extractFacebookVideoUrl(url, cookieFile);
+        const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile);
         console.log(`✅ Browser extracted: ${title}`);
 
         // Use extracted direct video URL instead of page URL (if available)
@@ -3470,9 +3470,10 @@ app.post("/download", async (req, res) => {
           url = videoUrl;
         }
 
-        // Store title and fresh cookies for later use
+        // Store title, fresh cookies, and UA for later use
         req.body._browserExtractedTitle = title;
         req.body._freshCookiePath = freshCookiePath;
+        req.body._userAgent = userAgent;
       } catch (error) {
         console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
         // Continue with original URL - yt-dlp will try
@@ -3965,11 +3966,15 @@ app.post("/download", async (req, res) => {
       // Add fresh cookies
       ytDlpArgs.push("--cookies", req.body._freshCookiePath);
 
-      // Add robustness flags for 16KB file fix
+      // Add User-Agent Sync if available
+      if (req.body._userAgent) {
+        console.log(`🕵️ Syncing User-Agent to yt-dlp: ${req.body._userAgent}`);
+        ytDlpArgs.push("--user-agent", req.body._userAgent);
+      }
+
+      // Add robustness flags for 16KB file fix (ensure these aren't duplicated if configured elsewhere)
       ytDlpArgs.push(
         "--concurrent-fragments", "16",
-        "-N", "16",
-        "--hls-prefer-native",
         "--fixup", "warn"
       );
     }

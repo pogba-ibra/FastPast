@@ -120,18 +120,24 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         if (!videoUrl) {
             console.log('⚠️ No direct video URL found, checking network requests...');
             // If not found in DOM, check captured network requests
-            videoUrl = await captureVideoFromNetwork(page);
+            const networkResult = await captureVideoFromNetwork(page);
+            videoUrl = networkResult.videoUrl;
+            // logic for audioUrl if separate
         }
+
+        // Capture the exact User-Agent used
+        const userAgent = await page.evaluate(() => navigator.userAgent);
+        console.log(`🕵️ Using User-Agent: ${userAgent}`);
 
         await browser.close();
 
         if (videoUrl) {
             console.log(`✅ Extracted video URL: ${videoUrl.substring(0, 100)}...`);
-            return { videoUrl, title, freshCookiePath };
+            return { videoUrl, title, freshCookiePath, userAgent };
         } else {
-            // Even if direct URL fails, we have fresh cookies + title, which might be enough for yt-dlp
+            // Even if direct URL fails, we have fresh cookies + title + UA
             console.log('⚠️ Could not extract direct URL, but returning fresh cookies & title');
-            return { videoUrl: null, title, freshCookiePath };
+            return { videoUrl: null, title, freshCookiePath, userAgent };
         }
 
 
@@ -176,24 +182,34 @@ function parseFacebookCookies(cookiesContent) {
 /**
  * Capture video URL from network requests
  */
+/**
+ * Capture video and audio URLs from network requests
+ */
 async function captureVideoFromNetwork(page) {
     return new Promise((resolve) => {
         let videoUrl = null;
+        let audioUrl = null;
 
         page.on('response', async (response) => {
             const responseUrl = response.url();
             const contentType = response.headers()['content-type'] || '';
 
-            // Look for video content type or .mp4 in URL
+            // Look for video content
             if (contentType.includes('video/') || responseUrl.includes('.mp4')) {
                 videoUrl = responseUrl;
                 console.log(`🎥 Found video in network: ${responseUrl.substring(0, 100)}...`);
+            }
+
+            // Look for audio content (Nuclear Workaround)
+            if (contentType.includes('audio/') || responseUrl.includes('bytestart') && responseUrl.includes('audio')) {
+                audioUrl = responseUrl;
+                console.log(`🎵 Found audio in network: ${responseUrl.substring(0, 100)}...`);
             }
         });
 
         // Wait a bit for requests to complete
         setTimeout(() => {
-            resolve(videoUrl);
+            resolve({ videoUrl, audioUrl });
         }, 5000);
     });
 }
