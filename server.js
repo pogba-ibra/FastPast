@@ -190,12 +190,28 @@ function configureAntiBlockingArgs(args, url) {
       // Do NOT set a custom User-Agent when impersonating; it breaks the fingerprint match.
     }
 
+
     // Facebook: Keep it simple - no user-agent, no impersonation (may be flagged)
-    // Just use cookies + force-ipv4 + mbasic URL for best results
+    // Add download speed optimizations for Facebook (2025)
     else if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      console.log("--> Facebook: using simple approach (cookies + IPv4 only)");
-      // No additional flags - keeping it minimal to avoid detection
+      console.log("--> Facebook: applying download speed optimizations");
+
+      // 1. Multi-threaded downloads (16 parallel connections)
+      args.push("-N", "16");
+
+      // 2. Use aria2c external downloader for faster speeds
+      args.push("--external-downloader", "aria2c");
+      args.push("--external-downloader-args", "-x 16 -s 16 -k 1M");
+
+      // 3. Throttle detection (restarts if speed drops below 100KB/s)
+      args.push("--throttled-rate", "100K");
+
+      // 4. Increase buffer size for efficient data handling
+      args.push("--buffer-size", "1M");
+
+      console.log("--> Facebook: concurrent fragments=16, external-downloader=aria2c");
     }
+
 
     // Instagram: iPhone UA failed. Strategy: Use Facebook Crawler UA.
     // Meta often whitelists their own crawler to allow link previews.
