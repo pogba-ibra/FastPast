@@ -3805,7 +3805,13 @@ app.post("/download", async (req, res) => {
     const downloadFilename = `FastPast – ${finalTitle}.${fmt}`;
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
 
-    let ytDlpArgs = ["--no-check-certificate", "--no-playlist", "--ffmpeg-location", "/usr/src/app/bin/ffmpeg"];
+    let ytDlpArgs = [
+      "--no-check-certificate",
+      "--no-playlist",
+      "--ffmpeg-location", "/usr/local/bin/ffmpeg",
+      "--ignore-no-formats-error",
+      "--check-formats"
+    ];
 
 
     // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
@@ -3899,10 +3905,10 @@ app.post("/download", async (req, res) => {
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
           // Force video+audio merge for Meta platforms with specific containers (Muxing Fix 2025)
-          // Ensures FFmpeg can merge them easily (mp4 video + m4a audio)
+          // Priority: AVC(h264) + AAC (avc1+mp4a) -> Universal compatibility
           formatArgs = [
             "-f",
-            `bestvideo[ext=mp4][height<=${fallbackHeight}]+bestaudio[ext=m4a]/best[ext=mp4][height<=${fallbackHeight}]/best`,
+            `bv[vcodec^=avc1][height<=${fallbackHeight}]+ba[acodec^=mp4a]/b[ext=mp4][height<=${fallbackHeight}]/b`,
             "--merge-output-format",
             "mp4",
           ];

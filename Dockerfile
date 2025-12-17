@@ -25,13 +25,13 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/down
 
 # Install Static FFmpeg Build (Optimized for yt-dlp)
 # Solves "Muxing" issues with Facebook DASH streams
-RUN mkdir -p /usr/src/app/bin && \
-    curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ffmpeg.tar.xz && \
-    tar -xvf ffmpeg.tar.xz && \
-    cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/src/app/bin/ && \
-    cp ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/src/app/bin/ && \
-    rm -rf ffmpeg.tar.xz ffmpeg-master-latest-linux64-gpl && \
-    chmod +x /usr/src/app/bin/ffmpeg /usr/src/app/bin/ffprobe
+RUN mkdir -p /tmp/ffmpeg && \
+    curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o /tmp/ffmpeg/ffmpeg.tar.xz && \
+    tar -xvf /tmp/ffmpeg/ffmpeg.tar.xz -C /tmp/ffmpeg && \
+    cp /tmp/ffmpeg/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ && \
+    cp /tmp/ffmpeg/ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/local/bin/ && \
+    rm -rf /tmp/ffmpeg && \
+    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
 # Create app directory
 WORKDIR /usr/src/app
