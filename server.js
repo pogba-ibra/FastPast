@@ -3462,12 +3462,17 @@ app.post("/download", async (req, res) => {
       try {
         const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
         console.log('🌐 Using Playwright browser extraction for Facebook...');
-        const { videoUrl, title } = await extractFacebookVideoUrl(url, cookieFile);
+        const { videoUrl, title, freshCookiePath } = await extractFacebookVideoUrl(url, cookieFile);
         console.log(`✅ Browser extracted: ${title}`);
-        // Use extracted direct video URL instead of page URL
-        url = videoUrl;
-        // Store title for later use (optional - can be used to override yt-dlp title)
+
+        // Use extracted direct video URL instead of page URL (if available)
+        if (videoUrl) {
+          url = videoUrl;
+        }
+
+        // Store title and fresh cookies for later use
         req.body._browserExtractedTitle = title;
+        req.body._freshCookiePath = freshCookiePath;
       } catch (error) {
         console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
         // Continue with original URL - yt-dlp will try
@@ -3937,6 +3942,29 @@ app.post("/download", async (req, res) => {
 
     if (downloadAccelerator) {
       ytDlpArgs.push("--concurrent-fragments", "5");
+    }
+
+    // Hybrid Solution for Facebook: Use fresh Playwright cookies + Metadata fix flags
+    if ((url.includes("facebook.com") || url.includes("fb.watch")) && req.body._freshCookiePath) {
+      console.log(`🍪 Using fresh cookies for download: ${req.body._freshCookiePath}`);
+
+      // Remove any existing cookie args
+      ytDlpArgs = ytDlpArgs.filter((arg, index, arr) => {
+        if (arg === "--cookies") return false;
+        if (index > 0 && arr[index - 1] === "--cookies") return false;
+        return true;
+      });
+
+      // Add fresh cookies
+      ytDlpArgs.push("--cookies", req.body._freshCookiePath);
+
+      // Add robustness flags for 16KB file fix
+      ytDlpArgs.push(
+        "--concurrent-fragments", "16",
+        "-N", "16",
+        "--hls-prefer-native",
+        "--fixup", "warn"
+      );
     }
 
     const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
