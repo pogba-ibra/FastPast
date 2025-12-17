@@ -3898,10 +3898,11 @@ app.post("/download", async (req, res) => {
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          // Force video+audio merge for Meta platforms
+          // Force video+audio merge for Meta platforms with specific containers (Muxing Fix 2025)
+          // Ensures FFmpeg can merge them easily (mp4 video + m4a audio)
           formatArgs = [
             "-f",
-            `bv*[height<=${fallbackHeight}]+ba/b[height<=${fallbackHeight}]/b`,
+            `bestvideo[ext=mp4][height<=${fallbackHeight}]+bestaudio[ext=m4a]/best[ext=mp4][height<=${fallbackHeight}]/best`,
             "--merge-output-format",
             "mp4",
           ];
