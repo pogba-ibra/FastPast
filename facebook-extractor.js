@@ -176,25 +176,36 @@ function parseFacebookCookies(cookiesContent) {
     const cookies = [];
     const lines = cookiesContent.split('\n');
 
+    let successCount = 0;
     for (const line of lines) {
         if (!line.trim() || line.startsWith('#')) continue;
 
-        const parts = line.split('\t');
+        let parts = line.split('\t');
+        // Fallback: If tabs fail, try splitting by whitespace (some exporters use spaces)
+        if (parts.length < 7) {
+            parts = line.trim().split(/\s+/);
+        }
+
         if (parts.length >= 7) {
-            cookies.push({
-                name: parts[5],
-                value: parts[6],
-                domain: parts[0],
-                path: parts[2],
-                expires: parseInt(parts[4]) || -1,
-                httpOnly: parts[1] === 'TRUE',
-                secure: parts[3] === 'TRUE',
-                sameSite: 'Lax'
-            });
+            const domain = parts[0];
+            // Filter for Facebook domains only to reduce overhead
+            if (domain.includes('facebook.com') || domain.includes('fb.com') || domain.includes('.facebook.com')) {
+                cookies.push({
+                    name: parts[5],
+                    value: parts[6],
+                    domain: parts[0],
+                    path: parts[2],
+                    expires: parseInt(parts[4]) || -1,
+                    httpOnly: parts[1] === 'TRUE',
+                    secure: parts[3] === 'TRUE',
+                    sameSite: 'Lax'
+                });
+                successCount++;
+            }
         }
     }
 
-    console.log(`🍪 Parsed ${cookies.length} cookies`);
+    console.log(`🍪 Parsed ${cookies.length} Facebook cookies (from ${lines.length} total lines)`);
     return cookies;
 }
 
