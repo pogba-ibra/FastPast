@@ -34,6 +34,16 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         const page = await context.newPage();
 
+        // Sniffer: Intercept network requests to find direct video file (User Request 2086)
+        let networkDirectUrl = null;
+        page.on('request', request => {
+            const reqUrl = request.url();
+            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('.mp4') || reqUrl.includes('video'))) {
+                console.log(`🕵️ Sniffer caught direct video: ${reqUrl.substring(0, 50)}...`);
+                networkDirectUrl = reqUrl;
+            }
+        });
+
         // Ensure we're using mbasic
         const mbasicUrl = url
             .replace('www.facebook.com', 'mbasic.facebook.com')
@@ -137,10 +147,15 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         console.log(`🍪 Saved fresh cookies to: ${freshCookiePath}`);
 
         if (!videoUrl) {
-            console.log('⚠️ No direct video URL found, checking network requests...');
-            // If not found in DOM, check captured network requests
-            const networkResult = await captureVideoFromNetwork(page);
-            videoUrl = networkResult.videoUrl;
+            if (networkDirectUrl) {
+                console.log('✅ Used Sniffer URL as fallback');
+                videoUrl = networkDirectUrl;
+            } else {
+                console.log('⚠️ No direct video URL found (DOM or Sniffer), checking response logs...');
+                // If not found in DOM, check captured network requests
+                const networkResult = await captureVideoFromNetwork(page);
+                videoUrl = networkResult.videoUrl;
+            }
             // logic for audioUrl if separate
         }
 

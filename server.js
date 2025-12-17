@@ -3201,7 +3201,7 @@ app.post("/get-qualities", async (req, res) => {
     //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     // }
 
-    // Use standard User-Agent for all platforms (Koyeb/Linux compatible)
+    // Use standard User-Agent for all platforms (Fly.io/Linux compatible)
     ytDlpInfoArgs.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
 
     ytDlpInfoArgs.push(videoUrl);
@@ -3983,6 +3983,7 @@ app.post("/download", async (req, res) => {
 
       // Add robustness flags for 16KB file fix (Redundant safety for 2025)
       ytDlpArgs.push(
+        "--add-header", "Referer:www.facebook.com",
         "--rm-cache-dir",
         "--force-ipv4",
         "--hls-prefer-native",
