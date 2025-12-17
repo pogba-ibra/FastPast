@@ -3978,8 +3978,12 @@ app.post("/download", async (req, res) => {
         ytDlpArgs.push("--user-agent", req.body._userAgent);
       }
 
-      // Add robustness flags for 16KB file fix (ensure these aren't duplicated if configured elsewhere)
+      // Add robustness flags for 16KB file fix (Redundant safety for 2025)
       ytDlpArgs.push(
+        "--rm-cache-dir",
+        "--force-ipv4",
+        "--hls-prefer-native",
+        "-N", "16",
         "--concurrent-fragments", "16",
         "--fixup", "warn"
       );
