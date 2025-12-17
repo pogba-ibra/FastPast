@@ -67,30 +67,39 @@ async function resolveFacebookUrl(url) {
       if (response.request && response.request.res && response.request.res.responseUrl) {
         let finalUrl = response.request.res.responseUrl;
         console.log('Resolved (GET) to:', finalUrl);
-        // Optimization: Force mobile site as it often has simpler HTML for yt-dlp
+        // Optimization: Use mbasic.facebook.com (simplest version, most resilient to parsing errors)
         if (finalUrl.includes('www.facebook.com')) {
-          finalUrl = finalUrl.replace('www.facebook.com', 'm.facebook.com');
-          console.log('Converted to mobile URL:', finalUrl);
+          finalUrl = finalUrl.replace('www.facebook.com', 'mbasic.facebook.com');
+          console.log('Converted to mbasic URL:', finalUrl);
+        } else if (finalUrl.includes('m.facebook.com')) {
+          finalUrl = finalUrl.replace('m.facebook.com', 'mbasic.facebook.com');
+          console.log('Converted to mbasic URL:', finalUrl);
         }
         return finalUrl;
       }
       // If resolution fails but we have a URL, check if we should convert original
       if (url.includes('www.facebook.com')) {
-        return url.replace('www.facebook.com', 'm.facebook.com');
+        return url.replace('www.facebook.com', 'mbasic.facebook.com');
+      } else if (url.includes('m.facebook.com')) {
+        return url.replace('m.facebook.com', 'mbasic.facebook.com');
       }
       return url;
     } catch (error) {
       console.log('Failed to resolve URL:', error.message);
       // Fallback: convert original if possible
       if (url.includes('www.facebook.com')) {
-        return url.replace('www.facebook.com', 'm.facebook.com');
+        return url.replace('www.facebook.com', 'mbasic.facebook.com');
+      } else if (url.includes('m.facebook.com')) {
+        return url.replace('m.facebook.com', 'mbasic.facebook.com');
       }
       return url;
     }
   }
-  // Mobile conversion for direct non-share links too
+  // Basic mobile conversion for direct non-share links too
   if (url.includes('www.facebook.com')) {
-    return url.replace('www.facebook.com', 'm.facebook.com');
+    return url.replace('www.facebook.com', 'mbasic.facebook.com');
+  } else if (url.includes('m.facebook.com')) {
+    return url.replace('m.facebook.com', 'mbasic.facebook.com');
   }
   return url;
 }
