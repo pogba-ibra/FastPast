@@ -176,7 +176,7 @@ function parseFacebookCookies(cookiesContent) {
     const cookies = [];
     const lines = cookiesContent.split('\n');
 
-    let successCount = 0;
+
     for (const line of lines) {
         if (!line.trim() || line.startsWith('#')) continue;
 
@@ -200,7 +200,7 @@ function parseFacebookCookies(cookiesContent) {
                     secure: parts[3] === 'TRUE',
                     sameSite: 'Lax'
                 });
-                successCount++;
+
             }
         }
     }
