@@ -77,7 +77,7 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         if (!videoUrl) {
             console.log('⚠️ No direct video URL found, checking network requests...');
             // If not found in DOM, check captured network requests
-            videoUrl = await captureVideoFromNetwork(page, mbasicUrl);
+            videoUrl = await captureVideoFromNetwork(page);
         }
 
         await browser.close();
@@ -130,7 +130,7 @@ function parseFacebookCookies(cookiesContent) {
 /**
  * Capture video URL from network requests
  */
-async function captureVideoFromNetwork(page, url) {
+async function captureVideoFromNetwork(page) {
     return new Promise((resolve) => {
         let videoUrl = null;
 

@@ -3440,6 +3440,23 @@ app.post("/download", async (req, res) => {
   // Resolve shortened URLs (Facebook/Instagram)
   if (url) {
     url = await resolveFacebookUrl(url);
+
+    // Use headless browser for Facebook video extraction (bypasses detection)
+    if (url.includes('facebook.com') || url.includes('fb.watch')) {
+      try {
+        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+        console.log('🌐 Using Playwright browser extraction for Facebook...');
+        const { videoUrl, title } = await extractFacebookVideoUrl(url, cookieFile);
+        console.log(`✅ Browser extracted: ${title}`);
+        // Use extracted direct video URL instead of page URL
+        url = videoUrl;
+        // Store title for later use (optional - can be used to override yt-dlp title)
+        req.body._browserExtractedTitle = title;
+      } catch (error) {
+        console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
+        // Continue with original URL - yt-dlp will try
+      }
+    }
   }
   const fmt = format || req.body.format;
   const qual = quality || req.body.quality;
