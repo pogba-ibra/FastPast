@@ -180,9 +180,6 @@ function parseFacebookCookies(cookiesContent) {
 }
 
 /**
- * Capture video URL from network requests
- */
-/**
  * Capture video and audio URLs from network requests
  */
 async function captureVideoFromNetwork(page) {
@@ -194,23 +191,29 @@ async function captureVideoFromNetwork(page) {
             const responseUrl = response.url();
             const contentType = response.headers()['content-type'] || '';
 
-            // Look for video content
-            if (contentType.includes('video/') || responseUrl.includes('.mp4')) {
+            // Look for video content (direct CDN links)
+            if ((contentType.includes('video/') || responseUrl.includes('.mp4')) && responseUrl.includes('fbcdn.net')) {
                 videoUrl = responseUrl;
-                console.log(`🎥 Found video in network: ${responseUrl.substring(0, 100)}...`);
+                console.log(`🎥 Found direct CDN video: ${responseUrl.substring(0, 100)}...`);
+            }
+            // Fallback: any video/mp4 if not fbcdn
+            else if (!videoUrl && (contentType.includes('video/') || responseUrl.includes('.mp4'))) {
+                videoUrl = responseUrl;
+                console.log(`🎥 Found video stream: ${responseUrl.substring(0, 100)}...`);
             }
 
             // Look for audio content (Nuclear Workaround)
-            if (contentType.includes('audio/') || responseUrl.includes('bytestart') && responseUrl.includes('audio')) {
+            if (contentType.includes('audio/') || (responseUrl.includes('bytestart') && responseUrl.includes('audio'))) {
                 audioUrl = responseUrl;
-                console.log(`🎵 Found audio in network: ${responseUrl.substring(0, 100)}...`);
+                console.log(`🎵 Found audio stream: ${responseUrl.substring(0, 100)}...`);
             }
         });
 
-        // Wait a bit for requests to complete
+        // Wait for requests to populate (Facebook lazy loads)
+        // User requested increased timeout for slow loads
         setTimeout(() => {
             resolve({ videoUrl, audioUrl });
-        }, 5000);
+        }, 15000);
     });
 }
 
