@@ -44,8 +44,29 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         // Navigate and wait for network to be idle
         await page.goto(mbasicUrl, { waitUntil: 'networkidle', timeout: 30000 });
 
-        // Extract title from page
-        const title = await page.title().catch(() => 'Unknown Title');
+        // Extract title from page (mbasic structure)
+        let title = 'Unknown Title';
+        try {
+            // Try specific selectors for mbasic post content
+            const titleSelectors = ['h3', 'h1', 'div[role="article"] strong', 'p'];
+            for (const selector of titleSelectors) {
+                const element = await page.$(selector);
+                if (element) {
+                    const text = await element.innerText();
+                    if (text && text.trim().length > 0 && text.length < 100) { // Avoid grabbing full post body
+                        title = text.trim();
+                        break;
+                    }
+                }
+            }
+            // Fallback to page title if selectors failed
+            if (title === 'Unknown Title') {
+                title = await page.title();
+            }
+        } catch (e) {
+            console.log('⚠️ Title extraction warning:', e.message);
+            title = await page.title().catch(() => 'Unknown Title');
+        }
         console.log(`📝 Page title: ${title}`);
 
         // Try to find video element with src attribute
