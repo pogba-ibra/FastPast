@@ -22,6 +22,14 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp-nightly && \
     chmod a+rx /usr/local/bin/yt-dlp-nightly
 
+# Install Static FFmpeg Build (Optimized for yt-dlp)
+# Solves "Muxing" issues with Facebook DASH streams
+RUN mkdir -p /usr/src/app/bin
+RUN curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ffmpeg.tar.xz && \
+    tar -xvf ffmpeg.tar.xz --strip-components=1 -C /usr/src/app/bin/ */bin/ffmpeg */bin/ffprobe && \
+    rm ffmpeg.tar.xz && \
+    chmod +x /usr/src/app/bin/ffmpeg /usr/src/app/bin/ffprobe
+
 # Create app directory
 WORKDIR /usr/src/app
 
