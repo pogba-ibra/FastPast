@@ -21,7 +21,8 @@ RUN pip3 install --upgrade "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/
 # Install yt-dlp Nightly Build (Standalone Binary) for YouTube
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp-nightly && \
-    chmod a+rx /usr/local/bin/yt-dlp-nightly
+    chmod a+rx /usr/local/bin/yt-dlp-nightly && \
+    /usr/local/bin/yt-dlp-nightly --update-to nightly
 
 # Install Static FFmpeg Build (Optimized for yt-dlp)
 # Solves "Muxing" issues with Facebook DASH streams
