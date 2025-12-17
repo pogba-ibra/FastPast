@@ -3780,6 +3780,13 @@ app.post("/download", async (req, res) => {
       console.error("Title fetch error:", e);
     }
 
+    // Fallback: Use browser-extracted title if yt-dlp failed or returned generic title
+    if (req.body._browserExtractedTitle && (videoTitle === "Unknown Title" || !videoTitle)) {
+      console.log(`ℹ️ using browser-extracted title: ${req.body._browserExtractedTitle}`);
+      videoTitle = req.body._browserExtractedTitle;
+    }
+
+
     /* eslint-disable no-control-regex */
     const INVALID_FILENAME_CHARS = /[\x00-\x1f\x80-\x9f/?<>\\:*|"]/g;
     /* eslint-enable no-control-regex */
