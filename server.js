@@ -3649,7 +3649,7 @@ app.post("/download", async (req, res) => {
         // Option 1 (Robust): Use --print to get exact fields separated by a delimiter
         // This avoids JSON parsing issues when yt-dlp outputs warnings/garbage.
         "--print",
-        "%(title)s|||%(duration)s", // Output: "My Video Title|||123" (duration is seconds)
+        "%(title,description,id)s|||%(duration)s", // Fallback chain: title → description → id (for Facebook Reels)
         "--no-download",
         "--no-playlist",
         "--no-check-certificate",
