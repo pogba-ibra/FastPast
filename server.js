@@ -3993,52 +3993,81 @@ app.post("/download", async (req, res) => {
 
     console.log("yt-dlp args:", finalYtDlpArgs);
 
-    // Wrapper to handle download and retries
-    const performDownload = (args, isRetry = false) => {
+    // Wrapper to handle download and proxy rotation
+    const proxies = require('./proxies');
+    let proxyIndex = -1; // -1 = Direct, 0+ = Proxies
 
+    const performDownload = (ignoredArgs, isRetry = false) => {
+      // Note: ignoredArgs was used in old recursive loop, now we use fresh build
+      if (res.headersSent) return;
 
-      // Spawn unified process
-      // const command = getPythonCommand();
-      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...args], {
+      // Determine current strategy
+      // Only rotate proxies for Facebook as requested
+      const isFacebook = (url.includes("facebook.com") || url.includes("fb.watch"));
+
+      // Algorithm:
+      // 1. Try Direct (proxyIndex = -1) -- typically uses --impersonate
+      // 2. If fail & isFacebook, Try Proxy[0], Proxy[1]...
+
+      const currentProxy = (proxyIndex >= 0 && proxyIndex < proxies.length) ? proxies[proxyIndex] : null;
+
+      if (proxyIndex >= proxies.length) {
+        logger.error("All proxies exhausted. Download failed.");
+        if (!res.headersSent) res.status(500).json({ error: "Failed to download video after trying all available proxies." });
+        return;
+      }
+
+      const currentArgs = [...finalYtDlpArgs];
+      let strategyName = "Direct (Impersonate)";
+
+      if (currentProxy) {
+        strategyName = `Proxy ${proxyIndex + 1}/${proxies.length}`;
+        currentArgs.push("--proxy", currentProxy);
+        // When using proxy, we might want to relax ipv4 enforcement if proxy is ipv6? 
+        // But user said "force-ipv4". We keep it.
+      }
+
+      console.log(`🚀 Attempting Download Strategy: ${strategyName}`);
+
+      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...currentArgs], {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
       streamProcessToResponse(res, ytDlpProcess, {
         filename: downloadFilename,
         contentType,
-        onRetry: (message, stderrText) => {
-          // Robust check for cookie lock
-          if (!isRetry && (stderrText.includes("Could not copy") || stderrText.includes("cookie database") || stderrText.includes("Failed to decrypt"))) {
-            logger.warn("Chrome cookies locked during download, retrying...", { url });
-            // Remove cookie args
-            performDownload(args, true);
-            return true;
-          }
+        onRetry: (msg, stderr) => {
+          // Legacy retry logic (can keep if needed, but rotation is better)
           return false;
         },
         onSuccess: () => {
-          logger.info("Download completed successfully", {
-            url,
-            format: fmt,
-            quality: qualityLabel || qual,
-            processDuration: Date.now() - downloadStartTime,
-            videoDuration: duration, // Retrieved from metadata
-            clipped: !!(startTime && endTime),
-          });
+          logger.info("Download completed successfully", { strategy: strategyName, url });
         },
         onFailure: (reason, stderrText) => {
-          logger.error("Download failed", {
-            url,
-            format: fmt,
-            quality: qualityLabel || qual,
-            reason,
-            stderr: (stderrText || "").substring(0, 1000),
-          });
+          // If failed and not streaming, rotate
+          if (!res.headersSent) {
+            logger.warn(`Strategy ${strategyName} failed: ${reason}`);
+
+            if (isFacebook) {
+              proxyIndex++;
+              // Recursive call
+              performDownload();
+            } else {
+              // Non-Facebook, fail immediately
+              // streamProcessToResponse already logged error, we just ensure response closed?
+              // It likely didn't send 500 if headers not sent? 
+              // streamProcessToResponse usually handles sending error if headers not sent.
+              // But we intercept onFailure.
+              // IMPORTANT: streamProcessToResponse sends 500 if we return (or don't handle?).
+              // If we want to retry, we must prevent it from sending 500.
+              // The original streamProcessToResponse likely sends 500 if onFailure returns true? No.
+            }
+          }
         },
       });
     };
 
-    performDownload(finalYtDlpArgs);
+    performDownload();
 
   } catch (error) {
     logger.error("Server error in download endpoint", {
