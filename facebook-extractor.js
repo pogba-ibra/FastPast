@@ -94,6 +94,17 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         // PRIORITY 0: Simulate human interaction to "warm up" the session
         console.log('👆 Simulating human interaction...');
+
+        // User Suggestion: Click play button to trigger network stream
+        try {
+            const playButton = await page.$('div[role="button"], [aria-label*="Play"]');
+            if (playButton) {
+                console.log('▶️ Clicking play button to trigger stream...');
+                await playButton.click({ force: true }).catch(() => { });
+                await page.waitForTimeout(1000);
+            }
+        } catch (e) { }
+
         await page.mouse.wheel(0, 500); // Scroll down
         await page.waitForTimeout(1000);
         await page.mouse.wheel(0, -200); // Scroll up slightly
