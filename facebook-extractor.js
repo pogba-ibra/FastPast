@@ -118,7 +118,9 @@ async function extractFacebookVideoUrl(url, cookieFile) {
                         videoUrl = href;
                     }
                 }
-            } catch (e) { }
+            } catch (error) {
+                console.log('⚠️ mbasic extraction warning:', error.message);
+            }
         }
 
         await page.mouse.wheel(0, 500); // Scroll down
