@@ -3967,7 +3967,7 @@ app.post("/download", async (req, res) => {
 
       // User Request: Use 2025 "Impersonate" Flag to bypass data-center fingerprint
       // Note: This requires curl-cffi (installed in Dockerfile)
-      ytDlpArgs.push("--impersonate", "chrome");
+      ytDlpArgs.push("--impersonate", "chrome-110");
 
       // Add fresh cookies
       ytDlpArgs.push("--cookies", req.body._freshCookiePath);
