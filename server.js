@@ -4000,7 +4000,7 @@ app.post("/download", async (req, res) => {
     const proxies = require('./proxies');
     let proxyIndex = -1; // -1 = Direct, 0+ = Proxies
 
-    const performDownload = (ignoredArgs, isRetry = false) => {
+    const performDownload = () => {
       // Note: ignoredArgs was used in old recursive loop, now we use fresh build
       if (res.headersSent) return;
 
@@ -4039,17 +4039,21 @@ app.post("/download", async (req, res) => {
       streamProcessToResponse(res, ytDlpProcess, {
         filename: downloadFilename,
         contentType,
-        onRetry: (msg, stderr) => {
+        onRetry: () => {
           // Legacy retry logic (can keep if needed, but rotation is better)
           return false;
         },
         onSuccess: () => {
-          logger.info("Download completed successfully", { strategy: strategyName, url });
+          logger.info("Download completed successfully", {
+            strategy: strategyName,
+            url,
+            videoDuration: duration
+          });
         },
         onFailure: (reason, stderrText) => {
           // If failed and not streaming, rotate
           if (!res.headersSent) {
-            logger.warn(`Strategy ${strategyName} failed: ${reason}`);
+            logger.warn(`Strategy ${strategyName} failed: ${reason}`, { stderr: stderrText });
 
             if (isFacebook) {
               proxyIndex++;
