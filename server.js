@@ -111,10 +111,10 @@ function spawnYtDlp(args, options = {}) {
   // These platforms aggressively block cloud IPs or break often, so Stable is unreliable.
   const restrictedPlatforms = [
     "youtube.com", "youtu.be",
-    "instagram.com",
-    // "tiktok.com", // Removed: use pip version to access impersonation deps (curl-cffi)
-    "facebook.com", "fb.watch",
-    "twitter.com", "x.com"
+    // "instagram.com", // Removed: use pip version
+    // "tiktok.com", // Removed: use pip version
+    // "facebook.com", "fb.watch", // Removed: use pip version for impersonate/curl-cffi support
+    // "twitter.com", "x.com" // Removed: potentially use pip
   ];
 
   const useNightlyBinary = args.some(arg =>

@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && ln -s $(which node) /usr/local/bin/node || true
 
-# Install yt-dlp regarding PEP 668 (Nightly Release via pip) and Impersonation Deps
-# Use @nightly to get the absolute latest version with Facebook parser fixes
+# Ensure pip is up to date and install required networking libraries
+RUN pip3 install --upgrade pip --break-system-packages
 RUN pip3 install --upgrade "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz" pyopenssl requests brotli certifi --break-system-packages
 
 # Install yt-dlp Nightly Build (Standalone Binary) for YouTube
