@@ -3972,10 +3972,13 @@ app.post("/download", async (req, res) => {
       // Add fresh cookies
       ytDlpArgs.push("--cookies", req.body._freshCookiePath);
 
-      // Add User-Agent Sync if available
-      if (req.body._userAgent) {
-        console.log(`🕵️ Syncing User-Agent to yt-dlp: ${req.body._userAgent}`);
-        ytDlpArgs.push("--user-agent", req.body._userAgent);
+      // Add User-Agent Sync (Dynamic or Static Fallback from User)
+      const staticUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+      const userAgentToUse = req.body._userAgent || staticUserAgent;
+
+      if (userAgentToUse) {
+        console.log(`🕵️ Syncing User-Agent to yt-dlp: ${userAgentToUse}`);
+        ytDlpArgs.push("--user-agent", userAgentToUse);
       }
 
       // Add robustness flags for 16KB file fix (Redundant safety for 2025)
