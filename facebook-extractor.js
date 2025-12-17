@@ -95,16 +95,30 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         // PRIORITY 0: Simulate human interaction to "warm up" the session
         console.log('👆 Simulating human interaction...');
 
-        // User Suggestion: Click play button to trigger network stream
+        // 1. Standard FB Interaction: Click play button to trigger network stream
         try {
-            const playButton = await page.$('div[role="button"], [aria-label*="Play"]');
-            if (playButton) {
+            const playButton = await page.locator('div[role="button"] >> text=/Play|Watch/i').first();
+            if (await playButton.count() > 0 && await playButton.isVisible()) {
                 console.log('▶️ Clicking play button to trigger stream...');
                 await playButton.click({ force: true }).catch(() => { });
                 await page.waitForTimeout(1000);
             }
         } catch (error) {
             console.log('⚠️ Play button interaction warning:', error.message);
+        }
+
+        // 2. mbasic Interaction: Look for "Download Video" link (mbasic specific)
+        if (page.url().includes('mbasic.facebook.com')) {
+            try {
+                const downloadLink = await page.$('a[href*="video_redirect"]');
+                if (downloadLink) {
+                    const href = await downloadLink.getAttribute('href');
+                    if (href) {
+                        console.log('✅ Found mbasic redirect link');
+                        videoUrl = href;
+                    }
+                }
+            } catch (e) { }
         }
 
         await page.mouse.wheel(0, 500); // Scroll down
@@ -193,16 +207,17 @@ async function captureVideoFromNetwork(page) {
         page.on('response', async (response) => {
             const responseUrl = response.url();
             const contentType = response.headers()['content-type'] || '';
+            const resourceType = response.request().resourceType();
 
             // Look for video content (direct CDN links)
-            if ((contentType.includes('video/') || responseUrl.includes('.mp4')) && responseUrl.includes('fbcdn.net')) {
-                videoUrl = responseUrl;
-                console.log(`🎥 Found direct CDN video: ${responseUrl.substring(0, 100)}...`);
-            }
-            // Fallback: any video/mp4 if not fbcdn
-            else if (!videoUrl && (contentType.includes('video/') || responseUrl.includes('.mp4'))) {
-                videoUrl = responseUrl;
-                console.log(`🎥 Found video stream: ${responseUrl.substring(0, 100)}...`);
+            if (resourceType === 'media' || contentType.includes('video/') || responseUrl.includes('.mp4')) {
+                if (responseUrl.includes('fbcdn.net')) {
+                    videoUrl = responseUrl;
+                    console.log(`🎥 Found DIRECT FB CDN video: ${responseUrl.substring(0, 100)}...`);
+                } else if (!videoUrl) {
+                    videoUrl = responseUrl;
+                    console.log(`🎥 Found video stream: ${responseUrl.substring(0, 100)}...`);
+                }
             }
 
             // Look for audio content (Nuclear Workaround)
