@@ -3805,7 +3805,7 @@ app.post("/download", async (req, res) => {
     const downloadFilename = `FastPast – ${finalTitle}.${fmt}`;
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
 
-    let ytDlpArgs = ["--no-check-certificate", "--no-playlist"]; // "--ffmpeg-location" removed
+    let ytDlpArgs = ["--no-check-certificate", "--no-playlist", "--ffmpeg-location", "/usr/bin/ffmpeg"];
 
 
     // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
