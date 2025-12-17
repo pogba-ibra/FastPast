@@ -103,7 +103,9 @@ async function extractFacebookVideoUrl(url, cookieFile) {
                 await playButton.click({ force: true }).catch(() => { });
                 await page.waitForTimeout(1000);
             }
-        } catch (e) { }
+        } catch (error) {
+            console.log('⚠️ Play button interaction warning:', error.message);
+        }
 
         await page.mouse.wheel(0, 500); // Scroll down
         await page.waitForTimeout(1000);
