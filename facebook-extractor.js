@@ -70,9 +70,12 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         console.log(`📝 Page title: ${title}`);
 
         // 1. Try DOM extraction (The "Direct Source" Fix)
+        let videoUrl = null;
         // Find the actual MP4 link in the page (video tag)
         const domVideoUrl = await page.evaluate(() => {
             const video = document.querySelector('video');
+            if (video && video.src) return video.src;
+
             const links = Array.from(document.querySelectorAll('a'));
             for (const link of links) {
                 const href = link.href || '';
@@ -83,6 +86,11 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
             return null;
         });
+
+        if (domVideoUrl && !domVideoUrl.startsWith('blob:')) {
+            videoUrl = domVideoUrl;
+            console.log(`🎥 Found video via DOM: ${videoUrl.substring(0, 100)}...`);
+        }
 
         // PRIORITY 0: Simulate human interaction to "warm up" the session
         console.log('👆 Simulating human interaction...');
