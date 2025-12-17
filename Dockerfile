@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     ffmpeg \
     aria2 \
+    xz-utils \
     ca-certificates \
     build-essential \
     libffi-dev \
@@ -24,10 +25,12 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/down
 
 # Install Static FFmpeg Build (Optimized for yt-dlp)
 # Solves "Muxing" issues with Facebook DASH streams
-RUN mkdir -p /usr/src/app/bin
-RUN curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ffmpeg.tar.xz && \
-    tar -xvf ffmpeg.tar.xz --strip-components=1 -C /usr/src/app/bin/ */bin/ffmpeg */bin/ffprobe && \
-    rm ffmpeg.tar.xz && \
+RUN mkdir -p /usr/src/app/bin && \
+    curl -L https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ffmpeg.tar.xz && \
+    tar -xvf ffmpeg.tar.xz && \
+    cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/src/app/bin/ && \
+    cp ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/src/app/bin/ && \
+    rm -rf ffmpeg.tar.xz ffmpeg-master-latest-linux64-gpl && \
     chmod +x /usr/src/app/bin/ffmpeg /usr/src/app/bin/ffprobe
 
 # Create app directory
