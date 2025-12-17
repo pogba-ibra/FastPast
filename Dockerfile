@@ -30,6 +30,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Install Playwright browsers (Chromium only for Facebook automation)
+# This is placed after npm install to ensure playwright package is available
+RUN npx playwright install --with-deps chromium
+
 # Install Deno (Supported JS Runtime for yt-dlp)
 RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
 RUN curl -fsSL https://deno.land/install.sh | sh && \

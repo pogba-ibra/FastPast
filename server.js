@@ -4,6 +4,7 @@ const axios = require("axios");
 const cors = require("cors");
 const { spawn, exec } = require("child_process");
 const path = require("path");
+const { extractFacebookVideoUrl } = require('./facebook-extractor'); // Facebook headless browser extraction
 // const multer = require("multer"); // Unused
 // const ffmpeg = require("ffmpeg-static");
 // const ffmpeg = "ffmpeg"; // Unused: yt-dlp uses system PATH automatically
@@ -130,7 +131,7 @@ function spawnYtDlp(args, options = {}) {
 
   if (useNightly) {
     // Invoke the binary directly (User Request: "Use Binary Instead of Module")
-    // This often handles runtime detection better than `python3 path/to/zipapp`
+    // This often handles runtime detection better than `python3 path / to / zipapp`
     command = nightlyPath;
 
     // Remove "-m" and "yt_dlp" if they are the first arguments
@@ -249,17 +250,17 @@ function configureAntiBlockingArgs(args, url) {
     if (fs.existsSync(cookiesPath)) {
       // Verify Read Permission explicitly
       fs.accessSync(cookiesPath, fs.constants.R_OK);
-      console.log(`--> Auth: Using cookie file: ${cookiesPath}`);
+      console.log(`-- > Auth: Using cookie file: ${cookiesPath} `);
       args.push("--cookies", cookiesPath);
     } else {
-      console.log(`--> Auth: Cookie file NOT FOUND at: ${cookiesPath}`);
+      console.log(`-- > Auth: Cookie file NOT FOUND at: ${cookiesPath} `);
       if (targetCookieFile !== 'cookies.txt') {
         // Log fallback attempt if needed, but for now just report missing
-        console.warn(`--> Auth Warning: Specific cookie file ${targetCookieFile} missing.`);
+        console.warn(`-- > Auth Warning: Specific cookie file ${targetCookieFile} missing.`);
       }
     }
   } catch (err) {
-    console.error(`--> Auth Error: Cookie file ${cookiesPath} found but NOT READABLE.`, err.message);
+    console.error(`-- > Auth Error: Cookie file ${cookiesPath} found but NOT READABLE.`, err.message);
   }
 
   // 7. Rate Limiting for YouTube (Avoid IP blocks)
@@ -287,7 +288,7 @@ function verifyYtDlpRuntime() {
     if (fs.existsSync(p)) {
       console.log(`✅ Found cookie file: ${file} (${fs.statSync(p).size} bytes)`);
     } else {
-      console.log(`❌ MISSING cookie file: ${file}`);
+      console.log(`❌ MISSING cookie file: ${file} `);
     }
   });
 
@@ -305,11 +306,11 @@ function verifyYtDlpRuntime() {
   check.stderr.on('data', (d) => output += d.toString());
 
   check.on('close', (code) => {
-    console.log(`🔍 yt-dlp check finished with code ${code}`);
+    console.log(`🔍 yt - dlp check finished with code ${code} `);
     const lines = output.split('\n');
     lines.forEach(line => {
       if (line.includes('[debug] JS runtimes') || line.includes('[debug] exe versions')) {
-        console.log(`✅ ${line.trim()}`);
+        console.log(`✅ ${line.trim()} `);
       }
     });
   });
@@ -509,21 +510,21 @@ function parsePTDuration(ptDuration) {
   const minutes = parseInt(match[2] || 0);
   const seconds = parseInt(match[3] || 0);
   if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} `;
   } else {
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')} `;
   }
 }
 
 function encodeRFC5987Value(value) {
   return encodeURIComponent(value)
-    .replace(/['()]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
+    .replace(/['()]/g, (char) => `% ${char.charCodeAt(0).toString(16).toUpperCase()} `)
     .replace(/\*/g, "%2A");
 }
 
 function getContentDisposition(filename) {
   const fallback = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
-  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeRFC5987Value(filename)}`;
+  return `attachment; filename = "${fallback}"; filename *= UTF - 8''${encodeRFC5987Value(filename)} `;
 }
 
 function getFormatScore(format) {
@@ -544,12 +545,12 @@ function getFormatScore(format) {
 }
 
 function buildQualityLabel(height) {
-  return `${height}p (${height >= 1080 ? "High Quality" : height >= 720 ? "HD Quality" : "Standard Quality"})`;
+  return `${height} p(${height >= 1080 ? "High Quality" : height >= 720 ? "HD Quality" : "Standard Quality"})`;
 }
 
 function buildFallbackQuality(height) {
   return {
-    value: `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
+    value: `bestvideo[height <= ${height}]+bestaudio / best[height <= ${height}]/best`,
     text: buildQualityLabel(height),
     height,
     hasAudio: false,
