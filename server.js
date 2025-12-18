@@ -177,10 +177,9 @@ function configureAntiBlockingArgs(args, url, requestUA) {
     else if (url.includes("facebook.com") || url.includes("fb.watch")) {
       console.log("--> Facebook: applying download speed optimizations");
 
-      // 1. Multi-threaded downloads (3 parallel connections)
-      args.push("-N", "3");
+      // Multi-threaded downloads removed for stability (CDN silent-fail bypass)
 
-      console.log("--> Facebook: concurrent fragments=3");
+      console.log("--> Facebook: concurrent fragments=1 (stable)");
     }
 
 
@@ -3984,8 +3983,6 @@ app.post("/download", async (req, res) => {
       ytDlpArgs.push(
         "--add-header", "Referer:mbasic.facebook.com",
         "--rm-cache-dir",
-        "-N", "3",
-        "--concurrent-fragments", "3",
         "--fixup", "warn"
       );
     }
