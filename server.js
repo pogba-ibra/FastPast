@@ -726,7 +726,13 @@ const downloadQueue = new Queue(function (task, cb) {
   }
 
   if (format) {
-    args.push("-f", format);
+    let finalFormat = format;
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+    if (isMeta && !finalFormat.includes("+") && !finalFormat.includes("/") && finalFormat !== "best") {
+      finalFormat = `${finalFormat}+ba[acodec^=mp4a]/b[ext=mp4]/b`;
+      console.log(`🛠️ [Batch] Augmenting Meta format ID: ${finalFormat}`);
+    }
+    args.push("-f", finalFormat);
   } else {
     args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
   }
@@ -3872,7 +3878,18 @@ app.post("/download", async (req, res) => {
     let formatArgs = [];
     if (fmt === "mp4") {
       if (formatSelector) {
-        formatArgs = ["-f", formatSelector, "--merge-output-format", "mp4"];
+        // Robust DASH support for Facebook/Instagram/Threads:
+        // If a specific ID is requested, ensure audio is merged by appending +ba
+        let finalFormat = formatSelector;
+        const isMetaPlatform = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+
+        if (isMetaPlatform && !finalFormat.includes("+") && !finalFormat.includes("/") && formatSelector !== "best") {
+          // Append compatible audio track to the video-only ID
+          finalFormat = `${finalFormat}+ba[acodec^=mp4a]/b[ext=mp4]/b`;
+          console.log(`🛠️ Augmenting Meta format ID with audio: ${finalFormat}`);
+        }
+
+        formatArgs = ["-f", finalFormat, "--merge-output-format", "mp4"];
       } else {
         // Use robust format selection that ensures both video and audio are downloaded
         // bv+ba/b = best video + best audio merged, fallback to single best file
@@ -3961,7 +3978,6 @@ app.post("/download", async (req, res) => {
       ytDlpArgs.push(
         "--add-header", "Referer:mbasic.facebook.com",
         "--rm-cache-dir",
-        "--force-ipv4",
         "--hls-prefer-native",
         "-N", "16",
         "--concurrent-fragments", "16",
