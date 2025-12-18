@@ -5,9 +5,10 @@ const fs = require('fs');
  * Extract direct video URL from Facebook using headless browser
  * @param {string} url - Facebook video URL (will be converted to mbasic)
  * @param {string} cookieFile - Path to Facebook cookies file
+ * @param {string} requestUA - Optional User-Agent to sync with
  * @returns {Promise<{videoUrl: string, title: string}>}
  */
-async function extractFacebookVideoUrl(url, cookieFile) {
+async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
     let browser;
     try {
         console.log('📱 Launching stealth browser for Facebook extraction...');
@@ -31,7 +32,7 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         // User Request: Use EXACT User-Agent provided by user for full synchronization
         const context = await browser.newContext({
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
+            userAgent: requestUA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
         });
 
         // Load cookies if file exists

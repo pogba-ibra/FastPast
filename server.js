@@ -3444,7 +3444,7 @@ app.post("/download", async (req, res) => {
       try {
         const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
         console.log('🌐 Using Playwright browser extraction for Facebook...');
-        const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile);
+        const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
         console.log(`✅ Browser extracted: ${title}`);
 
         // Use extracted direct video URL instead of page URL (if available)
