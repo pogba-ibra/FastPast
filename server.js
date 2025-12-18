@@ -669,7 +669,7 @@ const downloadQueue = new Queue(function (task, cb) {
   let args = [
     "-o", outputTemplate,
     "--no-check-certificate",
-    // "--ffmpeg-location", ffmpeg, // Removed: using system ffmpeg
+    "--ffmpeg-location", "/usr/local/bin/ffmpeg",
     "--progress", // Ensure progress is printed
     "--newline", // Easier to parse
   ];
@@ -2048,9 +2048,19 @@ function streamProcessToResponse(res, childProcess, options) {
     }
   };
   childProcess.stderr.on("data", (data) => {
-    stderr += data.toString();
+    const chunk = data.toString();
+    stderr += chunk;
+    // Real-time console logging for critical yt-dlp stages (Merger/FFmpeg)
+    // This ensures these lines appear in Fly.io dashboard logs immediately.
+    if (chunk.includes('[Merger]') || chunk.includes('[ffmpeg]') || chunk.includes('Merging formats into')) {
+      console.log(`🎬 yt-dlp Merger: ${chunk.trim()}`);
+    }
   });
   childProcess.stdout.on("data", (chunk) => {
+    const data = chunk.toString();
+    if (data.includes('[Merger]') || data.includes('[ffmpeg]') || data.includes('Merging formats into')) {
+      console.log(`🎬 yt-dlp Output: ${data.trim()}`);
+    }
     handleBackpressure(chunk);
   });
   childProcess.on("close", (code) => {
@@ -3909,6 +3919,8 @@ app.post("/download", async (req, res) => {
     // Platform-specific robustness (Non-security flags)
     if (url.includes("facebook.com") || url.includes("fb.watch")) {
       ytDlpArgs.push("--fixup", "warn");
+      // Add a buffer limit to prevent massive memory usage during merge/download
+      ytDlpArgs.push("--buffer-size", "16K");
     }
 
     const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
@@ -3970,9 +3982,16 @@ app.post("/download", async (req, res) => {
           });
         },
         onFailure: (reason, stderrText) => {
+          // Log the failure to Winston for persistent records
+          logger.error(`Download strategy ${strategyName} failed`, {
+            url,
+            reason,
+            stderr: (stderrText || "").substring(0, 2000), // Increased capture size
+            strategy: strategyName
+          });
+
           // If failed and not streaming, rotate
           if (!res.headersSent) {
-            logger.warn(`Strategy ${strategyName} failed: ${reason}`, { stderr: stderrText });
 
             if (isFacebook) {
               proxyIndex++;
