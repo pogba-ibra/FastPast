@@ -110,48 +110,15 @@ async function resolveFacebookUrl(url) {
   return url;
 }
 
-// Helper to spawn yt-dlp with hybrid logic (Standalone Nightly for YouTube, Pip Nightly for Meta/Others)
+// Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
-  // Check if target is a platform that requires Nightly (YouTube, Instagram, TikTok, FB, etc.)
-  // These platforms aggressively block cloud IPs or break often, so Stable is unreliable.
-  const restrictedPlatforms = [
-    "youtube.com", "youtu.be",
-    // "instagram.com", // Removed: use pip version
-    // "tiktok.com", // Removed: use pip version
-    // "facebook.com", "fb.watch", // Removed: use pip version for impersonate/curl-cffi support
-    // "twitter.com", "x.com" // Removed: potentially use pip
-  ];
+  // We consolidated to use Pip-installed version for ALL platforms (YouTube, Meta, etc.)
+  // This ensures curl-cffi support is always available for --impersonate.
+  const command = getPythonCommand();
+  const finalArgs = [...args];
 
-  const useNightlyBinary = args.some(arg =>
-    typeof arg === 'string' && restrictedPlatforms.some(platform => arg.includes(platform))
-  );
-
-  // Use Nightly binary if it's YouTube AND the binary exists (e.g. in Docker)
-  // We check /usr/local/bin/yt-dlp-nightly which we install in Dockerfile as a python zipapp
-  const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
-  const useNightly = useNightlyBinary && fs.existsSync(nightlyPath);
-
-  let command;
-  let finalArgs = [...args];
-
-  if (useNightly) {
-    // Invoke the binary directly (User Request: "Use Binary Instead of Module")
-    // This often handles runtime detection better than `python3 path / to / zipapp`
-    command = nightlyPath;
-
-    // Remove "-m" and "yt_dlp" if they are the first arguments
-    if (finalArgs[0] === '-m' && finalArgs[1] === 'yt_dlp') {
-      finalArgs.splice(0, 2);
-    }
-
-    // Note: We do NOT prepend nightlyPath to args, because it IS the command now.
-
-    logger.info("Using yt-dlp Nightly (Binary invocation) for YouTube", { nightlyPath });
-  } else {
-    command = getPythonCommand();
-    // Use the latest Pip-installed Nightly build (from requirements or master)
-    logger.info("Using yt-dlp Nightly (pip)", { command });
-  }
+  // Log usage
+  logger.info("Using yt-dlp Nightly (pip -m)", { command });
 
   return spawn(command, finalArgs, options);
 }
@@ -167,8 +134,7 @@ function configureAntiBlockingArgs(args, url, requestUA) {
   ].some(d => url.includes(d));
 
   if (isRestricted) {
-    // 1. Force IPv4 (often cleaner for auth/geo)
-    args.push("--force-ipv4");
+
 
 
     // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
@@ -323,27 +289,28 @@ function verifyYtDlpRuntime() {
     }
   });
 
-  // We can't easily use spawnYtDlp here because it's async/stream based and we want simple output logic.
-  // But let's use a simple spawn to be safe and independent.
-  const check = spawn(process.platform === 'win32' ? 'py' : 'python3', ['-m', 'yt_dlp', '-vU']);
+
 
   // If we are in the Docker container, we might want to check the binary if we were using it, 
   // but standard python invocation is what our app defaults to for non-nightly.
-  // Let's actually check BOTH or just the one we expect to use.
-  // For simplicity, let's just run the standard command which prints debug info.
+  // 2. Check yt-dlp Version and Runtime Details
+  console.log('🔍 Checking yt-dlp version...');
+  const checkArgs = ["-m", "yt_dlp", "--version"];
+  const check = spawn(getPythonCommand(), checkArgs);
 
   let output = '';
   check.stdout.on('data', (d) => output += d.toString());
   check.stderr.on('data', (d) => output += d.toString());
 
   check.on('close', (code) => {
-    console.log(`🔍 yt - dlp check finished with code ${code} `);
-    const lines = output.split('\n');
-    lines.forEach(line => {
-      if (line.includes('[debug] JS runtimes') || line.includes('[debug] exe versions')) {
-        console.log(`✅ ${line.trim()} `);
-      }
-    });
+    const version = output.trim();
+    if (code === 0) {
+      console.log(`✅ yt-dlp Version: ${version}`);
+      logger.info("yt-dlp version check", { version });
+    } else {
+      console.log(`❌ yt-dlp version check failed with code ${code}`);
+      console.log(`Debug Output: ${output}`);
+    }
   });
 }
 
