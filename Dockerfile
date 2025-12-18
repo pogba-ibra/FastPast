@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip3 install --upgrade pip --break-system-packages
 RUN pip3 install --upgrade "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz" pyopenssl requests brotli certifi --break-system-packages
 
-# Install yt-dlp Nightly Build (Standalone Binary) for YouTube
+# Install yt-dlp Nightly Build (Standalone Binary) for other legacy paths
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 RUN curl -L https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp-nightly && \
     chmod a+rx /usr/local/bin/yt-dlp-nightly && \

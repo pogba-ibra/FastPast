@@ -3905,11 +3905,13 @@ app.post("/download", async (req, res) => {
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          // Force video+audio merge for Meta platforms with specific containers (Muxing Fix 2025)
-          // Priority: AVC(h264) + AAC (avc1+mp4a) -> Universal compatibility
+          const fbFormat = url.includes("instagram.com")
+            ? `bv[vcodec^=avc1][height<=${fallbackHeight}]+ba[acodec^=mp4a]/b[ext=mp4][height<=${fallbackHeight}]/b`
+            : "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b"; // User Request Dec 18: Universal compatible format
+
           formatArgs = [
             "-f",
-            `bv[vcodec^=avc1][height<=${fallbackHeight}]+ba[acodec^=mp4a]/b[ext=mp4][height<=${fallbackHeight}]/b`,
+            fbFormat,
             "--merge-output-format",
             "mp4",
           ];
@@ -3967,14 +3969,16 @@ app.post("/download", async (req, res) => {
 
       // User Request: Use 2025 "Impersonate" Flag to bypass data-center fingerprint
       // Note: This requires curl-cffi (installed in Dockerfile)
-      ytDlpArgs.push("--impersonate", "chrome-110");
+      // User Request Dec 18: Use nightly compatible impersonate target
+      ytDlpArgs.push("--impersonate", "chrome");
 
       // Add fresh cookies
       ytDlpArgs.push("--cookies", req.body._freshCookiePath);
 
       // Add User-Agent Sync (Dynamic or Static Fallback from User)
-      const staticUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-      const userAgentToUse = req.body._userAgent || staticUserAgent;
+      // Use request header UA as priority for matching exactly with session
+      const requestUserAgent = req.headers['user-agent'];
+      const userAgentToUse = req.body._userAgent || requestUserAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
 
       if (userAgentToUse) {
         console.log(`🕵️ Syncing User-Agent to yt-dlp: ${userAgentToUse}`);
@@ -3983,7 +3987,7 @@ app.post("/download", async (req, res) => {
 
       // Add robustness flags for 16KB file fix (Redundant safety for 2025)
       ytDlpArgs.push(
-        "--add-header", "Referer:www.facebook.com",
+        "--add-header", "Referer:mbasic.facebook.com",
         "--rm-cache-dir",
         "--force-ipv4",
         "--hls-prefer-native",
