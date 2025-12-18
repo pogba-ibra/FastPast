@@ -356,6 +356,19 @@ function tryParseJson(stdout) {
   return null;
 }
 
+/**
+ * Generates a flexible format selector for Meta platforms (FB, IG, Threads)
+ * to ensure audio is always included and merged correctly.
+ */
+function getMetaFormatSelector(qualityLabel) {
+  // Extract numeric height from labels like "720p", "1080p HD", or "Auto"
+  const heightMatch = qualityLabel && typeof qualityLabel === 'string' ? qualityLabel.match(/(\d+)/) : null;
+  const height = heightMatch ? heightMatch[1] : '720';
+
+  // Template based on user suggestion for DASH streams
+  return `bestvideo[height<=${height}][vcodec^=avc1]+ba[acodec^=mp4a]/bestvideo[height<=${height}]+ba/best[height<=${height}]/best`;
+}
+
 // Storage mode flag
 let USE_MONGODB = false;
 let USERS_DATA = [];
@@ -729,8 +742,9 @@ const downloadQueue = new Queue(function (task, cb) {
     let finalFormat = format;
     const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
     if (isMeta && !finalFormat.includes("+") && !finalFormat.includes("/") && finalFormat !== "best") {
-      finalFormat = `${finalFormat}+ba[acodec^=mp4a]/b[ext=mp4]/b`;
-      console.log(`🛠️ [Batch] Augmenting Meta format ID: ${finalFormat}`);
+      // Use flexible selector for robust audio merge
+      finalFormat = getMetaFormatSelector(qualityLabel || "720p");
+      console.log(`🛠️ [Batch] Using flexible Meta selector: ${finalFormat}`);
     }
     args.push("-f", finalFormat);
   } else {
@@ -3879,14 +3893,13 @@ app.post("/download", async (req, res) => {
     if (fmt === "mp4") {
       if (formatSelector) {
         // Robust DASH support for Facebook/Instagram/Threads:
-        // If a specific ID is requested, ensure audio is merged by appending +ba
+        // Use property-based selection instead of hardcoded IDs to ensure audio compatibility
         let finalFormat = formatSelector;
         const isMetaPlatform = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
 
         if (isMetaPlatform && !finalFormat.includes("+") && !finalFormat.includes("/") && formatSelector !== "best") {
-          // Append compatible audio track to the video-only ID
-          finalFormat = `${finalFormat}+ba[acodec^=mp4a]/b[ext=mp4]/b`;
-          console.log(`🛠️ Augmenting Meta format ID with audio: ${finalFormat}`);
+          finalFormat = getMetaFormatSelector(qualityLabel);
+          console.log(`🛠️ Using flexible Meta selector: ${finalFormat}`);
         }
 
         formatArgs = ["-f", finalFormat, "--merge-output-format", "mp4"];
