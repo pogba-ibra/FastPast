@@ -709,7 +709,7 @@ if (!fs.existsSync(downloadDir)) {
 
 // Queue Processing Logic
 const downloadQueue = new Queue(function (task, cb) {
-  const { url, jobId, format, startTime: start, endTime: end } = task;
+  const { url, jobId, format, qualityLabel, startTime: start, endTime: end } = task;
   const startTime = Date.now();
 
   logger.info(`Starting batch download task`, { jobId, url, start, end });
@@ -3992,8 +3992,8 @@ app.post("/download", async (req, res) => {
         "--add-header", "Referer:mbasic.facebook.com",
         "--rm-cache-dir",
         "--hls-prefer-native",
-        "-N", "16",
-        "--concurrent-fragments", "16",
+        "-N", "4",
+        "--concurrent-fragments", "4",
         "--fixup", "warn"
       );
     }
