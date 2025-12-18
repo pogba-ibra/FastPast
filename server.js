@@ -124,7 +124,18 @@ function spawnYtDlp(args, options = {}) {
 }
 
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
-function configureAntiBlockingArgs(args, url, requestUA) {
+function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
+  // Helper to push unique flags
+  const pushUnique = (flag, value) => {
+    const existingIndex = args.indexOf(flag);
+    if (existingIndex !== -1) {
+      if (value !== undefined) args[existingIndex + 1] = value;
+    } else {
+      args.push(flag);
+      if (value !== undefined) args.push(value);
+    }
+  };
+
   const isRestricted = [
     "youtube.com", "youtu.be",
     "instagram.com",
@@ -134,126 +145,72 @@ function configureAntiBlockingArgs(args, url, requestUA) {
   ].some(d => url.includes(d));
 
   if (isRestricted) {
-
-
-
-    // 2. Use Android User-Agent (proven to bypass many datacenter blocks)
-    // Only apply to NON-YouTube and NON-Instagram and NON-TikTok platforms.
-    // YouTube & Instagram handlers in yt-dlp Nightly work best with their defaults.
-    // TikTok now uses --impersonate, so we shouldn't override UA there either.
-    // 2. Use request-synced User-Agent for Facebook and others
-    // Matching exactly prevents session invalidation (the "Silent Killer")
-    if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
-      console.log(`🕵️ Syncing User-Agent for Meta platform: ${requestUA}`);
-      // Ensure impersonation is added BEFORE User-Agent so UA can override it
-      if (!args.includes("--impersonate")) {
-        args.push("--impersonate", "chrome");
-      }
-      args.push("--user-agent", requestUA);
-      // Add Referer for better bot-bypass continuity
-      args.push("--add-header", "Referer:mbasic.facebook.com");
+    // 1. Client Impersonation (Dec 2025 Standard)
+    // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
+    // Exception: VK (not in isRestricted here, but handled elsewhere)
+    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
+      pushUnique("--impersonate", "chrome");
     }
-    else if (!url.includes("youtube.com") && !url.includes("youtu.be") &&
-      !url.includes("instagram.com") && !url.includes("tiktok.com") &&
-      !url.includes("facebook.com") && !url.includes("fb.watch") &&
-      !url.includes("reddit.com")) {
-      args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36");
+
+    // 2. User-Agent Matching
+    // Prioritize request-synced UA for Meta, otherwise use standard Android bypass
+    if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
+      console.log(`🕵️ Syncing User-Agent: ${requestUA}`);
+      pushUnique("--user-agent", requestUA);
+      pushUnique("--add-header", "Referer:mbasic.facebook.com");
+    }
+    else if (url.includes("instagram.com")) {
+      pushUnique("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
+    }
+    else if (url.includes("tiktok.com")) {
+      // TikTok prefers no custom UA when impersonating
+    }
+    else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com")) {
+      pushUnique("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36");
     }
 
     // 3. Platform specific extractor args
-
-    // TikTok: Use impersonation (requires curl_cffi installed via pip)
-    // We removed TikTok from 'restricted' list in spawnYtDlp to ensure it uses the pip version (which has curl_cffi).
-    // Now we must pass the impersonate target.
-    if (url.includes("tiktok.com")) {
-      console.log("--> TikTok: enabling client impersonation (chrome)");
-      args.push("--impersonate", "chrome");
-      // Do NOT set a custom User-Agent when impersonating; it breaks the fingerprint match.
+    if (url.includes("vimeo.com")) {
+      pushUnique("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
     }
 
-
-    // Facebook: Keep it simple - no user-agent, no impersonation (may be flagged)
-    // Add download speed optimizations for Facebook (2025)
-    else if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      console.log("--> Facebook: applying download speed optimizations");
-
-      // Multi-threaded downloads removed for stability (CDN silent-fail bypass)
-
-      console.log("--> Facebook: concurrent fragments=1 (stable)");
-    }
-
-
-    // Instagram: iPhone UA failed. Strategy: Use Facebook Crawler UA.
-    // Meta often whitelists their own crawler to allow link previews.
-    else if (url.includes("instagram.com")) {
-      args.push("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
-    }
-
-    // YouTube: relying on Nightly default behavior which is proven to work manually
-    // if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    //   args.push("--extractor-args", "youtube:player_client=android");
-    // }
-
-    // 4. Proxy Support (Critical for Cloud Deployments)
-    // If user has defined PROXY_URL in environment, use it.
+    // 4. Proxy Support
     if (process.env.PROXY_URL) {
-      args.push("--proxy", process.env.PROXY_URL);
-      // Log that we are using a proxy (don't log the full URL for security)
-      console.log("--> Security: Using Proxy for this request");
-    } else {
-      console.log("--> Security: Direct Connection (No Proxy configured)");
+      pushUnique("--proxy", process.env.PROXY_URL);
     }
 
-    // 5. Clear metadata cache for Facebook (fixes "Cannot parse data" errors)
-    // Facebook frequently changes its layout, causing cached extractors to fail
+    // 5. Cache Management
     if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      args.push("--rm-cache-dir");
-      console.log("--> Cache: Clearing metadata cache for Facebook");
+      pushUnique("--rm-cache-dir");
     }
   }
 
-  // 5. Ensure JS Runtime (Critical for YouTube signature extraction)
-  // We installed Deno in Dockerfile which is yt-dlp's preferred runtime. 
-  // It is auto-detected, so we don't need to force modern Node paths anymore.
-  // args.push("--js-runtimes", "node:/usr/local/bin/node");
+  // 6. Cookies Authentication
+  // Priority: freshCookiePath > domain-specific cookies.txt
+  if (freshCookiePath) {
+    console.log(`🍪 Using fresh cookies: ${freshCookiePath}`);
+    pushUnique("--cookies", freshCookiePath);
+  } else {
+    let targetCookieFile = 'cookies.txt';
+    if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
+    else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
+    else if (url.includes("facebook.com") || url.includes("fb.watch")) targetCookieFile = "www.facebook.com_cookies.txt";
+    else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
+    else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
+    else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
+    else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
+    else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
-  // 6. Authentication & Rate Limiting (User Request)
-  // Determine specific cookie file based on domain
-  let targetCookieFile = 'cookies.txt'; // Default (YouTube usually)
-
-  if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
-  else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
-  else if (url.includes("facebook.com") || url.includes("fb.watch")) targetCookieFile = "www.facebook.com_cookies.txt";
-  else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
-  else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
-  else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
-  else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
-  else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
-
-  const cookiesPath = path.resolve(__dirname, targetCookieFile);
-
-  try {
+    const cookiesPath = path.resolve(__dirname, targetCookieFile);
     if (fs.existsSync(cookiesPath)) {
-      // Verify Read Permission explicitly
-      fs.accessSync(cookiesPath, fs.constants.R_OK);
-      console.log(`-- > Auth: Using cookie file: ${cookiesPath} `);
-      args.push("--cookies", cookiesPath);
-    } else {
-      console.log(`-- > Auth: Cookie file NOT FOUND at: ${cookiesPath} `);
-      if (targetCookieFile !== 'cookies.txt') {
-        // Log fallback attempt if needed, but for now just report missing
-        console.warn(`-- > Auth Warning: Specific cookie file ${targetCookieFile} missing.`);
+      pushUnique("--cookies", cookiesPath);
+
+      // 7. Rate Limiting for YouTube (Avoid IP blocks)
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        pushUnique("--min-sleep-interval", "5");
+        pushUnique("--max-sleep-interval", "10");
       }
     }
-  } catch (err) {
-    console.error(`-- > Auth Error: Cookie file ${cookiesPath} found but NOT READABLE.`, err.message);
-  }
-
-  // 7. Rate Limiting for YouTube (Avoid IP blocks)
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    console.log("--> Rate Limiting: Active (5-10s sleep)");
-    args.push("--min-sleep-interval", "5");
-    args.push("--max-sleep-interval", "10");
   }
 }
 
@@ -717,11 +674,8 @@ const downloadQueue = new Queue(function (task, cb) {
     "--newline", // Easier to parse
   ];
 
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    args.push("--extractor-args", "youtube:player_client=android");
-    // Masquerade as a real Android device/Latest Chrome to bypass DC IP blocks
-    args.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
-  }
+  // Unified Anti-Blocking Logic (2025 Standard) - Handles UA, Cookies, Impersonate
+  configureAntiBlockingArgs(args, url);
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
     // args.push("--cookies-from-browser", "chrome"); // Disabled
@@ -2598,7 +2552,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             // "--ffmpeg-location", ffmpeg // Removed
           ];
 
-          // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
+          // Use unified anti-blocking logic (Android UA, Proxy, handles cookies/UA)
           configureAntiBlockingArgs(args, url);
 
           // Format-specific arguments
@@ -3802,8 +3756,8 @@ app.post("/download", async (req, res) => {
     ];
 
 
-    // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
-    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent']);
+    // Apply unified anti-blocking args (User-Agent, Cookies, Impersonate) handles deduplication
+    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent'], req.body._freshCookiePath);
 
     if (url.includes("instagram.com")) {
       // Instagram specific - try generic UA from helper first, or keep GraphQL if absolutely needed
@@ -3948,43 +3902,13 @@ app.post("/download", async (req, res) => {
       ytDlpArgs.push("--concurrent-fragments", "5");
     }
 
-    // Hybrid Solution for Facebook: Use fresh Playwright cookies + Metadata fix flags
-    if ((url.includes("facebook.com") || url.includes("fb.watch")) && req.body._freshCookiePath) {
-      console.log(`🍪 Using fresh cookies for download: ${req.body._freshCookiePath}`);
+    // Unified Anti-Blocking Logic (2025 Standard)
+    // Handles Deduplication of Impersonate, User-Agent, and Cookies automatically
+    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent'], req.body._freshCookiePath);
 
-      // Remove any existing cookie args and User-Agent args (Impersonate handles UA)
-      ytDlpArgs = ytDlpArgs.filter((arg, index, arr) => {
-        if (arg === "--cookies") return false;
-        if (index > 0 && arr[index - 1] === "--cookies") return false;
-        if (arg === "--user-agent" && !req.body._userAgent) return false; // Keep synced UA if available, otherwise drop
-        if (index > 0 && arr[index - 1] === "--user-agent" && !req.body._userAgent) return false;
-        return true;
-      });
-
-      // User Request: Use 2025 "Impersonate" Flag to bypass data-center fingerprint
-      // Note: This requires curl-cffi (installed in Dockerfile)
-      // User Request Dec 18: Use nightly compatible impersonate target
-      ytDlpArgs.push("--impersonate", "chrome");
-
-      // Add fresh cookies
-      ytDlpArgs.push("--cookies", req.body._freshCookiePath);
-
-      // Add User-Agent Sync (Dynamic or Static Fallback from User)
-      // Use request header UA as priority for matching exactly with session
-      const requestUserAgent = req.headers['user-agent'];
-      const userAgentToUse = req.body._userAgent || requestUserAgent || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-
-      if (userAgentToUse) {
-        console.log(`🕵️ Syncing User-Agent to yt-dlp: ${userAgentToUse}`);
-        ytDlpArgs.push("--user-agent", userAgentToUse);
-      }
-
-      // Add robustness flags for 16KB file fix (Redundant safety for 2025)
-      ytDlpArgs.push(
-        "--add-header", "Referer:mbasic.facebook.com",
-        "--rm-cache-dir",
-        "--fixup", "warn"
-      );
+    // Platform-specific robustness (Non-security flags)
+    if (url.includes("facebook.com") || url.includes("fb.watch")) {
+      ytDlpArgs.push("--fixup", "warn");
     }
 
     const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
