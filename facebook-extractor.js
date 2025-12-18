@@ -35,13 +35,14 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         const page = await context.newPage();
 
-        // Sniffer: Intercept network requests to find direct video file
-        let networkDirectUrl = null;
+        // Sniffer: Intercept network requests to find direct video file (The "FDown Secret")
+        let snortedUrl = null;
         page.on('request', request => {
             const reqUrl = request.url();
-            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('.mp4') || reqUrl.includes('video'))) {
+            // Facebook video segments always contain 'fbcdn.net' and usually 'bytestart=' or '.mp4'
+            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4'))) {
                 // console.log(`🕵️ Sniffer caught direct video: ${reqUrl.substring(0, 50)}...`);
-                networkDirectUrl = reqUrl;
+                snortedUrl = reqUrl;
             }
         });
 
@@ -58,8 +59,14 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         console.log(`🔍 Navigating to: ${mbasicUrl}`);
 
-        // Navigate and wait for DOM (networkidle might be too slow for mbasic)
-        await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        try {
+            // Navigate and wait for DOM
+            await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        } catch (navError) {
+            console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
+            // Take screenshot for debug
+            await page.screenshot({ path: 'debug_nav_error.png' });
+        }
 
         // Extract title from page (mbasic structure)
         let title = 'Unknown Title';
@@ -86,57 +93,41 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         }
         console.log(`📝 Page title: ${title}`);
 
-        // 1. Try DOM extraction (The "Direct Source" Fix)
-        let videoUrl = null;
-        // Find the actual MP4 link in the page (video tag)
-        const domVideoUrl = await page.evaluate(() => {
+        // Login Wall / Consent Check
+        if (await page.$('button[value="1"], button[name="login"]')) {
+            console.log('⚠️ Consent/Login button detected. Attempting click...');
+            await page.click('button[value="1"]', { timeout: 5000 }).catch(() => { });
+            await page.waitForTimeout(3000);
+        }
+
+        // Check for Login Wall (Cookie Verification)
+        const content = await page.content();
+        if (content.includes('Log In') || content.includes('login_form')) {
+            console.error('❌ Login Wall detected! Cookies invalid.');
+            await page.screenshot({ path: 'debug_login_wall.png' });
+        }
+
+        // 1. Wait for ANY link that looks like a video redirect (Facebook 2025 Layout)
+        let videoUrl = await page.evaluate(() => {
+            // Look for the mobile-basic download link
+            const anchor = document.querySelector('a[href*="video_redirect"]');
+            if (anchor) return anchor.href;
+
+            // Fallback: Look for the actual <video> tag if it's rendered
             const video = document.querySelector('video');
-            if (video && video.src) return video.src;
-
-            const links = Array.from(document.querySelectorAll('a'));
-            for (const link of links) {
-                const href = link.href || '';
-                if (href.includes('.mp4') || href.includes('/video/')) {
-                    return href;
-                }
-            }
-
-            return null;
+            return video ? video.src : null;
         });
 
-        if (domVideoUrl && !domVideoUrl.startsWith('blob:')) {
-            videoUrl = domVideoUrl;
-            console.log(`🎥 Found video via DOM: ${videoUrl.substring(0, 100)}...`);
+        if (videoUrl) {
+            console.log(`✅ Found direct link via DOM: ${videoUrl.substring(0, 100)}...`);
+        } else {
+            // Force interaction to trigger network sniffer
+            console.log('👆 Simulating interaction to trigger sniffer...');
+            await page.click('div[role="button"], [aria-label*="Play"]', { force: true }).catch(() => { });
+            await page.waitForTimeout(5000); // Give it time to sniff
         }
 
-        // PRIORITY 0: Simulate human interaction to "warm up" the session
-        console.log('👆 Simulating human interaction...');
-
-        // 1. Standard FB Interaction: Click play button to trigger network stream
-        try {
-            const playButton = await page.locator('div[role="button"] >> text=/Play|Watch/i').first();
-            if (await playButton.count() > 0 && await playButton.isVisible()) {
-                console.log('▶️ Clicking play button to trigger stream...');
-                await playButton.click({ force: true }).catch(() => { });
-                await page.waitForTimeout(1000);
-            }
-        } catch (error) {
-            console.log('⚠️ Play button interaction warning:', error.message);
-        }
-
-        // 2. mbasic Interaction: Look for "Download Video" link (This is the "FDown" logic)
-        // Try precise selector for mbasic redirect
-        try {
-            const redirectLink = await page.getAttribute('a[href*="video_redirect"]', 'href');
-            if (redirectLink) {
-                console.log('✅ Found mbasic redirect link (Direct MP4)');
-                videoUrl = redirectLink;
-            }
-        } catch (e) {
-            console.log('⚠️ mbasic redirect check failed:', e.message);
-        }
-
-        await page.mouse.wheel(0, 500); // Scroll down
+        await page.mouse.wheel(0, 500);
         await page.waitForTimeout(1000);
         await page.mouse.wheel(0, -200); // Scroll up slightly
         await page.waitForTimeout(500);
@@ -150,16 +141,15 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         console.log(`🍪 Saved fresh cookies to: ${freshCookiePath}`);
 
         if (!videoUrl) {
-            if (networkDirectUrl) {
-                console.log('✅ Used Sniffer URL as fallback');
-                videoUrl = networkDirectUrl;
+            if (snortedUrl) {
+                console.log('✅ Used Sniffer URL (FDown Secret) as fallback');
+                videoUrl = snortedUrl;
             } else {
-                console.log('⚠️ No direct video URL found (DOM or Sniffer), checking response logs...');
-                // If not found in DOM, check captured network requests
+                console.log('⚠️ No direct video URL found (DOM or Sniffer), checking likely failed...');
+                // Capture generic network as last resort
                 const networkResult = await captureVideoFromNetwork(page);
                 videoUrl = networkResult.videoUrl;
             }
-            // logic for audioUrl if separate
         }
 
         // Capture the exact User-Agent used
