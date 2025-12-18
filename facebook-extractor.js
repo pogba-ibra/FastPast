@@ -10,17 +10,22 @@ const fs = require('fs');
 async function extractFacebookVideoUrl(url, cookieFile) {
     let browser;
     try {
-        console.log('📱 Launching headless browser for Facebook extraction...');
+        console.log('📱 Launching stealth browser for Facebook extraction...');
 
-        // Launch Chromium in headless mode
+        const proxies = require('./proxies');
+        const randomProxy = proxies[Math.floor(Math.random() * proxies.length)];
+
+        // Launch Chromium with stealth and memory-saving flags
         browser = await chromium.launch({
             headless: true,
+            proxy: { server: randomProxy }, // User Request: Use proxy to bypass tarpitting
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu',      // User Request: Reduce memory
-                '--single-process'    // User Request: Reduce memory
+                '--disable-gpu',
+                '--single-process',
+                '--js-flags="--max-old-space-size=1024"' // User Request: Limit JS memory
             ]
         });
 
@@ -45,9 +50,7 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         let snortedUrl = null;
         page.on('request', request => {
             const reqUrl = request.url();
-            // Facebook video segments always contain 'fbcdn.net' and usually 'bytestart=' or '.mp4'
             if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4'))) {
-                // console.log(`🕵️ Sniffer caught direct video: ${reqUrl.substring(0, 50)}...`);
                 snortedUrl = reqUrl;
             }
         });
@@ -66,134 +69,92 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         console.log(`🔍 Navigating to: ${mbasicUrl}`);
 
         try {
-            // Navigate and wait for DOM
-            await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            // Navigate and wait for commit (Faster than networkidle)
+            await page.goto(mbasicUrl, { waitUntil: 'commit', timeout: 15000 });
         } catch (navError) {
             console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
-            // Take screenshot for debug
             await page.screenshot({ path: 'debug_nav_error.png' });
         }
 
-        // PRIORITY 1: The "FDown" Method (Direct Redirect Link)
+        // 1. Check for Login Wall immediately (Cookie Verification)
+        const loginWall = await page.isVisible('input[name="login"], button[name="login"]');
+        if (loginWall) {
+            console.error('❌ Login Wall detected! Cookies invalid or IP blocked.');
+            await page.screenshot({ path: 'debug_login_wall.png' });
+            throw new Error("Cookies Expired or IP Blocked");
+        }
+
+        // 2. Search for the link directly in HTML without waiting for selectors (FDown Method)
         let videoUrl = null;
         try {
-            const directLink = await page.getAttribute('a[href*="video_redirect"]', 'href');
-            if (directLink) {
-                console.log(`✅ Found direct link (FDown Method): ${directLink.substring(0, 100)}...`);
-                videoUrl = directLink;
+            const html = await page.content();
+            const match = html.match(/href="([^"]+video_redirect[^"]+)"/);
+            if (match) {
+                videoUrl = match[1].replace(/&amp;/g, '&');
+                console.log(`✅ Found direct link via Regex: ${videoUrl.substring(0, 100)}...`);
             }
-        } catch (e) {
-            console.log('⚠️ Priority redirect check failed/skipped:', e.message);
+        } catch (regexErr) {
+            console.log('⚠️ Regex extraction failed:', regexErr.message);
         }
 
-        // Extract title from page (mbasic structure)
-        let title = 'Unknown Title';
-        try {
-            // Try specific selectors for mbasic post content
-            const titleSelectors = ['h3', 'h1', 'div[role="article"] strong', 'p'];
-            for (const selector of titleSelectors) {
-                const element = await page.$(selector);
-                if (element) {
-                    const text = await element.innerText();
-                    if (text && text.trim().length > 0 && text.length < 100) { // Avoid grabbing full post body
-                        title = text.trim();
-                        break;
-                    }
-                }
-            }
-            // Fallback to page title if selectors failed
-            if (title === 'Unknown Title') {
-                title = await page.title();
-            }
-        } catch (e) {
-            console.log('⚠️ Title extraction warning:', e.message);
-            title = await page.title().catch(() => 'Unknown Title');
-        }
-        console.log(`📝 Page title: ${title}`);
-
-        // Login Wall / Consent Check
-        if (await page.$('button[value="1"], button[name="login"]')) {
-            console.log('⚠️ Consent/Login button detected. Attempting click...');
-            await page.click('button[value="1"]', { timeout: 5000 }).catch(() => { });
-            await page.waitForTimeout(3000);
-        }
-
-        // Check for Login Wall (Cookie Verification)
-        const content = await page.content();
-        if (content.includes('Log In') || content.includes('login_form')) {
-            console.error('❌ Login Wall detected! Cookies invalid.');
-            await page.screenshot({ path: 'debug_login_wall.png' });
-        }
-
-        // 1. Wait for ANY link that looks like a video redirect (Facebook 2025 Layout)
+        // 3. Fallback to DOM if regex failed
         if (!videoUrl) {
             videoUrl = await page.evaluate(() => {
-                // Look for the mobile-basic download link
                 const anchor = document.querySelector('a[href*="video_redirect"]');
                 if (anchor) return anchor.href;
-
-                // Fallback: Look for the actual <video> tag if it's rendered
                 const video = document.querySelector('video');
                 return video ? video.src : null;
             });
         }
 
-        if (videoUrl) {
-            console.log(`✅ Found direct link via DOM: ${videoUrl.substring(0, 100)}...`);
-        } else {
-            // Force interaction to trigger network sniffer
-            console.log('👆 Simulating interaction to trigger sniffer...');
-            await page.click('div[role="button"], [aria-label*="Play"]', { force: true }).catch(() => { });
-            await page.waitForTimeout(5000); // Give it time to sniff
+        // Extract title
+        let title = 'Unknown Title';
+        try {
+            const titleSelectors = ['h3', 'h1', 'div[role="article"] strong', 'p'];
+            for (const selector of titleSelectors) {
+                const element = await page.$(selector);
+                if (element) {
+                    const text = await element.innerText();
+                    if (text && text.trim().length > 0 && text.length < 100) {
+                        title = text.trim();
+                        break;
+                    }
+                }
+            }
+            if (title === 'Unknown Title') title = await page.title();
+        } catch (e) {
+            title = await page.title().catch(() => 'Unknown Title');
         }
 
-        await page.mouse.wheel(0, 500);
-        await page.waitForTimeout(1000);
-        await page.mouse.wheel(0, -200); // Scroll up slightly
-        await page.waitForTimeout(500);
+        // Force interaction if still no URL (to trigger snortedUrl)
+        if (!videoUrl) {
+            console.log('👆 Triggering sniffer...');
+            await page.click('div[role="button"], [aria-label*="Play"]', { force: true }).catch(() => { });
+            await page.waitForTimeout(5000);
+            if (snortedUrl) videoUrl = snortedUrl;
+        }
 
-        // Export fresh cookies (now validated/refreshed by Facebook)
+        // Export fresh cookies
         const freshCookies = await context.cookies();
-        // Format cookies for yt-dlp (Netscape format)
         const netscapeCookies = formatCookiesToNetscape(freshCookies);
         const freshCookiePath = cookieFile.replace('.txt', '_fresh.txt');
         fs.writeFileSync(freshCookiePath, netscapeCookies);
-        console.log(`🍪 Saved fresh cookies to: ${freshCookiePath}`);
 
-        if (!videoUrl) {
-            if (snortedUrl) {
-                console.log('✅ Used Sniffer URL (FDown Secret) as fallback');
-                videoUrl = snortedUrl;
-            } else {
-                console.log('⚠️ No direct video URL found (DOM or Sniffer), checking likely failed...');
-                // Capture generic network as last resort
-                const networkResult = await captureVideoFromNetwork(page);
-                videoUrl = networkResult.videoUrl;
-            }
-        }
-
-        // Capture the exact User-Agent used
         const userAgent = await page.evaluate(() => navigator.userAgent);
-        console.log(`🕵️ Using User-Agent: ${userAgent}`);
-
         await browser.close();
 
         if (videoUrl) {
-            console.log(`✅ Extracted video URL: ${videoUrl.substring(0, 100)}...`);
             return { videoUrl, title, freshCookiePath, userAgent };
         } else {
-            // Even if direct URL fails, we have fresh cookies + title + UA
-            console.log('⚠️ Could not extract direct URL, but returning fresh cookies & title');
             return { videoUrl: null, title, freshCookiePath, userAgent };
         }
 
-
     } catch (error) {
-        if (browser) {
-            await browser.close().catch(() => { });
-        }
+        if (browser) await browser.close().catch(() => { });
         console.error('❌ Facebook extraction error:', error.message);
         throw error;
+    } finally {
+        if (browser) await browser.close().catch(() => { });
     }
 }
 
