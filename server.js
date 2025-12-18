@@ -145,11 +145,11 @@ function configureAntiBlockingArgs(args, url, requestUA) {
     // Matching exactly prevents session invalidation (the "Silent Killer")
     if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
       console.log(`🕵️ Syncing User-Agent for Meta platform: ${requestUA}`);
-      args.push("--user-agent", requestUA);
-      // Ensure impersonation is also added to enable curl-cffi nightly support
+      // Ensure impersonation is added BEFORE User-Agent so UA can override it
       if (!args.includes("--impersonate")) {
         args.push("--impersonate", "chrome");
       }
+      args.push("--user-agent", requestUA);
       // Add Referer for better bot-bypass continuity
       args.push("--add-header", "Referer:mbasic.facebook.com");
     }
@@ -716,10 +716,9 @@ const downloadQueue = new Queue(function (task, cb) {
   ];
 
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    args.push("--force-ipv4");
     args.push("--extractor-args", "youtube:player_client=android");
-    // Masquerade as a real Android device to bypass DC IP blocks
-    args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+    // Masquerade as a real Android device/Latest Chrome to bypass DC IP blocks
+    args.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
   }
   if (url.includes("vimeo.com")) {
     args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -2266,7 +2265,7 @@ async function getVimeoVideoData(url) {
   }
 }
 
-async function getThreadsVideoData(url) {
+async function getThreadsVideoData(url, requestUA) {
   try {
     // eslint-disable-next-line no-useless-escape
     const postMatch = url.match(/\/@([^\/]+)\/post\/([^\/?&]+)/);
@@ -2278,8 +2277,7 @@ async function getThreadsVideoData(url) {
 
     const pageResponse = await fetch(url.split("?")[0], {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "User-Agent": requestUA || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br",
@@ -3017,14 +3015,14 @@ app.get("/video-info", async (req, res) => {
 
 
 // Helper to fetch page metadata for thumbnail fallback
-async function fetchPageMetadata(url) {
+async function fetchPageMetadata(url, requestUA) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+        'User-Agent': requestUA || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="143", "Chromium";v="143"',
+        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="143\", \"Chromium\";v=\"143\"',
         'Sec-Ch-Ua-Mobile': '?0',
         'Sec-Ch-Ua-Platform': '"Windows"',
         'Upgrade-Insecure-Requests': '1',
@@ -3111,7 +3109,7 @@ app.post("/get-qualities", async (req, res) => {
 
 
     if (videoUrl.includes("threads.net") || videoUrl.includes("threads.com")) {
-      const threadsData = await getThreadsVideoData(videoUrl);
+      const threadsData = await getThreadsVideoData(videoUrl, req.headers['user-agent']);
       if (threadsData) {
         const qualities = [
           { value: "720p", text: "720p (High Quality)" },
@@ -3129,7 +3127,7 @@ app.post("/get-qualities", async (req, res) => {
         // Fallback if Threads extractor failed to find thumbnail
         if (!result.thumbnail) {
           logger.info("Threads internal thumb missing, attempting metadata fallback", { url: videoUrl });
-          result.thumbnail = await fetchPageMetadata(videoUrl);
+          result.thumbnail = await fetchPageMetadata(videoUrl, req.headers['user-agent']);
         }
 
 
@@ -3185,8 +3183,8 @@ app.post("/get-qualities", async (req, res) => {
     //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     // }
 
-    // Use standard User-Agent for all platforms (Fly.io/Linux compatible)
-    ytDlpInfoArgs.push("--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");
+    // Use request-synced User-Agent for all platforms
+    ytDlpInfoArgs.push("--user-agent", req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
 
     ytDlpInfoArgs.push(videoUrl);
 
@@ -3273,7 +3271,7 @@ app.post("/get-qualities", async (req, res) => {
         // Generic Metadata Fallback for all platforms if still no thumbnail OR if domain is unreliable
         if (!finalThumbnail || isUnreliable) {
           logger.info("Attempting robust metadata thumbnail extraction", { url: videoUrl, forced: isUnreliable });
-          const metadataThumb = await fetchPageMetadata(videoUrl);
+          const metadataThumb = await fetchPageMetadata(videoUrl, req.headers['user-agent']);
           // If we found a metadata thumb, use it. 
           // Logic: If original was missing, use new. If original existed but is unreliable, overwrite it.
           if (metadataThumb) {
@@ -3804,14 +3802,14 @@ app.post("/download", async (req, res) => {
 
     if (url.includes("threads.net") || url.includes("threads.com")) {
       try {
-        const threadsData = await getThreadsVideoData(url);
+        const threadsData = await getThreadsVideoData(url, req.headers['user-agent']);
         if (threadsData && threadsData.videoUrl) {
           const curlArgs = [
             "-L",
             "-o",
             "-",
             "-H",
-            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            `User-Agent: ${req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}`,
             "-H",
             "Accept: */*",
             "-H",
