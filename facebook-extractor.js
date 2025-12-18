@@ -18,8 +18,9 @@ async function extractFacebookVideoUrl(url, cookieFile) {
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
         });
 
+        // User Request: Use REAL User-Agent to bypass detection
         const context = await browser.newContext({
-            userAgent: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 Chrome/131.0.0.0 Mobile Safari/537.36'
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         });
 
         // Load cookies if file exists
@@ -34,25 +35,31 @@ async function extractFacebookVideoUrl(url, cookieFile) {
 
         const page = await context.newPage();
 
-        // Sniffer: Intercept network requests to find direct video file (User Request 2086)
+        // Sniffer: Intercept network requests to find direct video file
         let networkDirectUrl = null;
         page.on('request', request => {
             const reqUrl = request.url();
             if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('.mp4') || reqUrl.includes('video'))) {
-                console.log(`🕵️ Sniffer caught direct video: ${reqUrl.substring(0, 50)}...`);
+                // console.log(`🕵️ Sniffer caught direct video: ${reqUrl.substring(0, 50)}...`);
                 networkDirectUrl = reqUrl;
             }
         });
 
-        // Ensure we're using mbasic
-        const mbasicUrl = url
-            .replace('www.facebook.com', 'mbasic.facebook.com')
-            .replace('m.facebook.com', 'mbasic.facebook.com');
+        // Fix URL Formatting: Convert /reel/ to /video.php?v= for mbasic stability
+        let mbasicUrl = url;
+        const idMatch = url.match(/(?:videos\/|video\.php\?v=|reel\/)(\d+)/);
+        if (idMatch && idMatch[1]) {
+            mbasicUrl = `https://mbasic.facebook.com/video.php?v=${idMatch[1]}`;
+        } else {
+            mbasicUrl = url
+                .replace('www.facebook.com', 'mbasic.facebook.com')
+                .replace('m.facebook.com', 'mbasic.facebook.com');
+        }
 
         console.log(`🔍 Navigating to: ${mbasicUrl}`);
 
-        // Navigate and wait for network to be idle
-        await page.goto(mbasicUrl, { waitUntil: 'networkidle', timeout: 30000 });
+        // Navigate and wait for DOM (networkidle might be too slow for mbasic)
+        await page.goto(mbasicUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
         // Extract title from page (mbasic structure)
         let title = 'Unknown Title';
@@ -117,20 +124,16 @@ async function extractFacebookVideoUrl(url, cookieFile) {
             console.log('⚠️ Play button interaction warning:', error.message);
         }
 
-        // 2. mbasic Interaction: Look for "Download Video" link (mbasic specific)
-        if (page.url().includes('mbasic.facebook.com')) {
-            try {
-                const downloadLink = await page.$('a[href*="video_redirect"]');
-                if (downloadLink) {
-                    const href = await downloadLink.getAttribute('href');
-                    if (href) {
-                        console.log('✅ Found mbasic redirect link');
-                        videoUrl = href;
-                    }
-                }
-            } catch (error) {
-                console.log('⚠️ mbasic extraction warning:', error.message);
+        // 2. mbasic Interaction: Look for "Download Video" link (This is the "FDown" logic)
+        // Try precise selector for mbasic redirect
+        try {
+            const redirectLink = await page.getAttribute('a[href*="video_redirect"]', 'href');
+            if (redirectLink) {
+                console.log('✅ Found mbasic redirect link (Direct MP4)');
+                videoUrl = redirectLink;
             }
+        } catch (e) {
+            console.log('⚠️ mbasic redirect check failed:', e.message);
         }
 
         await page.mouse.wheel(0, 500); // Scroll down
