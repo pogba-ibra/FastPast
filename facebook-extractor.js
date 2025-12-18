@@ -122,7 +122,7 @@ async function extractFacebookVideoUrl(url, cookieFile) {
                 }
             }
             if (title === 'Unknown Title') title = await page.title();
-        } catch (e) {
+        } catch {
             title = await page.title().catch(() => 'Unknown Title');
         }
 
@@ -198,44 +198,7 @@ function parseFacebookCookies(cookiesContent) {
     return cookies;
 }
 
-/**
- * Capture video and audio URLs from network requests
- */
-async function captureVideoFromNetwork(page) {
-    return new Promise((resolve) => {
-        let videoUrl = null;
-        let audioUrl = null;
 
-        page.on('response', async (response) => {
-            const responseUrl = response.url();
-            const contentType = response.headers()['content-type'] || '';
-            const resourceType = response.request().resourceType();
-
-            // Look for video content (direct CDN links)
-            if (resourceType === 'media' || contentType.includes('video/') || responseUrl.includes('.mp4')) {
-                if (responseUrl.includes('fbcdn.net')) {
-                    videoUrl = responseUrl;
-                    console.log(`🎥 Found DIRECT FB CDN video: ${responseUrl.substring(0, 100)}...`);
-                } else if (!videoUrl) {
-                    videoUrl = responseUrl;
-                    console.log(`🎥 Found video stream: ${responseUrl.substring(0, 100)}...`);
-                }
-            }
-
-            // Look for audio content (Nuclear Workaround)
-            if (contentType.includes('audio/') || (responseUrl.includes('bytestart') && responseUrl.includes('audio'))) {
-                audioUrl = responseUrl;
-                console.log(`🎵 Found audio stream: ${responseUrl.substring(0, 100)}...`);
-            }
-        });
-
-        // Wait for requests to populate (Facebook lazy loads)
-        // User requested increased timeout for slow loads
-        setTimeout(() => {
-            resolve({ videoUrl, audioUrl });
-        }, 15000);
-    });
-}
 
 /**
  * Format Playwright cookies to Netscape format for yt-dlp
