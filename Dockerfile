@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
 
 # Ensure pip is up to date and install required networking libraries
 RUN pip3 install --upgrade pip --break-system-packages
-RUN pip3 install --upgrade "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz" pyopenssl requests brotli certifi --break-system-packages
+RUN pip3 install --no-cache-dir --upgrade "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz" pyopenssl requests brotli certifi --break-system-packages
 
 # Install yt-dlp Nightly Build (Standalone Binary) for other legacy paths
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*

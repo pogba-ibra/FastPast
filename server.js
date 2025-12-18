@@ -69,43 +69,48 @@ async function resolveFacebookUrl(url) {
         let finalUrl = response.request.res.responseUrl;
         console.log('Resolved (GET) to:', finalUrl);
         // Optimization: Use mbasic.facebook.com (simplest version, most resilient to parsing errors)
-        if (finalUrl.includes('www.facebook.com')) {
-          finalUrl = finalUrl.replace('www.facebook.com', 'mbasic.facebook.com');
-          console.log('Converted to mbasic URL:', finalUrl);
-        } else if (finalUrl.includes('m.facebook.com')) {
-          finalUrl = finalUrl.replace('m.facebook.com', 'mbasic.facebook.com');
+        if (finalUrl.includes('facebook.com')) {
+          finalUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
+          // Fix: mbasic does not support /reel/ paths, convert to video.php?v=ID
+          const reelMatch = finalUrl.match(/\/(?:reel|reels)\/(\d+)\/?/);
+          if (reelMatch && reelMatch[1]) {
+            finalUrl = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
+          }
           console.log('Converted to mbasic URL:', finalUrl);
         }
         return finalUrl;
       }
       // If resolution fails but we have a URL, check if we should convert original
-      if (url.includes('www.facebook.com')) {
-        return url.replace('www.facebook.com', 'mbasic.facebook.com');
-      } else if (url.includes('m.facebook.com')) {
-        return url.replace('m.facebook.com', 'mbasic.facebook.com');
+      if (url.includes('facebook.com')) {
+        let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
+        const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
+        if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
+        return normalized;
       }
       return url;
     } catch (error) {
       console.log('Failed to resolve URL:', error.message);
       // Fallback: convert original if possible
-      if (url.includes('www.facebook.com')) {
-        return url.replace('www.facebook.com', 'mbasic.facebook.com');
-      } else if (url.includes('m.facebook.com')) {
-        return url.replace('m.facebook.com', 'mbasic.facebook.com');
+      if (url.includes('facebook.com')) {
+        let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
+        const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
+        if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
+        return normalized;
       }
       return url;
     }
   }
   // Basic mobile conversion for direct non-share links too
-  if (url.includes('www.facebook.com')) {
-    return url.replace('www.facebook.com', 'mbasic.facebook.com');
-  } else if (url.includes('m.facebook.com')) {
-    return url.replace('m.facebook.com', 'mbasic.facebook.com');
+  if (url.includes('facebook.com')) {
+    let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
+    const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
+    if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
+    return normalized;
   }
   return url;
 }
 
-// Helper to spawn yt-dlp with hybrid logic (Nightly for YouTube, Stable for others)
+// Helper to spawn yt-dlp with hybrid logic (Standalone Nightly for YouTube, Pip Nightly for Meta/Others)
 function spawnYtDlp(args, options = {}) {
   // Check if target is a platform that requires Nightly (YouTube, Instagram, TikTok, FB, etc.)
   // These platforms aggressively block cloud IPs or break often, so Stable is unreliable.
@@ -144,15 +149,15 @@ function spawnYtDlp(args, options = {}) {
     logger.info("Using yt-dlp Nightly (Binary invocation) for YouTube", { nightlyPath });
   } else {
     command = getPythonCommand();
-    // Ensure -m yt_dlp is present if using python command (it usually is passed in args)
-    logger.info("Using yt-dlp Stable (pip)", { command });
+    // Use the latest Pip-installed Nightly build (from requirements or master)
+    logger.info("Using yt-dlp Nightly (pip)", { command });
   }
 
   return spawn(command, finalArgs, options);
 }
 
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
-function configureAntiBlockingArgs(args, url) {
+function configureAntiBlockingArgs(args, url, requestUA) {
   const isRestricted = [
     "youtube.com", "youtu.be",
     "instagram.com",
@@ -170,13 +175,23 @@ function configureAntiBlockingArgs(args, url) {
     // Only apply to NON-YouTube and NON-Instagram and NON-TikTok platforms.
     // YouTube & Instagram handlers in yt-dlp Nightly work best with their defaults.
     // TikTok now uses --impersonate, so we shouldn't override UA there either.
-    // Facebook: User reported mismatch issues. Best to let yt-dlp choose the default UA.
-    // Reddit: Similar to Facebook, authentication works best with default UA.
-    if (!url.includes("youtube.com") && !url.includes("youtu.be") &&
+    // 2. Use request-synced User-Agent for Facebook and others
+    // Matching exactly prevents session invalidation (the "Silent Killer")
+    if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
+      console.log(`🕵️ Syncing User-Agent for Meta platform: ${requestUA}`);
+      args.push("--user-agent", requestUA);
+      // Ensure impersonation is also added to enable curl-cffi nightly support
+      if (!args.includes("--impersonate")) {
+        args.push("--impersonate", "chrome");
+      }
+      // Add Referer for better bot-bypass continuity
+      args.push("--add-header", "Referer:mbasic.facebook.com");
+    }
+    else if (!url.includes("youtube.com") && !url.includes("youtu.be") &&
       !url.includes("instagram.com") && !url.includes("tiktok.com") &&
       !url.includes("facebook.com") && !url.includes("fb.watch") &&
       !url.includes("reddit.com")) {
-      args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36");
+      args.push("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36");
     }
 
     // 3. Platform specific extractor args
@@ -747,7 +762,7 @@ const downloadQueue = new Queue(function (task, cb) {
   if (format) {
     args.push("-f", format);
   } else {
-    args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+    args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
   }
 
   // Clip Support
@@ -1764,7 +1779,7 @@ app.get("/proxy-image", async (req, res) => {
   // Helper to determine best headers for specific domains
   const getHeadersForUrl = (targetUrl) => {
     const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
       "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
       "Accept-Encoding": "gzip, deflate, br",
       "Accept-Language": "en-US,en;q=0.9",
@@ -1872,7 +1887,7 @@ app.post("/get-playlist-videos", async (req, res) => {
         const axios = require('axios');
         const axiosConfig = {
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
             "Referer": "https://www.youtube.com/"
           }
         };
@@ -2162,7 +2177,7 @@ async function getVimeoVideoData(url) {
     const pageResponse = await fetch(cleanUrl.split("?")[0], {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br",
@@ -2614,6 +2629,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             args.push("-x", "--audio-format", "mp3", "--audio-quality", "192K");
             args.push("-o", path.join(fastpastDir, "%(title)s.mp3"));
           } else {
+            args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
             args.push("--merge-output-format", "mp4");
             args.push("-o", path.join(fastpastDir, "%(title)s.%(ext)s"));
           }
@@ -2851,8 +2867,8 @@ app.get("/debug-network", async (req, res) => {
     await new Promise((resolve) => {
       const nightlyPath = "/usr/local/bin/yt-dlp-nightly";
       // Construct command manually to mimic spawnYtDlp but capturing output cleanly for JSON
-      // Use Android UA as per our fix
-      const ua = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
+      // Use Chrome 143 UA for consistency
+      const ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
       const cmd = `python3 ${nightlyPath} --dump-json --no-playlist --no-check-certificate --user-agent "${ua}" "${targetUrl}"`;
 
       exec(cmd, { timeout: 30000, maxBuffer: 1024 * 1024 * 10 }, (err, stdout, stderr) => {
@@ -2889,9 +2905,10 @@ app.get("/video-info", async (req, res) => {
     const command = getPythonCommand();
     logger.info("Spawning info fetch", { command, url });
 
-    // Construct args dynamically
     const infoArgs = ["-m", "yt_dlp", "-J"];
-    configureAntiBlockingArgs(infoArgs, url); // Apply global anti-blocking (UA, IPv4)
+    // Extract User-Agent from request if possible (for debug/test endpoints we might not have it)
+    const requestUA = req ? req.headers['user-agent'] : null;
+    configureAntiBlockingArgs(infoArgs, url, requestUA); // Apply global anti-blocking (UA, IPv4)
     infoArgs.push(url);
 
     const ytDlp = spawnYtDlp(infoArgs);
@@ -3037,10 +3054,10 @@ async function fetchPageMetadata(url) {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="121", "Chromium";v="121"',
+        'Sec-Ch-Ua': '"Not A(Brand";v="99", "Google Chrome";v="143", "Chromium";v="143"',
         'Sec-Ch-Ua-Mobile': '?0',
         'Sec-Ch-Ua-Platform': '"Windows"',
         'Upgrade-Insecure-Requests': '1',
@@ -3516,15 +3533,8 @@ app.post("/download", async (req, res) => {
   }
   const formatSelector =
     req.body.formatSelector ||
-    req.body.formatId ||
-    req.body.selectedFormat ||
-    req.body.format_id;
+    req.body.formatId;
   const qualityLabel = req.body.qualityLabel || qual;
-  const requestedHeight =
-    parseInt(req.body.selectedHeight || req.body.height, 10) ||
-    (typeof qual === "string" && qual.includes("p")
-      ? parseInt(qual.replace(/[^\d]/g, ""), 10)
-      : null);
 
   logger.info("Download parameters parsed", {
     url,
@@ -3687,7 +3697,7 @@ app.post("/download", async (req, res) => {
         // titleArgs.push("--force-ipv4"); // Handled by configureAntiBlockingArgs
       }
 
-      configureAntiBlockingArgs(titleArgs, url); // Apply globally
+      configureAntiBlockingArgs(titleArgs, url, req.headers['user-agent']); // Apply globally
 
       // Add Vimeo-specific handling
       if (url.includes("vimeo.com")) {
@@ -3816,7 +3826,7 @@ app.post("/download", async (req, res) => {
 
 
     // Apply unified anti-blocking args (User-Agent, IPv4, etc.)
-    configureAntiBlockingArgs(ytDlpArgs, url);
+    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent']);
 
     if (url.includes("instagram.com")) {
       // Instagram specific - try generic UA from helper first, or keep GraphQL if absolutely needed
@@ -3901,13 +3911,10 @@ app.post("/download", async (req, res) => {
       } else {
         // Use robust format selection that ensures both video and audio are downloaded
         // bv+ba/b = best video + best audio merged, fallback to single best file
-        const fallbackHeight = requestedHeight || 720;
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          const fbFormat = url.includes("instagram.com")
-            ? `bv[vcodec^=avc1][height<=${fallbackHeight}]+ba[acodec^=mp4a]/b[ext=mp4][height<=${fallbackHeight}]/b`
-            : "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b"; // User Request Dec 18: Universal compatible format
+          const fbFormat = "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b"; // User Request: Universal compatible format
 
           formatArgs = [
             "-f",
@@ -3918,7 +3925,7 @@ app.post("/download", async (req, res) => {
         } else {
           formatArgs = [
             "-f",
-            `bestvideo[height<=${fallbackHeight}]+bestaudio/best[height<=${fallbackHeight}]/best`,
+            "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
             "--merge-output-format",
             "mp4",
           ];
