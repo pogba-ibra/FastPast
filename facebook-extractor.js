@@ -29,9 +29,9 @@ async function extractFacebookVideoUrl(url, cookieFile) {
             ]
         });
 
-        // User Request: Use REAL User-Agent to bypass detection
+        // User Request: Use EXACT User-Agent provided by user for full synchronization
         const context = await browser.newContext({
-            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
         });
 
         // Load cookies if file exists
