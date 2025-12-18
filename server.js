@@ -180,12 +180,6 @@ function configureAntiBlockingArgs(args, url, requestUA) {
       // 1. Multi-threaded downloads (3 parallel connections)
       args.push("-N", "3");
 
-      // 3. Throttle detection (restarts if speed drops below 100KB/s)
-      args.push("--throttled-rate", "100K");
-
-      // 4. Increase buffer size for efficient data handling
-      args.push("--buffer-size", "1M");
-
       console.log("--> Facebook: concurrent fragments=3");
     }
 
