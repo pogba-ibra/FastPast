@@ -747,6 +747,9 @@ const downloadQueue = new Queue(function (task, cb) {
     args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
   }
 
+  // Explicitly force MP4 merge for compatibility
+  args.push("--merge-output-format", "mp4");
+
   // Clip Support
   if (start && end) {
     args.push("--download-sections", `*${start}-${end}`);
