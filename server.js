@@ -177,12 +177,8 @@ function configureAntiBlockingArgs(args, url, requestUA) {
     else if (url.includes("facebook.com") || url.includes("fb.watch")) {
       console.log("--> Facebook: applying download speed optimizations");
 
-      // 1. Multi-threaded downloads (16 parallel connections)
-      args.push("-N", "16");
-
-      // 2. Use native downloader (Native DASH Fix) for better audio handling
-      args.push("--external-downloader", "native");
-      args.push("--hls-prefer-native");
+      // 1. Multi-threaded downloads (4 parallel connections)
+      args.push("-N", "4");
 
       // 3. Throttle detection (restarts if speed drops below 100KB/s)
       args.push("--throttled-rate", "100K");
@@ -190,7 +186,7 @@ function configureAntiBlockingArgs(args, url, requestUA) {
       // 4. Increase buffer size for efficient data handling
       args.push("--buffer-size", "1M");
 
-      console.log("--> Facebook: concurrent fragments=16, external-downloader=native");
+      console.log("--> Facebook: concurrent fragments=4");
     }
 
 
@@ -3991,7 +3987,6 @@ app.post("/download", async (req, res) => {
       ytDlpArgs.push(
         "--add-header", "Referer:mbasic.facebook.com",
         "--rm-cache-dir",
-        "--hls-prefer-native",
         "-N", "4",
         "--concurrent-fragments", "4",
         "--fixup", "warn"
