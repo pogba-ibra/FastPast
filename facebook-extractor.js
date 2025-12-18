@@ -15,7 +15,13 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         // Launch Chromium in headless mode
         browser = await chromium.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',      // User Request: Reduce memory
+                '--single-process'    // User Request: Reduce memory
+            ]
         });
 
         // User Request: Use REAL User-Agent to bypass detection
@@ -68,6 +74,18 @@ async function extractFacebookVideoUrl(url, cookieFile) {
             await page.screenshot({ path: 'debug_nav_error.png' });
         }
 
+        // PRIORITY 1: The "FDown" Method (Direct Redirect Link)
+        let videoUrl = null;
+        try {
+            const directLink = await page.getAttribute('a[href*="video_redirect"]', 'href');
+            if (directLink) {
+                console.log(`✅ Found direct link (FDown Method): ${directLink.substring(0, 100)}...`);
+                videoUrl = directLink;
+            }
+        } catch (e) {
+            console.log('⚠️ Priority redirect check failed/skipped:', e.message);
+        }
+
         // Extract title from page (mbasic structure)
         let title = 'Unknown Title';
         try {
@@ -108,15 +126,17 @@ async function extractFacebookVideoUrl(url, cookieFile) {
         }
 
         // 1. Wait for ANY link that looks like a video redirect (Facebook 2025 Layout)
-        let videoUrl = await page.evaluate(() => {
-            // Look for the mobile-basic download link
-            const anchor = document.querySelector('a[href*="video_redirect"]');
-            if (anchor) return anchor.href;
+        if (!videoUrl) {
+            videoUrl = await page.evaluate(() => {
+                // Look for the mobile-basic download link
+                const anchor = document.querySelector('a[href*="video_redirect"]');
+                if (anchor) return anchor.href;
 
-            // Fallback: Look for the actual <video> tag if it's rendered
-            const video = document.querySelector('video');
-            return video ? video.src : null;
-        });
+                // Fallback: Look for the actual <video> tag if it's rendered
+                const video = document.querySelector('video');
+                return video ? video.src : null;
+            });
+        }
 
         if (videoUrl) {
             console.log(`✅ Found direct link via DOM: ${videoUrl.substring(0, 100)}...`);
