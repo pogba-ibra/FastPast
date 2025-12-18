@@ -312,7 +312,9 @@ function getMetaFormatSelector(qualityLabel) {
   const height = heightMatch ? heightMatch[1] : '720';
 
   // Template to force extensions (mp4+m4a) to avoid transcoding on Fly.io
-  return `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${height}][ext=mp4]/best`;
+  // User Request Dec 2025: Use generic but high-quality string for compatibility
+  const selector = `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${height}][ext=mp4]/best`;
+  return selector;
 }
 
 // Storage mode flag
@@ -684,8 +686,9 @@ const downloadQueue = new Queue(function (task, cb) {
   if (format) {
     let finalFormat = format;
     const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-    if (isMeta && !finalFormat.includes("+") && !finalFormat.includes("/") && finalFormat !== "best") {
+    if (isMeta && finalFormat !== "best") {
       // Use flexible selector for robust audio merge
+      // User Request: avoid hardcoded IDs, use generic high-quality strings
       finalFormat = getMetaFormatSelector(qualityLabel || "720p");
       console.log(`🛠️ [Batch] Using flexible Meta selector: ${finalFormat}`);
     }
@@ -3853,7 +3856,7 @@ app.post("/download", async (req, res) => {
         let finalFormat = formatSelector;
         const isMetaPlatform = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
 
-        if (isMetaPlatform && !finalFormat.includes("+") && !finalFormat.includes("/") && formatSelector !== "best") {
+        if (isMetaPlatform && formatSelector !== "best") {
           finalFormat = getMetaFormatSelector(qualityLabel);
           console.log(`🛠️ Using flexible Meta selector: ${finalFormat}`);
         }
@@ -3865,7 +3868,7 @@ app.post("/download", async (req, res) => {
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          const fbFormat = "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b"; // User Request: Universal compatible format
+          const fbFormat = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"; // User Request Dec 2025: Robust generic selector
 
           formatArgs = [
             "-f",
