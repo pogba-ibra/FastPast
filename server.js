@@ -361,8 +361,8 @@ function getMetaFormatSelector(qualityLabel) {
   const heightMatch = qualityLabel && typeof qualityLabel === 'string' ? qualityLabel.match(/(\d+)/) : null;
   const height = heightMatch ? heightMatch[1] : '720';
 
-  // Template based on user suggestion for DASH streams
-  return `bestvideo[height<=${height}][vcodec^=avc1]+ba[acodec^=mp4a]/bestvideo[height<=${height}]+ba/best[height<=${height}]/best`;
+  // Template to force extensions (mp4+m4a) to avoid transcoding on Fly.io
+  return `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${height}][ext=mp4]/best`;
 }
 
 // Storage mode flag
