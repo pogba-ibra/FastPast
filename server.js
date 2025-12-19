@@ -145,6 +145,86 @@ async function verifyStreamCompleteness(filePath) {
   });
 }
 
+/**
+ * Helper to download and merge direct video/audio streams using ffmpeg (Bypasses yt-dlp parsing)
+ */
+async function downloadAndMergeDirectStreams(videoUrl, audioUrl, outputFilePath, userAgent) {
+  const tempDir = path.join(os.tmpdir(), "fastpast_streams");
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+  const tempVideo = path.join(tempDir, `v_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
+  const tempAudio = (audioUrl && audioUrl !== "undefined") ? path.join(tempDir, `a_${Date.now()}_${Math.random().toString(36).substring(7)}.m4a`) : null;
+
+  try {
+    console.log(`📥 Downloading direct video stream: ${videoUrl.substring(0, 50)}...`);
+    const vResponse = await axios({
+      url: videoUrl,
+      method: "GET",
+      responseType: "stream",
+      headers: { "User-Agent": userAgent || DESKTOP_UA },
+      timeout: 60000,
+    });
+    const vWriter = fs.createWriteStream(tempVideo);
+    vResponse.data.pipe(vWriter);
+    await new Promise((resolve, reject) => {
+      vWriter.on("finish", resolve);
+      vWriter.on("error", reject);
+    });
+
+    if (tempAudio && audioUrl && audioUrl !== "undefined") {
+      console.log(`📥 Downloading direct audio stream: ${audioUrl.substring(0, 50)}...`);
+      const aResponse = await axios({
+        url: audioUrl,
+        method: "GET",
+        responseType: "stream",
+        headers: { "User-Agent": userAgent || DESKTOP_UA },
+        timeout: 60000,
+      });
+      const aWriter = fs.createWriteStream(tempAudio);
+      aResponse.data.pipe(aWriter);
+      await new Promise((resolve, reject) => {
+        aWriter.on("finish", resolve);
+        aWriter.on("error", reject);
+      });
+
+      console.log(`🔀 Merging streams with ffmpeg into: ${outputFilePath}`);
+      return new Promise((resolve, reject) => {
+        const ffmpegPath = process.platform === 'win32' ? 'ffmpeg' : '/usr/bin/ffmpeg';
+        const ff = spawn(ffmpegPath, [
+          "-y",
+          "-i", tempVideo,
+          "-i", tempAudio,
+          "-c", "copy",
+          outputFilePath
+        ]);
+        ff.on("close", (code) => {
+          // Cleanup temps
+          if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
+          if (fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
+          if (code === 0) resolve(true);
+          else reject(new Error(`ffmpeg exited with code ${code}`));
+        });
+        ff.on("error", (err) => {
+          if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
+          if (fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
+          reject(err);
+        });
+      });
+    } else {
+      console.log(`🚚 No audio stream provided, moving direct video to output...`);
+      // If outputFilePath exists, fs.renameSync might fail on some systems if it's across partitions
+      // but here we are usually in same drive or tmp.
+      fs.copyFileSync(tempVideo, outputFilePath);
+      fs.unlinkSync(tempVideo);
+      return true;
+    }
+  } catch (err) {
+    if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
+    if (tempAudio && fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
+    throw err;
+  }
+}
+
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
   // We consolidated to use Pip-installed version for ALL platforms (YouTube, Meta, etc.)
@@ -712,6 +792,29 @@ const downloadQueue = new Queue(function (task, cb) {
   // Default args - similar to standard download but writing to file
   // Default args - writing to user's downloads folder without jobId prefix in filename
   const outputTemplate = path.join(downloadDir, `%(title)s.%(ext)s`);
+
+  // User Request: Handle Direct HD Capture (Bypass yt-dlp)
+  if (qualityLabel && qualityLabel.startsWith('direct_capture|')) {
+    console.log(`💎 [Batch] Processing Direct HD Capture for ${jobId}`);
+    const parts = qualityLabel.split('|');
+    const vUrl = parts[1];
+    const aUrl = parts[2]; // Might be undefined
+    const tempOutput = path.join(downloadDir, `DirectCapture_${jobId}.mp4`); // Temporary name, will try to fix if title available
+
+    (async () => {
+      try {
+        await downloadAndMergeDirectStreams(vUrl, aUrl, tempOutput, task.userAgent || DESKTOP_UA);
+        io.emit('job_complete', { jobId, url });
+        logger.info(`Batch direct download completed`, { jobId, duration: Date.now() - startTime });
+        return cb(null, { status: 'completed' });
+      } catch (err) {
+        console.error(`❌ [Batch] Direct capture failed:`, err.message);
+        io.emit('job_error', { jobId, error: err.message, url });
+        return cb(err);
+      }
+    })();
+    return; // Stop here, don't execute yt-dlp
+  }
 
   let args = [
     "-o", outputTemplate,
@@ -3138,17 +3241,19 @@ app.post("/get-qualities", async (req, res) => {
     let freshCookiePath = null;
     let browserUA = null;
 
+    let capturedExtractions = null;
+
     // Aggressive Playwright Discovery for Meta to ensure HD streams
     if (videoUrl.includes('facebook.com') || videoUrl.includes('fb.watch') || videoUrl.includes('instagram.com')) {
       try {
         console.log('🌐 [Qualities] Launching aggressive Playwright discovery for Meta...');
         const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-        const extraction = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
+        capturedExtractions = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
 
-        if (extraction.freshCookiePath) freshCookiePath = extraction.freshCookiePath;
-        if (extraction.userAgent) browserUA = extraction.userAgent;
+        if (capturedExtractions.freshCookiePath) freshCookiePath = capturedExtractions.freshCookiePath;
+        if (capturedExtractions.userAgent) browserUA = capturedExtractions.userAgent;
 
-        console.log(`✅ [Qualities] Browser discovery complete for: ${extraction.title}`);
+        console.log(`✅ [Qualities] Browser discovery complete for: ${capturedExtractions.title}`);
       } catch (err) {
         console.warn('⚠️ [Qualities] Browser discovery failed, falling back to standard yt-dlp:', err.message);
       }
@@ -3252,6 +3357,18 @@ app.post("/get-qualities", async (req, res) => {
           );
 
           qualities = selectVideoQualities(videoFormats);
+
+          // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
+          if (capturedExtractions && capturedExtractions.videoUrl) {
+            console.log('💎 Injecting Direct HD Capture stream discovered by Playwright sniffer');
+            qualities.unshift({
+              value: `direct_capture|${capturedExtractions.videoUrl}${capturedExtractions.audioUrl ? `|${capturedExtractions.audioUrl}` : ''}`,
+              text: "Direct HD (Bypass - Highest Quality)",
+              height: 1080,
+              hasAudio: !!capturedExtractions.audioUrl,
+              ext: "mp4"
+            });
+          }
 
           if (qualities.length === 0) {
             qualities = [
@@ -4003,9 +4120,41 @@ app.post("/download", async (req, res) => {
     const proxies = require('./proxies');
     let proxyIndex = -1; // -1 = Direct, 0+ = Proxies
 
-    const performDownload = () => {
+    const performDownload = async () => {
       // Note: ignoredArgs was used in old recursive loop, now we use fresh build
       if (res.headersSent) return;
+
+      // User Request: Handle Direct HD Capture (Bypass yt-dlp)
+      if (formatSelector && formatSelector.startsWith('direct_capture|')) {
+        console.log(`💎 [Direct] Processing Direct HD Capture bypass`);
+        const parts = formatSelector.split('|');
+        const vUrl = parts[1];
+        const aUrl = parts[2];
+
+        try {
+          const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
+          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+          const tempFilePath = path.join(tempDir, `fb_direct_${Date.now()}.mp4`);
+
+          await downloadAndMergeDirectStreams(vUrl, aUrl, tempFilePath, req.headers['user-agent'] || DESKTOP_UA);
+
+          console.log(`✅ [Direct] Manual merge successful, streaming to client...`);
+          res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
+          res.setHeader("Content-Type", contentType);
+
+          const readStream = fs.createReadStream(tempFilePath);
+          readStream.pipe(res);
+
+          readStream.on('end', () => {
+            fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
+          });
+          return;
+        } catch (err) {
+          console.error(`❌ [Direct] Manual merge failed:`, err.message);
+          if (!res.headersSent) res.status(500).json({ error: "Failed to download via direct capture", details: err.message });
+          return;
+        }
+      }
 
       // Determine current strategy
       // Only rotate proxies for Facebook as requested

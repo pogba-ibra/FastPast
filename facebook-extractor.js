@@ -60,17 +60,33 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
         });
 
-        // Sniffer: Intercept network requests to find direct video file (The "FDown Secret")
-        let snortedUrl = null;
+        // Sniffer: Intercept network requests to find direct video/audio files
+        let snortedVideo = null;
+        let snortedAudio = null;
+        let candidateStreams = [];
+
         page.on('request', request => {
             const reqUrl = request.url();
-            // User Request Dec 2025: Target HD streams (usually DASH or specific CDNs)
-            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('bytestart'))) {
-                // If it's a bytestart/range request, it's likely a high-quality DASH segment
-                if (reqUrl.includes('bytestart')) {
-                    console.log(`🎬 Potential HD Stream detected: ${reqUrl.substring(0, 50)}...`);
+            // User Request: Target HD streams (usually DASH or specific CDNs)
+            if (reqUrl.includes('fbcdn.net')) {
+                const isVideo = reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('cat=video');
+                const isAudio = reqUrl.includes('audio') || reqUrl.includes('.m4a') || reqUrl.includes('cat=audio');
+
+                if (isVideo || isAudio) {
+                    candidateStreams.push({
+                        url: reqUrl,
+                        type: isVideo ? 'video' : 'audio',
+                        isDash: reqUrl.includes('bytestart') || reqUrl.includes('.mpd')
+                    });
+
+                    // Prioritize DASH segments for HD
+                    if (isVideo && reqUrl.includes('bytestart')) snortedVideo = reqUrl;
+                    if (isAudio && (reqUrl.includes('bytestart') || reqUrl.includes('audio'))) snortedAudio = reqUrl;
+
+                    // Fallback for simple MP4/M4A if nothing better found yet
+                    if (!snortedVideo && isVideo) snortedVideo = reqUrl;
+                    if (!snortedAudio && isAudio) snortedAudio = reqUrl;
                 }
-                snortedUrl = reqUrl;
             }
         });
 
@@ -128,9 +144,10 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         }
 
         // 3. Robust URL Selection
-        let videoUrl = snortedUrl;
+        let videoUrl = snortedVideo;
+        let audioUrl = snortedAudio;
 
-        // Fallback: DOM Search
+        // Fallback: DOM Search if sniffer missed something
         if (!videoUrl) {
             videoUrl = await page.evaluate(() => {
                 const video = document.querySelector('video');
@@ -159,7 +176,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         const userAgent = await page.evaluate(() => navigator.userAgent);
         await browser.close();
 
-        return { videoUrl, title, freshCookiePath, userAgent };
+        return { videoUrl, audioUrl, title, freshCookiePath, userAgent, candidateStreams };
 
     } catch (error) {
         if (browser) await browser.close().catch(() => { });
