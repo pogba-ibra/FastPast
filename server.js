@@ -51,8 +51,18 @@ async function resolveFacebookUrl(url) {
           validateStatus: (status) => status >= 200 && status < 400
         });
         if (response.request && response.request.res && response.request.res.responseUrl) {
-          console.log('Resolved (HEAD) to:', response.request.res.responseUrl);
-          return response.request.res.responseUrl;
+          const resUrl = response.request.res.responseUrl;
+          console.log('Resolved (HEAD) to:', resUrl);
+
+          let normalizedUrl = resUrl;
+          const originalUrl = resUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+
+          if (resUrl.includes('facebook.com')) {
+            normalizedUrl = resUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
+            const reelMatch = normalizedUrl.match(/\/(?:reel|reels)\/(\d+)\/?/);
+            if (reelMatch && reelMatch[1]) normalizedUrl = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
+          }
+          return { normalizedUrl, originalUrl };
         }
       } catch {
         // Ignore HEAD error and try GET
@@ -69,8 +79,8 @@ async function resolveFacebookUrl(url) {
         let finalUrl = response.request.res.responseUrl;
         console.log('Resolved (GET) to:', finalUrl);
 
-        // Save the original resolved URL (www/mobile) for metadata-rich processing (Playwright)
-        const originalResolvedUrl = finalUrl;
+        // Normalize the original resolved URL to always use www for Playwright (better metadata/DOM)
+        const originalResolvedUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
 
         // Optimization: Use mbasic.facebook.com for yt-dlp compatibility
         if (finalUrl.includes('facebook.com')) {
@@ -108,9 +118,12 @@ async function resolveFacebookUrl(url) {
     let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
     const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
     if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-    return normalized;
+
+    // Normalize original URL to www for metadata
+    const originalUrl = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+    return { normalizedUrl: normalized, originalUrl };
   }
-  return url;
+  return { normalizedUrl: url, originalUrl: url };
 }
 // Helper to verify if a video file has both video and audio streams using ffprobe
 async function verifyStreamCompleteness(filePath) {
@@ -3256,16 +3269,16 @@ app.post("/get-qualities", async (req, res) => {
 
   videoUrl = normalizeVkUrl(videoUrl);
 
-  if (videoUrl.includes("vimeo.com")) {
+  if (videoUrl?.includes("vimeo.com")) {
     videoUrl = videoUrl.split("?")[0];
   }
 
   try {
     // Detect YouTube playlist URL without video ID
     if (
-      (videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be")) &&
-      videoUrl.includes("list=") &&
-      !videoUrl.includes("v=")
+      (videoUrl?.includes("youtube.com") || videoUrl?.includes("youtu.be")) &&
+      videoUrl?.includes("list=") &&
+      !videoUrl?.includes("v=")
     ) {
       return res.status(400).json({
         error: "This is a playlist URL. Please use the Batch Download feature.",
@@ -3285,7 +3298,7 @@ app.post("/get-qualities", async (req, res) => {
     let capturedExtractions = null;
 
     // Aggressive Playwright Discovery for Meta to ensure HD streams
-    if (videoUrl.includes('facebook.com') || videoUrl.includes('fb.watch') || videoUrl.includes('instagram.com')) {
+    if (videoUrl?.includes('facebook.com') || videoUrl?.includes('fb.watch') || videoUrl?.includes('instagram.com')) {
       const fbCookieDir = path.join(__dirname, 'downloads');
       const fbCookieV1 = path.join(fbCookieDir, 'www.facebook.com_cookies v1.txt');
       const fbCookieV2 = path.join(fbCookieDir, 'www.facebook.com_cookies v2.txt');
@@ -3316,7 +3329,7 @@ app.post("/get-qualities", async (req, res) => {
       }
     }
 
-    if (videoUrl.includes("threads.net") || videoUrl.includes("threads.com")) {
+    if (videoUrl?.includes("threads.net") || videoUrl?.includes("threads.com")) {
       const threadsData = await getThreadsVideoData(videoUrl, req.headers['user-agent']);
       if (threadsData) {
         const qualities = [
