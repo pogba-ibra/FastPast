@@ -88,16 +88,21 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         });
 
         // Use FULL site for better extraction and HD support
-        let fullUrl = url;
         if (url.includes('facebook.com/share') || url.includes('fb.watch')) {
             // These should be resolved by server.js first, but as a guard:
             console.log('🔗 Shortened URL detected in extractor, relying on redirect...');
         }
 
-        // Ensure we are on www or m (not mbasic) for better DOM/Features
-        fullUrl = url.replace('mbasic.facebook.com', 'www.facebook.com');
+        // User Request Stage 3: Normalize to /watch/ format for maximum desktop compatibility
+        let fullUrl = url.includes('facebook.com') ? url.replace('mbasic.facebook.com', 'www.facebook.com') : url;
+        if (fullUrl.includes('facebook.com')) {
+            const reelMatch = fullUrl.match(/\/(?:reel|reels|video\.php\?v=)(\d+)/);
+            if (reelMatch && reelMatch[1]) {
+                fullUrl = `https://www.facebook.com/watch/?v=${reelMatch[1]}`;
+            }
+        }
 
-        console.log(`🔍 Navigating to FULL site: ${fullUrl}`);
+        console.log(`🔍 Navigating to STAGE 3 URL: ${fullUrl}`);
 
         try {
             // Navigate and wait for reasonable load (User Request: Use networkidle and longer timeout)
@@ -112,20 +117,21 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             // Fallback: try to continue anyway as sniffer might have worked
         }
 
-        // 1. Check for Login Wall immediately (Cookie Verification)
-        const blockingText = ['log in', 'sign up', 'you must log in', 'create an account', 'unusual activity'];
+        // 1. Check for Login Wall or Terminal Errors (Cookie Verification)
+        const blockingText = ['log in', 'sign up', 'you must log in', 'create an account', 'unusual activity', 'content isn\'t available', 'private video', 'video is private'];
         const pageContent = (await page.content()).toLowerCase();
         const textBlocked = blockingText.some(text => pageContent.includes(text));
         const loginWall = await page.isVisible('input[name="login"], button[name="login"], form[action*="login"]');
 
         if (loginWall || (textBlocked && !pageContent.includes('video'))) {
-            console.error('❌ Login Wall or Blocking detected! Cookies invalid or IP blocked.');
-            await page.screenshot({ path: 'debug_login_wall.png' });
-            throw new Error("Cookies Expired or IP Blocked");
+            const isTerminal = pageContent.includes('content isn\'t available') || pageContent.includes('private video');
+            console.error(`❌ ${isTerminal ? 'Terminal Error (Private/Deleted)' : 'Login Wall'} detected!`);
+            await page.screenshot({ path: `debug_${isTerminal ? 'terminal' : 'login'}_wall.png` });
+            throw new Error(isTerminal ? "Content Unavailable or Private" : "Cookies Expired or IP Blocked");
         }
 
         // 2. Dismiss Overlays (Cookie Banners/Popups)
-        console.log('🧹 Dismissing potential overlays...');
+        console.log('🧹 Dismissing potential overlays (Stage 3)...');
         try {
             const overlays = [
                 'div[aria-label*="Allow all cookies"]',
@@ -133,36 +139,68 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
                 'div[aria-label*="Decline optional cookies"]',
                 'div[role="dialog"] button',
                 'button:has-text("Allow")',
-                'button:has-text("Accept")'
+                'button:has-text("Accept")',
+                'div[aria-label="Close"]',
+                'div[role="button"]:has-text("Accept")',
+                'div[aria-label*="Cookie"] button'
             ];
             for (const selector of overlays) {
-                if (await page.isVisible(selector)) {
-                    await page.click(selector, { timeout: 1000 }).catch(() => { });
+                const element = await page.$(selector);
+                if (element && await element.isVisible()) {
+                    await element.click({ timeout: 1000 }).catch(() => { });
                 }
             }
         } catch { /* ignore overlay errors */ }
 
         // 3. Playback Simulation: Trigger HD streams by interacting with the video
-        console.log('👇 Simulating playback and scrolling to trigger HD streams...');
+        console.log('👇 Simulating Stage 3 playback and scrolling...');
         try {
             await page.evaluate(() => window.scrollBy(0, 500));
             await page.waitForTimeout(2000);
 
             // Wait for any video element
-            await page.waitForSelector('video', { timeout: 15000 }).catch(() => { });
+            const videoElem = await page.waitForSelector('video', { timeout: 15000 }).catch(() => { });
 
-            const videoElement = await page.$('video');
-            if (videoElement) {
-                console.log('🎬 Video element found, clicking to start playback...');
-                await videoElement.click({ force: true }).catch(() => { });
+            if (videoElem) {
+                console.log('🎬 Video element found, performing multi-point interaction...');
+                const box = await videoElem.boundingBox();
+                if (box) {
+                    // Click center
+                    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+                    await page.waitForTimeout(1000);
+                    // Click top-left (often where play buttons or toggles are)
+                    await page.mouse.click(box.x + 20, box.y + 20);
+                } else {
+                    await videoElem.click({ force: true }).catch(() => { });
+                }
+            } else {
+                // Proactive fallback: Click common player zones in major viewport
+                console.log('🖱️ No video element visible, clicking common zones...');
+                const { width, height } = page.viewportSize();
+                await page.mouse.click(width / 2, height / 2); // Center
+                await page.waitForTimeout(500);
+                await page.mouse.click(width / 2, height / 3); // Upper center
             }
-
-            // Proactive fallback: Click center of screen to trigger any hidden players
-            const { width, height } = page.viewportSize();
-            await page.mouse.click(width / 2, height / 2);
 
             console.log('⏳ Waiting 12 seconds for HD stream discovery...');
             await page.waitForTimeout(12000);
+
+            // User Request Stage 3: Direct SRC Fallback if sniffer failed
+            if (!snortedVideo) {
+                console.log('🕵️ Sniffer silent. Attempting Stage 3 Direct SRC Fallback...');
+                const capturedSrc = await page.evaluate(() => {
+                    const v = document.querySelector('video');
+                    if (v && v.src && !v.src.startsWith('blob:')) return v.src;
+                    const nested = document.querySelector('embed, object');
+                    if (nested && (nested.src || nested.data)) return nested.src || nested.data;
+                    return null;
+                });
+
+                if (capturedSrc) {
+                    console.log('✅ Stage 3 Fallback caught direct URL:', capturedSrc);
+                    videoUrl = capturedSrc;
+                }
+            }
         } catch (simError) {
             console.log('⚠️ Playback simulation interaction failed:', simError.message);
         }
