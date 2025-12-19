@@ -47,89 +47,121 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         const page = await context.newPage();
 
-        // Sniffer: Intercept network requests to find direct video file (The "FDown Secret")
+        // Sniffer: Intercept network requests to find direct video file
         let snortedUrl = null;
         page.on('request', request => {
             const reqUrl = request.url();
-            // User Request Dec 2025: Target HD streams (usually DASH or specific CDNs)
-            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('bytestart'))) {
-                // If it's a bytestart/range request, it's likely a high-quality DASH segment
+            // User Request Dec 2025: Target HD streams (CDNs, DASH, bytestart)
+            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('bytestart') || reqUrl.includes('dash'))) {
                 if (reqUrl.includes('bytestart')) {
-                    console.log(`🎬 Potential HD Stream detected: ${reqUrl.substring(0, 50)}...`);
+                    console.log(`🎬 Potential HD Segment detected: ${reqUrl.substring(0, 60)}...`);
                 }
                 snortedUrl = reqUrl;
             }
         });
 
-        // Use FULL site for better extraction and HD support
-        let fullUrl = url;
-        if (url.includes('facebook.com/share') || url.includes('fb.watch')) {
-            // These should be resolved by server.js first, but as a guard:
-            console.log('🔗 Shortened URL detected in extractor, relying on redirect...');
+        // SITE FALLBACK LOGIC
+        // 1. Try FB mbasic first (often less detection/lighter)
+        // 2. Then try full site (better for HD)
+        const idMatch = url.match(/(?:videos\/|video\.php\?v=|reel\/)(\d+)/);
+        const videoId = idMatch ? idMatch[1] : null;
+
+        let targetUrls = [];
+        if (videoId) {
+            targetUrls.push(`https://mbasic.facebook.com/video.php?v=${videoId}`); // Lightweight first
+            targetUrls.push(`https://www.facebook.com/video.php?v=${videoId}`);   // HD Full site
+        } else {
+            targetUrls.push(url.replace('www.facebook.com', 'mbasic.facebook.com'));
+            targetUrls.push(url.replace('mbasic.facebook.com', 'www.facebook.com'));
         }
 
-        // Ensure we are on www or m (not mbasic) for better DOM/Features
-        fullUrl = url.replace('mbasic.facebook.com', 'www.facebook.com');
+        let navigationSuccessful = false;
+        for (const targetUrl of targetUrls) {
+            console.log(`🔍 Attempting Navigation: ${targetUrl}`);
+            try {
+                // User Request: 60s timeout + networkidle for stability
+                await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 60000 });
 
-        console.log(`🔍 Navigating to FULL site: ${fullUrl}`);
+                // Check if we hit a login wall or empty page
+                const isLoginWall = await page.isVisible('input[name="login"], button[name="login"]');
+                if (isLoginWall) {
+                    console.log(`⚠️ Login block on ${targetUrl}, trying next...`);
+                    continue;
+                }
 
-        try {
-            // Navigate and wait for reasonable load
-            await page.goto(fullUrl, { waitUntil: 'load', timeout: 30000 });
-        } catch (navError) {
-            console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
-            // Fallback: try to continue anyway as sniffer might have worked
-        }
-
-        // 1. Check for Login Wall immediately (Cookie Verification)
-        const loginWall = await page.isVisible('input[name="login"], button[name="login"]');
-        if (loginWall) {
-            console.error('❌ Login Wall detected! Cookies invalid or IP blocked.');
-            await page.screenshot({ path: 'debug_login_wall.png' });
-            throw new Error("Cookies Expired or IP Blocked");
-        }
-
-        // 2. Playback Simulation: Trigger HD streams by interacting with the video
-        console.log('👇 Simulating playback to trigger HD streams...');
-        try {
-            // Wait for any video element and click it
-            const videoElement = await page.$('video');
-            if (videoElement) {
-                await videoElement.click();
-            } else {
-                // Try clicking common play button areas
-                await page.click('div[role="button"][aria-label*="Play"]', { timeout: 2000 }).catch(() => { });
+                navigationSuccessful = true;
+                break; // Stop at the first successful navigation
+            } catch (navError) {
+                console.log(`⚠️ Navigation to ${targetUrl} failed: ${navError.message}`);
+                // Continue to next URL
             }
-            // Wait for network activity to settle/streams to start
-            await page.waitForTimeout(5000);
-        } catch (simError) {
-            console.log('⚠️ Playback simulation interaction failed:', simError.message);
         }
 
-        // 3. Robust URL Selection
+        if (!navigationSuccessful) {
+            throw new Error("Could not navigate to any Facebook endpoint successfully (Detection or Network)");
+        }
+
+        // 2. Interaction Loop: Scroll and Simulate Playback
+        console.log('👆 Interacting with page to trigger HD streams...');
+        try {
+            // Scroll down a bit
+            await page.evaluate(() => window.scrollBy(0, 500));
+            await page.waitForTimeout(1000);
+            await page.evaluate(() => window.scrollBy(0, -200));
+
+            // Wait for video element (priority for video[src])
+            try {
+                // Wait for any video to appear
+                await page.waitForSelector('video', { timeout: 10000 });
+
+                // Explicitly click to start/trigger HD loading
+                const video = await page.$('video');
+                if (video) {
+                    await video.hover();
+                    await video.click({ force: true });
+                    console.log('✅ Video clicked (Playback triggered)');
+                }
+            } catch {
+                console.log('⚠️ No video element found via selector, trying button click...');
+                await page.click('div[role="button"][aria-label*="Play"]', { timeout: 3000, force: true }).catch((clickErr) => {
+                    console.log('⚠️ Click on play button failed:', clickErr.message);
+                });
+            }
+
+            // User Request: Wait specifically for a stream to be active
+            console.log('⏳ Waiting for HD data to flow (5s buffer)...');
+            await page.waitForTimeout(5000);
+
+        } catch (intError) {
+            console.log('⚠️ Interaction failed, proceeding with current results:', intError.message);
+        }
+
+        // 3. Result Selection
         let videoUrl = snortedUrl;
 
-        // Fallback: DOM Search
+        // Fallback: If sniffer missed it but DOM has it
         if (!videoUrl) {
             videoUrl = await page.evaluate(() => {
                 const video = document.querySelector('video');
-                return video ? video.src : null;
+                if (video && video.src && !video.src.startsWith('blob:')) return video.src;
+                // Check for source tags
+                const source = document.querySelector('video source');
+                return source ? source.src : null;
             });
         }
 
-        // Extract title
-        let title = 'Unknown Title';
+        // Extract Title
+        let title = 'Facebook Video';
         try {
             title = await page.title();
-            if (!title || title === 'Facebook') {
+            if (!title || title === 'Facebook' || title.includes("Log In")) {
                 const h1 = await page.$('h1');
                 if (h1) title = await h1.innerText();
             }
-        } catch {
-            title = 'Facebook Video';
+        } catch (e) {
+            console.log('⚠️ Title extraction failed:', e.message);
         }
 
-        // Export fresh cookies
         const freshCookies = await context.cookies();
         const netscapeCookies = formatCookiesToNetscape(freshCookies);
         const freshCookiePath = cookieFile.replace('.txt', '_fresh.txt');
