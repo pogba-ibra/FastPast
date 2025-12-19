@@ -49,14 +49,8 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         // User Request: Enhanced Stealth to bypass bot detection
         await page.addInitScript(() => {
-            // Pass the Webdriver Test
-            try {
-                delete navigator.__proto__.webdriver;
-            } catch {
-                // Ignore errors if property doesn't exist
-            }
-            // Mock plugins and languages
-            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
             Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
         });
 
@@ -105,6 +99,11 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         try {
             // Navigate and wait for reasonable load (User Request: Use networkidle and longer timeout)
             await page.goto(fullUrl, { waitUntil: 'networkidle', timeout: 60000 });
+
+            // User Request: Add random longer wait and simulated mouse movement for human-like behavior
+            console.log('🖱️ Simulating human-like delay and mouse activity...');
+            await page.waitForTimeout(10000 + Math.random() * 10000);
+            await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
         } catch (navError) {
             console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
             // Fallback: try to continue anyway as sniffer might have worked
