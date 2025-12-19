@@ -47,6 +47,19 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         const page = await context.newPage();
 
+        // User Request: Enhanced Stealth to bypass bot detection
+        await page.addInitScript(() => {
+            // Pass the Webdriver Test
+            try {
+                delete navigator.__proto__.webdriver;
+            } catch {
+                // Ignore errors if property doesn't exist
+            }
+            // Mock plugins and languages
+            Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+            Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+        });
+
         // Sniffer: Intercept network requests to find direct video file (The "FDown Secret")
         let snortedUrl = null;
         page.on('request', request => {
