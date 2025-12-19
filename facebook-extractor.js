@@ -113,32 +113,54 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         }
 
         // 1. Check for Login Wall immediately (Cookie Verification)
-        const loginWall = await page.isVisible('input[name="login"], button[name="login"]');
-        if (loginWall) {
-            console.error('❌ Login Wall detected! Cookies invalid or IP blocked.');
+        const blockingText = ['log in', 'sign up', 'you must log in', 'create an account', 'unusual activity'];
+        const pageContent = (await page.content()).toLowerCase();
+        const textBlocked = blockingText.some(text => pageContent.includes(text));
+        const loginWall = await page.isVisible('input[name="login"], button[name="login"], form[action*="login"]');
+
+        if (loginWall || (textBlocked && !pageContent.includes('video'))) {
+            console.error('❌ Login Wall or Blocking detected! Cookies invalid or IP blocked.');
             await page.screenshot({ path: 'debug_login_wall.png' });
             throw new Error("Cookies Expired or IP Blocked");
         }
 
-        // 2. Playback Simulation: Trigger HD streams by interacting with the video
+        // 2. Dismiss Overlays (Cookie Banners/Popups)
+        console.log('🧹 Dismissing potential overlays...');
+        try {
+            const overlays = [
+                'div[aria-label*="Allow all cookies"]',
+                'div[aria-label*="Accept all"]',
+                'div[aria-label*="Decline optional cookies"]',
+                'div[role="dialog"] button',
+                'button:has-text("Allow")',
+                'button:has-text("Accept")'
+            ];
+            for (const selector of overlays) {
+                if (await page.isVisible(selector)) {
+                    await page.click(selector, { timeout: 1000 }).catch(() => { });
+                }
+            }
+        } catch { /* ignore overlay errors */ }
+
+        // 3. Playback Simulation: Trigger HD streams by interacting with the video
         console.log('👇 Simulating playback and scrolling to trigger HD streams...');
         try {
-            // Force load via scroll (User Request)
             await page.evaluate(() => window.scrollBy(0, 500));
             await page.waitForTimeout(2000);
 
-            // Wait for any video element or specific reel dialog video (User Request: Improved Selectors)
-            await page.waitForSelector('div[role="dialog"] video, video[src], video', { timeout: 30000 }).catch(() => { });
+            // Wait for any video element
+            await page.waitForSelector('video', { timeout: 15000 }).catch(() => { });
 
             const videoElement = await page.$('video');
             if (videoElement) {
                 console.log('🎬 Video element found, clicking to start playback...');
-                await videoElement.click();
-            } else {
-                // Try clicking common play button areas
-                await page.click('div[role="button"][aria-label*="Play"]', { timeout: 2000 }).catch(() => { });
+                await videoElement.click({ force: true }).catch(() => { });
             }
-            // Wait longer for network activity to settle/streams to start (as requested)
+
+            // Proactive fallback: Click center of screen to trigger any hidden players
+            const { width, height } = page.viewportSize();
+            await page.mouse.click(width / 2, height / 2);
+
             console.log('⏳ Waiting 12 seconds for HD stream discovery...');
             await page.waitForTimeout(12000);
         } catch (simError) {
@@ -242,6 +264,12 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         // Final thumbnail decision: prefer network-snorted cover if DOM extraction returned nothing or low quality
         const finalThumbnail = snortedThumb || thumbnail;
+
+        // User Request: Fail-Fast if absolutely nothing was found
+        if (!videoUrl && !finalThumbnail) {
+            console.warn('❌ [Extractor] No video or thumbnail captured. Triggering retry...');
+            throw new Error("No Data Captured (Empty Extraction)");
+        }
 
         return { videoUrl, audioUrl, title, thumbnail: finalThumbnail, freshCookiePath, userAgent, candidateStreams };
 
