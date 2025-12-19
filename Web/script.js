@@ -1844,12 +1844,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
       submitDownloadRequest(fields);
 
-      // Show success message after 4 second delay
+      // Show success message after delay (10s for Facebook, 4s for others)
       if (successMessage) {
+        const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
+        const delay = isFacebook ? 10000 : 4000;
         setTimeout(() => {
           successMessage.style.display = "flex";
           successMessage.classList.add("show");
-        }, 4000);
+        }, delay);
       }
     });
   }
