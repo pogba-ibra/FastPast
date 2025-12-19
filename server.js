@@ -54,15 +54,10 @@ async function resolveFacebookUrl(url) {
           const resUrl = response.request.res.responseUrl;
           console.log('Resolved (HEAD) to:', resUrl);
 
-          let normalizedUrl = resUrl;
           const originalUrl = resUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-
-          if (resUrl.includes('facebook.com')) {
-            normalizedUrl = resUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-            const reelMatch = normalizedUrl.match(/\/(?:reel|reels)\/(\d+)\/?/);
-            if (reelMatch && reelMatch[1]) normalizedUrl = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-          }
-          return { normalizedUrl, originalUrl };
+          // User Request: Stop manually rewriting to mbasic.facebook.com as it's deprecated.
+          // yt-dlp now handles www.facebook.com better natively.
+          return { normalizedUrl: originalUrl, originalUrl };
         }
       } catch {
         // Ignore HEAD error and try GET
@@ -79,49 +74,30 @@ async function resolveFacebookUrl(url) {
         let finalUrl = response.request.res.responseUrl;
         console.log('Resolved (GET) to:', finalUrl);
 
-        // Normalize the original resolved URL to always use www for Playwright (better metadata/DOM)
-        const originalResolvedUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-
-        // Optimization: Use mbasic.facebook.com for yt-dlp compatibility
-        if (finalUrl.includes('facebook.com')) {
-          finalUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-          const reelMatch = finalUrl.match(/\/(?:reel|reels)\/(\d+)\/?/);
-          if (reelMatch && reelMatch[1]) {
-            finalUrl = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-          }
-          console.log('Converted to mbasic URL:', finalUrl);
-        }
-        return { normalizedUrl: finalUrl, originalUrl: originalResolvedUrl };
+        // Standardize to www.facebook.com
+        const resolvedUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+        return { normalizedUrl: resolvedUrl, originalUrl: resolvedUrl };
       }
 
-      // If resolution fails, fallback to converting original
+      // If resolution fails, fallback to converting original to www
       if (url.includes('facebook.com')) {
-        let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-        const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
-        if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-        return { normalizedUrl: normalized, originalUrl: url };
+        const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+        return { normalizedUrl: normalized, originalUrl: normalized };
       }
       return { normalizedUrl: url, originalUrl: url };
     } catch (error) {
       console.log('Failed to resolve URL:', error.message);
       if (url.includes('facebook.com')) {
-        let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-        const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
-        if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-        return { normalizedUrl: normalized, originalUrl: url };
+        const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+        return { normalizedUrl: normalized, originalUrl: normalized };
       }
       return { normalizedUrl: url, originalUrl: url };
     }
   }
-  // Basic mobile conversion for direct non-share links too
+  // Standardize non-share links to www.facebook.com
   if (url.includes('facebook.com')) {
-    let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-    const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
-    if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-
-    // Normalize original URL to www for metadata
-    const originalUrl = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-    return { normalizedUrl: normalized, originalUrl };
+    const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+    return { normalizedUrl: normalized, originalUrl: normalized };
   }
   return { normalizedUrl: url, originalUrl: url };
 }
@@ -311,7 +287,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
     // Exception: VK (not in isRestricted here, but handled elsewhere)
     if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-      pushUnique("--impersonate", "chrome110:windows");
+      // User Request Dec 2025: Update from chrome110 to latest 'chrome' to avoid outdated browser flagging.
+      // Alternatively use 'safari' if Meta throttling is strict.
+      pushUnique("--impersonate", "chrome");
     }
 
     // 2. User-Agent Matching
@@ -3412,7 +3390,12 @@ app.post("/get-qualities", async (req, res) => {
     // Helper to process valid JSON output
     const processVideoInfo = async (jsonString, stderrString) => {
       try {
-        const videoInfo = JSON.parse(jsonString);
+        // User Request: Robust check for videoInfo with refined parsing
+        const videoInfo = tryParseJson(jsonString);
+
+        if (!videoInfo) {
+          throw new Error("Invalid or empty video info returned by yt-dlp");
+        }
 
         let qualities = [];
 
@@ -3428,6 +3411,7 @@ app.post("/get-qualities", async (req, res) => {
           qualities = selectVideoQualities(videoFormats);
 
           // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
+          // Ensure capturedExtractions and its properties are checked
           if (capturedExtractions && capturedExtractions.videoUrl) {
             console.log('💎 Injecting Direct HD Capture stream discovered by Playwright sniffer');
             qualities.unshift({
@@ -3466,12 +3450,11 @@ app.post("/get-qualities", async (req, res) => {
         }
 
         // Special handling for Instagram and Threads thumbnails
-        let finalThumbnail = videoInfo.thumbnail;
+        let finalThumbnail = videoInfo ? (videoInfo.thumbnail || (videoInfo.thumbnails && videoInfo.thumbnails.length > 0 ? videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url : null)) : null;
 
-        // Fallback to thumbnails array if top-level thumbnail is missing
-        if (!finalThumbnail && videoInfo.thumbnails && videoInfo.thumbnails.length > 0) {
-          finalThumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
-        }
+        // User Request: Add safety checks for title and other properties
+        const videoTitle = videoInfo?.title || "Unknown Title";
+        const videoDuration = videoInfo?.duration ? parsePTDuration(`PT${videoInfo.duration}S`) : "--:--";
 
         if (videoUrl.includes("instagram.com") && !finalThumbnail) {
           try {
