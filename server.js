@@ -3484,8 +3484,13 @@ app.post("/get-qualities", async (req, res) => {
 
         const isUnreliable = UNRELIABLE_THUMB_DOMAINS.some(d => videoUrl.includes(d));
 
+        // User Request: Prioritize browser discovery thumbnail for Meta (FB/IG) if found
+        if ((videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com")) && capturedExtractions && capturedExtractions.thumbnail) {
+          console.log(`🌐 [Qualities] Prioritizing Playwright-captured thumbnail for Meta`);
+          finalThumbnail = capturedExtractions.thumbnail;
+        }
         // Generic Metadata Fallback for all platforms if still no thumbnail OR if domain is unreliable
-        if (!finalThumbnail || isUnreliable) {
+        else if (!finalThumbnail || isUnreliable) {
           logger.info("Attempting robust metadata thumbnail extraction", { url: videoUrl, forced: isUnreliable });
           const metadataThumb = await fetchPageMetadata(videoUrl, req.headers['user-agent']);
           // If we found a metadata thumb, use it. 

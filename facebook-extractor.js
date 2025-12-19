@@ -165,16 +165,35 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             });
         }
 
-        // Extract title
+        // Extract title and thumbnail
         let title = 'Unknown Title';
+        let thumbnail = null;
+
         try {
+            thumbnail = await page.evaluate(() => {
+                // 1. Try OG Image (Standard Meta)
+                const ogImage = document.querySelector('meta[property="og:image"]');
+                if (ogImage && ogImage.content) return ogImage.content;
+
+                // 2. Try Twitter Image
+                const twitterImage = document.querySelector('meta[name="twitter:image"]');
+                if (twitterImage && twitterImage.content) return twitterImage.content;
+
+                // 3. Try Video Poster
+                const video = document.querySelector('video');
+                if (video && video.poster) return video.poster;
+
+                return null;
+            });
+
             title = await page.title();
             if (!title || title === 'Facebook') {
                 const h1 = await page.$('h1');
                 if (h1) title = await h1.innerText();
             }
-        } catch {
-            title = 'Facebook Video';
+        } catch (metadataError) {
+            console.warn('⚠️ Metadata extraction partial failure:', metadataError.message);
+            title = title || 'Facebook Video';
         }
 
         // Export fresh cookies
@@ -186,7 +205,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         const userAgent = await page.evaluate(() => navigator.userAgent);
         await browser.close();
 
-        return { videoUrl, audioUrl, title, freshCookiePath, userAgent, candidateStreams };
+        return { videoUrl, audioUrl, title, thumbnail, freshCookiePath, userAgent, candidateStreams };
 
     } catch (error) {
         if (browser) await browser.close().catch(() => { });
