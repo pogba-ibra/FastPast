@@ -158,6 +158,9 @@ function spawnYtDlp(args, options = {}) {
   return spawn(command, finalArgs, options);
 }
 
+// Hardcoded Desktop User-Agent (Forced for all platforms to ensure HD/4K discovery)
+const DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
 function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
   // Helper to push unique flags
@@ -184,23 +187,22 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
     // Exception: VK (not in isRestricted here, but handled elsewhere)
     if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-      pushUnique("--impersonate", "chrome:windows");
+      pushUnique("--impersonate", "chrome110:windows");
     }
 
-    const desktopUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
-
     // 2. User-Agent Matching
-    // Force Desktop User-Agent for Meta to ensure HD streams
+    // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
+    pushUnique("--user-agent", DESKTOP_UA);
+
     if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
-      pushUnique("--user-agent", desktopUA);
       pushUnique("--add-header", "Referer:https://www.facebook.com/");
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
     }
     else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com")) {
-      pushUnique("--user-agent", desktopUA);
+      // General fallback handled by top-level pushUnique
     }
 
     // 3. Platform specific extractor args
@@ -3227,10 +3229,9 @@ app.post("/get-qualities", async (req, res) => {
     //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     // }
 
-    // Use request-synced or browser-synced User-Agent for all platforms
-    const finalUA = browserUA || req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+    // Use forced desktop User-Agent for all platforms (User Request)
     // We use push instead of pushUnique here because this acts as the "best effort" override for all extractors
-    ytDlpInfoArgs.push("--user-agent", finalUA);
+    ytDlpInfoArgs.push("--user-agent", DESKTOP_UA);
 
     ytDlpInfoArgs.push(videoUrl);
 
