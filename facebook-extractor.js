@@ -74,8 +74,8 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         console.log(`🔍 Navigating to FULL site: ${fullUrl}`);
 
         try {
-            // Navigate and wait for reasonable load
-            await page.goto(fullUrl, { waitUntil: 'load', timeout: 30000 });
+            // Navigate and wait for reasonable load (User Request: Use networkidle and longer timeout)
+            await page.goto(fullUrl, { waitUntil: 'networkidle', timeout: 60000 });
         } catch (navError) {
             console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
             // Fallback: try to continue anyway as sniffer might have worked
@@ -90,10 +90,15 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         }
 
         // 2. Playback Simulation: Trigger HD streams by interacting with the video
-        console.log('👇 Simulating playback to trigger HD streams...');
+        console.log('👇 Simulating playback and scrolling to trigger HD streams...');
         try {
-            // Wait for any video element
-            await page.waitForSelector('video', { timeout: 10000 });
+            // Force load via scroll (User Request)
+            await page.evaluate(() => window.scrollBy(0, 500));
+            await page.waitForTimeout(2000);
+
+            // Wait for any video element or specific reel dialog video (User Request: Improved Selectors)
+            await page.waitForSelector('div[role="dialog"] video, video[src], video', { timeout: 30000 }).catch(() => { });
+
             const videoElement = await page.$('video');
             if (videoElement) {
                 console.log('🎬 Video element found, clicking to start playback...');
