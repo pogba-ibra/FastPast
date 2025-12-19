@@ -611,20 +611,29 @@ let server;
 
 // SSL Certificate Loading
 let httpsOptions = null;
-try {
-  const keyMatch = fs.existsSync(path.join(__dirname, 'key.pem'));
-  const certMatch = fs.existsSync(path.join(__dirname, 'cert.pem'));
-  if (keyMatch && certMatch) {
-    httpsOptions = {
-      key: fs.readFileSync(path.join(__dirname, 'key.pem')),
-      cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
-    };
-    console.log('🔒 SSL Certificates loaded - HTTPS enabled');
-  } else {
-    console.log('⚠️  SSL Certificates not found - Falling back to HTTP');
+
+// User Request Dec 2025: Standardize on HTTP for Fly.io/Production to avoid 502 port mismatches.
+const isProduction = process.env.NODE_ENV === 'production';
+const disableSSL = process.env.DISABLE_SSL === 'true';
+
+if (isProduction || disableSSL) {
+  console.log('🌐 Production environment detected - Using HTTP only (SSL terminated by Fly.io/Proxy)');
+} else {
+  try {
+    const keyMatch = fs.existsSync(path.join(__dirname, 'key.pem'));
+    const certMatch = fs.existsSync(path.join(__dirname, 'cert.pem'));
+    if (keyMatch && certMatch) {
+      httpsOptions = {
+        key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+        cert: fs.readFileSync(path.join(__dirname, 'cert.pem'))
+      };
+      console.log('🔒 SSL Certificates loaded - HTTPS enabled');
+    } else {
+      console.log('⚠️  SSL Certificates not found - Falling back to HTTP');
+    }
+  } catch (err) {
+    console.log('⚠️  Error loading SSL Certificates:', err.message);
   }
-} catch (err) {
-  console.log('⚠️  Error loading SSL Certificates:', err.message);
 }
 
 if (httpsOptions) {
