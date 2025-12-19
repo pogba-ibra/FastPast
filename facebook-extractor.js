@@ -171,19 +171,61 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         try {
             thumbnail = await page.evaluate(() => {
-                // 1. Try OG Image (Standard Meta)
+                const results = [];
+
+                // 1. Try LD+JSON (Very reliable for video metadata)
+                try {
+                    const jsonScripts = document.querySelectorAll('script[type="application/ld+json"]');
+                    for (const script of jsonScripts) {
+                        try {
+                            const data = JSON.parse(script.innerText);
+                            if (data && data.thumbnailUrl) results.push({ url: data.thumbnailUrl, priority: 10 });
+                            if (data && data.image) {
+                                const imgUrl = typeof data.image === 'string' ? data.image : (data.image.url || data.image[0]);
+                                if (imgUrl) results.push({ url: imgUrl, priority: 9 });
+                            }
+                        } catch { /* ignore parse error */ }
+                    }
+                } catch { /* ignore */ }
+
+                // 2. Try OG Image / Twitter Image
                 const ogImage = document.querySelector('meta[property="og:image"]');
-                if (ogImage && ogImage.content) return ogImage.content;
+                if (ogImage && ogImage.content) results.push({ url: ogImage.content, priority: 8 });
 
-                // 2. Try Twitter Image
                 const twitterImage = document.querySelector('meta[name="twitter:image"]');
-                if (twitterImage && twitterImage.content) return twitterImage.content;
+                if (twitterImage && twitterImage.content) results.push({ url: twitterImage.content, priority: 7 });
 
-                // 3. Try Video Poster
+                // 3. Try Background Images from Video Containers/Placeholders
+                // Often Facebook uses a div with a background-image as the cover
+                try {
+                    const potentialDivs = document.querySelectorAll('div[style*="background-image"]');
+                    for (const div of potentialDivs) {
+                        const bg = div.style.backgroundImage;
+                        if (bg && bg.includes('url(')) {
+                            const url = bg.match(/url\(["']?([^"']+)["']?\)/)?.[1];
+                            if (url && url.includes('fbcdn.net')) results.push({ url, priority: 6 });
+                        }
+                    }
+                } catch { /* ignore */ }
+
+                // 4. Search for high-quality fbcdn images in DOM
+                try {
+                    const imgs = Array.from(document.querySelectorAll('img[src*="fbcdn.net"]'));
+                    for (const img of imgs) {
+                        // Usually covers are larger or have specific classes, but we can check dimensions
+                        if (img.width > 200 || img.height > 200) {
+                            results.push({ url: img.src, priority: 5 });
+                        }
+                    }
+                } catch { /* ignore */ }
+
+                // 5. Try Video Poster
                 const video = document.querySelector('video');
-                if (video && video.poster) return video.poster;
+                if (video && video.poster) results.push({ url: video.poster, priority: 4 });
 
-                return null;
+                // Sort by priority and return best
+                results.sort((a, b) => b.priority - a.priority);
+                return results.length > 0 ? results[0].url : null;
             });
 
             title = await page.title();
