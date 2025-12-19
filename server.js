@@ -184,24 +184,23 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
     // Exception: VK (not in isRestricted here, but handled elsewhere)
     if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-      pushUnique("--impersonate", "chrome");
+      pushUnique("--impersonate", "chrome:windows");
     }
 
+    const desktopUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+
     // 2. User-Agent Matching
-    // Prioritize request-synced UA for Meta, otherwise use standard Android bypass
-    if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
-      console.log(`🕵️ Syncing User-Agent: ${requestUA}`);
-      pushUnique("--user-agent", requestUA);
-      pushUnique("--add-header", "Referer:mbasic.facebook.com");
-    }
-    else if (url.includes("instagram.com")) {
-      pushUnique("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
+    // Force Desktop User-Agent for Meta to ensure HD streams
+    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
+      console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
+      pushUnique("--user-agent", desktopUA);
+      pushUnique("--add-header", "Referer:https://www.facebook.com/");
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
     }
     else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com")) {
-      pushUnique("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36");
+      pushUnique("--user-agent", desktopUA);
     }
 
     // 3. Platform specific extractor args
