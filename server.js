@@ -3130,6 +3130,28 @@ app.post("/get-qualities", async (req, res) => {
 
 
 
+    // Resolve shortened Meta links
+    videoUrl = await resolveFacebookUrl(videoUrl);
+
+    let freshCookiePath = null;
+    let browserUA = null;
+
+    // Aggressive Playwright Discovery for Meta to ensure HD streams
+    if (videoUrl.includes('facebook.com') || videoUrl.includes('fb.watch') || videoUrl.includes('instagram.com')) {
+      try {
+        console.log('🌐 [Qualities] Launching aggressive Playwright discovery for Meta...');
+        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+        const extraction = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
+
+        if (extraction.freshCookiePath) freshCookiePath = extraction.freshCookiePath;
+        if (extraction.userAgent) browserUA = extraction.userAgent;
+
+        console.log(`✅ [Qualities] Browser discovery complete for: ${extraction.title}`);
+      } catch (err) {
+        console.warn('⚠️ [Qualities] Browser discovery failed, falling back to standard yt-dlp:', err.message);
+      }
+    }
+
     if (videoUrl.includes("threads.net") || videoUrl.includes("threads.com")) {
       const threadsData = await getThreadsVideoData(videoUrl, req.headers['user-agent']);
       if (threadsData) {
@@ -3180,8 +3202,8 @@ app.post("/get-qualities", async (req, res) => {
       // ffmpeg,
     ];
 
-    // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
-    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl);
+    // Use unified anti-blocking logic (Desktop UA, Proxy, IPv4, Browser Cookies)
+    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl, browserUA || req.headers['user-agent'], freshCookiePath);
 
     // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
     // or if they are supplemental referring headers
@@ -3205,8 +3227,10 @@ app.post("/get-qualities", async (req, res) => {
     //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     // }
 
-    // Use request-synced User-Agent for all platforms
-    ytDlpInfoArgs.push("--user-agent", req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
+    // Use request-synced or browser-synced User-Agent for all platforms
+    const finalUA = browserUA || req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+    // We use push instead of pushUnique here because this acts as the "best effort" override for all extractors
+    ytDlpInfoArgs.push("--user-agent", finalUA);
 
     ytDlpInfoArgs.push(videoUrl);
 

@@ -92,16 +92,19 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         // 2. Playback Simulation: Trigger HD streams by interacting with the video
         console.log('👇 Simulating playback to trigger HD streams...');
         try {
-            // Wait for any video element and click it
+            // Wait for any video element
+            await page.waitForSelector('video', { timeout: 10000 });
             const videoElement = await page.$('video');
             if (videoElement) {
+                console.log('🎬 Video element found, clicking to start playback...');
                 await videoElement.click();
             } else {
                 // Try clicking common play button areas
                 await page.click('div[role="button"][aria-label*="Play"]', { timeout: 2000 }).catch(() => { });
             }
-            // Wait for network activity to settle/streams to start
-            await page.waitForTimeout(5000);
+            // Wait longer for network activity to settle/streams to start (as requested)
+            console.log('⏳ Waiting 12 seconds for HD stream discovery...');
+            await page.waitForTimeout(12000);
         } catch (simError) {
             console.log('⚠️ Playback simulation interaction failed:', simError.message);
         }
