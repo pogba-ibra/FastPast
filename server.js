@@ -109,6 +109,41 @@ async function resolveFacebookUrl(url) {
   }
   return url;
 }
+// Helper to verify if a video file has both video and audio streams using ffprobe
+async function verifyStreamCompleteness(filePath) {
+  return new Promise((resolve) => {
+    const ffprobePath = process.platform === 'win32' ? 'ffprobe' : '/usr/bin/ffprobe';
+    const ffprobe = spawn(ffprobePath, [
+      '-v', 'error',
+      '-show_entries', 'stream=codec_type',
+      '-of', 'csv=p=0',
+      filePath
+    ]);
+
+    let output = '';
+    ffprobe.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    ffprobe.on('close', (code) => {
+      if (code !== 0) {
+        console.error(`ffprobe error on file: ${filePath}`);
+        return resolve(false);
+      }
+      const streams = output.trim().split(/\s+/).map(s => s.trim().toLowerCase());
+      const hasVideo = streams.includes('video');
+      const hasAudio = streams.includes('audio');
+
+      console.log(`🎬 Stream Verification for ${path.basename(filePath)}: Video=${hasVideo}, Audio=${hasAudio}`);
+      resolve(hasVideo && hasAudio);
+    });
+
+    ffprobe.on('error', (err) => {
+      console.error(`Failed to execute ffprobe: ${err.message}`);
+      resolve(false);
+    });
+  });
+}
 
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
@@ -3976,53 +4011,112 @@ app.post("/download", async (req, res) => {
 
       console.log(`🚀 Attempting Download Strategy: ${strategyName}`);
 
-      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...currentArgs], {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+      if (isFacebook) {
+        // Facebook/Meta Server-Side Processing: Download to disk -> Verify -> Stream
+        const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-      streamProcessToResponse(res, ytDlpProcess, {
-        filename: downloadFilename,
-        contentType,
-        onRetry: () => {
-          // Legacy retry logic (can keep if needed, but rotation is better)
-          return false;
-        },
-        onSuccess: () => {
-          logger.info("Download completed successfully", {
-            strategy: strategyName,
-            url,
-            videoDuration: duration
-          });
-        },
-        onFailure: (reason, stderrText) => {
-          // Log the failure to Winston for persistent records
-          logger.error(`Download strategy ${strategyName} failed`, {
-            url,
-            reason,
-            stderr: (stderrText || "").substring(0, 2000), // Increased capture size
-            strategy: strategyName
-          });
+        const tempFilePath = path.join(tempDir, `fb_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
+        const fbArgs = [...currentArgs];
+        // Remove output to stdout and replace with temp file path
+        const oIndex = fbArgs.indexOf("-o");
+        if (oIndex !== -1) fbArgs[oIndex + 1] = tempFilePath;
+        else fbArgs.push("-o", tempFilePath);
 
-          // If failed and not streaming, rotate
-          if (!res.headersSent) {
+        logger.info("Executing Facebook Disk-Based Download", { strategyName, tempFilePath });
 
-            if (isFacebook) {
-              proxyIndex++;
-              // Recursive call
-              performDownload();
+        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...fbArgs], {
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+
+        let stderr = "";
+        ytDlpProcess.stderr.on("data", (data) => {
+          stderr += data.toString();
+        });
+
+        ytDlpProcess.on("close", async (code) => {
+          if (code === 0 && fs.existsSync(tempFilePath)) {
+            const isComplete = await verifyStreamCompleteness(tempFilePath);
+
+            if (isComplete) {
+              logger.info("Verification successful. Streaming to client.", { tempFilePath });
+              res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
+              res.setHeader("Content-Type", contentType);
+
+              const readStream = fs.createReadStream(tempFilePath);
+              readStream.pipe(res);
+
+              readStream.on('end', () => {
+                logger.info("Streaming completed. Cleaning up.", { tempFilePath });
+                fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
+              });
+
+              readStream.on('error', (err) => {
+                logger.error("ReadStream error:", { error: err.message, tempFilePath });
+                if (!res.headersSent) res.status(500).json({ error: "Failed to stream file." });
+                fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
+              });
             } else {
-              // Non-Facebook, fail immediately
-              // streamProcessToResponse already logged error, we just ensure response closed?
-              // It likely didn't send 500 if headers not sent? 
-              // streamProcessToResponse usually handles sending error if headers not sent.
-              // But we intercept onFailure.
-              // IMPORTANT: streamProcessToResponse sends 500 if we return (or don't handle?).
-              // If we want to retry, we must prevent it from sending 500.
-              // The original streamProcessToResponse likely sends 500 if onFailure returns true? No.
+              logger.warn("Verification failed (missing audio/video). Rotating/Falling back.", { tempFilePath });
+              fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
+
+              // Fallback logic for Facebook: Rotate proxy or try lower quality
+              proxyIndex++;
+              performDownload();
             }
+          } else {
+            logger.error("Disk download failed", { exitCode: code, stderr: stderr.substring(0, 500) });
+            if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+
+            // Rotate on failure
+            proxyIndex++;
+            performDownload();
           }
-        },
-      });
+        });
+
+        ytDlpProcess.on("error", (err) => {
+          logger.error("Spawn error in Disk Download:", err.message);
+          proxyIndex++;
+          performDownload();
+        });
+
+      } else {
+        // Standard Piping for other platforms
+        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...currentArgs], {
+          stdio: ["ignore", "pipe", "pipe"],
+        });
+
+        streamProcessToResponse(res, ytDlpProcess, {
+          filename: downloadFilename,
+          contentType: contentType,
+          onRetry: () => {
+            return false;
+          },
+          onSuccess: () => {
+            logger.info("Download completed successfully", {
+              strategy: strategyName,
+              url,
+              videoDuration: duration
+            });
+          },
+          onFailure: (reason, stderrText) => {
+            logger.error(`Download strategy ${strategyName} failed`, {
+              url,
+              reason,
+              stderr: (stderrText || "").substring(0, 2000),
+              strategy: strategyName
+            });
+
+            if (!res.headersSent) {
+              // Note: Only Facebook rotates for now as per code structure
+              if (isFacebook) {
+                proxyIndex++;
+                performDownload();
+              }
+            }
+          },
+        });
+      }
     };
 
     performDownload();
