@@ -3770,6 +3770,7 @@ app.post("/download", async (req, res) => {
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
 
     let ytDlpArgs = [
+      "-v", // Enable verbose logging for debugging
       "--no-check-certificate",
       "--no-playlist",
       "--ffmpeg-location", "/usr/local/bin/ffmpeg",
