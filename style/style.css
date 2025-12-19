@@ -11295,7 +11295,7 @@ footer {
   visibility: hidden;
   transform: translateY(100px) scale(0.8);
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 1000;
+  z-index: 10001;
   box-shadow: 0 12px 35px rgba(29, 53, 87, 0.4),
     0 6px 20px rgba(69, 123, 157, 0.3), 0 2px 8px rgba(168, 218, 220, 0.2),
     inset 0 2px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.1);

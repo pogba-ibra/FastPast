@@ -1847,7 +1847,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Show success message after delay (10s for Facebook, 4s for others)
       if (successMessage) {
         const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
-        const delay = isFacebook ? 18000 : 5000;
+        const delay = isFacebook ? 20000 : 5000;
         setTimeout(() => {
           successMessage.style.display = "flex";
           successMessage.classList.add("show");
@@ -2311,7 +2311,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.addEventListener("scroll", () => {
     if (backToTopBtn) {
-      if (window.pageYOffset > 300) {
+      const scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      if (scrollPos > 300) {
         backToTopBtn.classList.add("show");
       } else {
         backToTopBtn.classList.remove("show");
