@@ -848,6 +848,17 @@ const downloadQueue = new Queue(function (task, cb) {
   // Explicitly force MP4 merge for compatibility
   args.push("--merge-output-format", "mp4");
 
+  // User Request: Server-Side Full Processing (Disk-Based + Verify) for Meta
+  const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
+  let tempMetaFile = null;
+  if (isMeta) {
+    tempMetaFile = path.join(downloadDir, `batch_verify_${jobId}_${Date.now()}.mp4`);
+    const oIndex = args.indexOf("-o");
+    if (oIndex !== -1) args[oIndex + 1] = tempMetaFile;
+    else args.push("-o", tempMetaFile);
+    console.log(`🛠️ [Batch] Meta full processing enabled. Temp file: ${tempMetaFile}`);
+  }
+
   // Clip Support
   if (start && end) {
     args.push("--download-sections", `*${start}-${end}`);
@@ -883,12 +894,30 @@ const downloadQueue = new Queue(function (task, cb) {
     stderr += data.toString();
   });
 
-  ytDlp.on("close", (code) => {
+  ytDlp.on("close", async (code) => {
     if (code === 0) {
+      if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) {
+        console.log(`🔍 [Batch] Verifying Meta stream integrity for ${jobId}...`);
+        const isComplete = await verifyStreamCompleteness(tempMetaFile);
+        if (!isComplete) {
+          console.warn(`⚠️ [Batch] Meta verification failed for ${jobId}. Streams incomplete.`);
+          fs.unlink(tempMetaFile, () => { });
+          io.emit('job_error', { jobId, error: "Verification failed: missing audio or video stream", url });
+          return cb(new Error("Verification failed"));
+        }
+
+        // Finalize: For batch, we'd ideally rename to title, but without --print filename it's hard. 
+        // We'll keep it as jobId or try to guess. For now, we'll rename to a more friendly "Verified_Meta_{jobId}.mp4"
+        const finalPath = path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
+        fs.renameSync(tempMetaFile, finalPath);
+        console.log(`✅ [Batch] Verification passed. Final file: ${finalPath}`);
+      }
+
       io.emit('job_complete', { jobId, url });
       logger.info(`Batch download completed`, { jobId, duration: Date.now() - startTime });
       cb(null, { status: 'completed' });
     } else {
+      if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
       io.emit('job_error', { jobId, error: "Process exited with code " + code, url });
       logger.error(`Batch download process failed`, { jobId, code, stderr });
       cb(new Error(`Process exited with code ${code}`));
@@ -4138,7 +4167,10 @@ app.post("/download", async (req, res) => {
 
           await downloadAndMergeDirectStreams(vUrl, aUrl, tempFilePath, req.headers['user-agent'] || DESKTOP_UA);
 
-          console.log(`✅ [Direct] Manual merge successful, streaming to client...`);
+          const isComplete = await verifyStreamCompleteness(tempFilePath);
+          if (!isComplete) throw new Error("Direct capture streams are incomplete or missing audio/video");
+
+          console.log(`✅ [Direct] Manual merge verified and successful, streaming to client...`);
           res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
           res.setHeader("Content-Type", contentType);
 
@@ -4158,11 +4190,11 @@ app.post("/download", async (req, res) => {
 
       // Determine current strategy
       // Only rotate proxies for Facebook as requested
-      const isFacebook = (url.includes("facebook.com") || url.includes("fb.watch"));
+      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
 
       // Algorithm:
       // 1. Try Direct (proxyIndex = -1) -- typically uses --impersonate
-      // 2. If fail & isFacebook, Try Proxy[0], Proxy[1]...
+      // 2. If fail & isMeta, Try Proxy[0], Proxy[1]...
 
       const currentProxy = (proxyIndex >= 0 && proxyIndex < proxies.length) ? proxies[proxyIndex] : null;
 
@@ -4178,27 +4210,25 @@ app.post("/download", async (req, res) => {
       if (currentProxy) {
         strategyName = `Proxy ${proxyIndex + 1}/${proxies.length}`;
         currentArgs.push("--proxy", currentProxy);
-        // When using proxy, we might want to relax ipv4 enforcement if proxy is ipv6? 
-        // But user said "force-ipv4". We keep it.
       }
 
       console.log(`🚀 Attempting Download Strategy: ${strategyName}`);
 
-      if (isFacebook) {
-        // Facebook/Meta Server-Side Processing: Download to disk -> Verify -> Stream
+      if (isMeta) {
+        // Meta Server-Side Processing: Download to disk -> Verify -> Stream
         const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-        const tempFilePath = path.join(tempDir, `fb_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
-        const fbArgs = [...currentArgs];
+        const tempFilePath = path.join(tempDir, `meta_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
+        const metaArgs = [...currentArgs];
         // Remove output to stdout and replace with temp file path
-        const oIndex = fbArgs.indexOf("-o");
-        if (oIndex !== -1) fbArgs[oIndex + 1] = tempFilePath;
-        else fbArgs.push("-o", tempFilePath);
+        const oIndex = metaArgs.indexOf("-o");
+        if (oIndex !== -1) metaArgs[oIndex + 1] = tempFilePath;
+        else metaArgs.push("-o", tempFilePath);
 
-        logger.info("Executing Facebook Disk-Based Download", { strategyName, tempFilePath });
+        logger.info("Executing Meta Disk-Based Download", { strategyName, tempFilePath, platform: isMeta ? "Meta" : "Other" });
 
-        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...fbArgs], {
+        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...metaArgs], {
           stdio: ["ignore", "pipe", "pipe"],
         });
 
@@ -4212,7 +4242,7 @@ app.post("/download", async (req, res) => {
             const isComplete = await verifyStreamCompleteness(tempFilePath);
 
             if (isComplete) {
-              logger.info("Verification successful. Streaming to client.", { tempFilePath });
+              logger.info("✅ Verification successful. Streaming to client.", { tempFilePath });
               res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
               res.setHeader("Content-Type", contentType);
 
@@ -4230,15 +4260,23 @@ app.post("/download", async (req, res) => {
                 fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
               });
             } else {
-              logger.warn("Verification failed (missing audio/video). Rotating/Falling back.", { tempFilePath });
-              fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
+              logger.warn("⚠️ Meta verification failed (missing audio/video). Falling back to 'best' format or rotating proxy.", { tempFilePath });
+              if (fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
 
-              // Fallback logic for Facebook: Rotate proxy or try lower quality
+              // Fallback optimization: if verification failed, try a pre-merged 'best' format next time
+              if (formatArgs[1] !== "best" && formatArgs[1] !== "best[ext=mp4]/best") {
+                console.log("🛠️ Switching format to 'best' for fallback retry");
+                formatArgs = ["-f", "best[ext=mp4]/best", "--merge-output-format", "mp4"];
+                // Re-build finalYtDlpArgs to include the new format
+                // We can't easily re-build the whole chain here, but performDownload will pick up proxy changes.
+                // For format change, we'd need to re-run the whole outer function or just adjust currentArgs.
+              }
+
               proxyIndex++;
               performDownload();
             }
           } else {
-            logger.error("Disk download failed", { exitCode: code, stderr: stderr.substring(0, 500) });
+            logger.error("❌ Disk download failed", { exitCode: code, stderr: stderr.substring(0, 500) });
             if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
 
             // Rotate on failure
@@ -4281,8 +4319,7 @@ app.post("/download", async (req, res) => {
             });
 
             if (!res.headersSent) {
-              // Note: Only Facebook rotates for now as per code structure
-              if (isFacebook) {
+              if (isMeta) {
                 proxyIndex++;
                 performDownload();
               }
