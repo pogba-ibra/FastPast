@@ -125,29 +125,47 @@ function spawnYtDlp(args, options = {}) {
 
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
 function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
-  // 1. User-Agent Handling (CRITICAL: Single Source of Truth)
-  // Ensure we don't have duplicates. Use pushUnique for everything.
-  const hasUserAgent = args.includes("--user-agent");
-  const hasImpersonate = args.includes("--impersonate");
+  // Helper to push unique flags
+  const pushUnique = (flag, value) => {
+    const existingIndex = args.indexOf(flag);
+    if (existingIndex !== -1) {
+      if (value !== undefined) args[existingIndex + 1] = value;
+    } else {
+      args.push(flag);
+      if (value !== undefined) args.push(value);
+    }
+  };
+
+  const isRestricted = [
+    "youtube.com", "youtu.be",
+    "instagram.com",
+    "tiktok.com",
+    "facebook.com", "fb.watch",
+    "twitter.com", "x.com"
+  ].some(d => url.includes(d));
 
   if (isRestricted) {
     // 1. Client Impersonation (Dec 2025 Standard)
     // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
     // Exception: VK (not in isRestricted here, but handled elsewhere)
-    if (!hasImpersonate && !url.includes("youtube.com") && !url.includes("youtu.be")) {
+    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
       pushUnique("--impersonate", "chrome");
     }
 
     // 2. User-Agent Matching
-    // Prioritize request-synced UA if available, otherwise use default Android bypass
-    if (requestUA) {
+    // Prioritize request-synced UA for Meta, otherwise use standard Android bypass
+    if ((url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) && requestUA) {
       console.log(`🕵️ Syncing User-Agent: ${requestUA}`);
       pushUnique("--user-agent", requestUA);
+      pushUnique("--add-header", "Referer:mbasic.facebook.com");
     }
     else if (url.includes("instagram.com")) {
       pushUnique("--user-agent", "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)");
     }
-    else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com") && !url.includes("tiktok.com")) {
+    else if (url.includes("tiktok.com")) {
+      // TikTok prefers no custom UA when impersonating
+    }
+    else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com")) {
       pushUnique("--user-agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Mobile Safari/537.36");
     }
 
@@ -3129,9 +3147,32 @@ app.post("/get-qualities", async (req, res) => {
     ];
 
     // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
-    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl, req.headers['user-agent']);
+    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl);
 
     // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
+    // or if they are supplemental referring headers
+    if (videoUrl.includes("shorts")) {
+      ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
+    }
+
+    if (videoUrl.includes("instagram.com")) {
+      ytDlpInfoArgs.push("--add-header", "Referer:https://www.instagram.com/");
+    }
+
+
+    // Add Vimeo-specific handling
+    if (videoUrl.includes("vimeo.com")) {
+      ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
+      // ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
+    }
+
+    // Add VK-specific handling (use cookies for private/wall posts)
+    // if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
+    //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
+    // }
+
+    // Use request-synced User-Agent for all platforms
+    ytDlpInfoArgs.push("--user-agent", req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
 
     ytDlpInfoArgs.push(videoUrl);
 
@@ -3882,6 +3923,10 @@ app.post("/download", async (req, res) => {
     if (downloadAccelerator) {
       ytDlpArgs.push("--concurrent-fragments", "5");
     }
+
+    // Unified Anti-Blocking Logic (2025 Standard)
+    // Handles Deduplication of Impersonate, User-Agent, and Cookies automatically
+    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent'], req.body._freshCookiePath);
 
     // Platform-specific robustness (Non-security flags)
     if (url.includes("facebook.com") || url.includes("fb.watch")) {
