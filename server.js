@@ -3509,15 +3509,15 @@ app.post("/get-qualities", async (req, res) => {
         const result = {
           qualities,
           thumbnail: finalThumbnail,
-          title: videoInfo.title,
-          duration: videoInfo.duration,
+          title: videoTitle,
+          duration: videoDuration,
         };
 
         if (videoUrl.includes("instagram.com")) {
           logger.info("Instagram video info", {
             url: videoUrl,
             finalThumbnail: finalThumbnail,
-            title: videoInfo.title,
+            title: videoTitle,
           });
         }
 
@@ -3684,17 +3684,21 @@ app.post("/download", async (req, res) => {
 
   // Resolve shortened URLs (Facebook/Instagram)
   if (url) {
-    url = await resolveFacebookUrl(url);
+    const resolved = await resolveFacebookUrl(url);
+    const normalizedUrl = resolved.normalizedUrl;
+    // Keep 'url' as the string for subsequent yt-dlp calls if browser extraction isn't used
+    url = normalizedUrl;
 
     // Use headless browser for Facebook video extraction if yt-dlp is likely to fail or if Direct HD requested
-    if (url.includes('facebook.com') || url.includes('fb.watch')) {
+    // User Request Dec 2025: Use optional chaining to prevent NPE
+    if (normalizedUrl?.includes?.('facebook.com') || normalizedUrl?.includes?.('fb.watch')) {
       const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
 
       if (isDirectHD) {
         try {
           const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
           console.log('🌐 [Download] User requested Direct HD. Launching Playwright browser extraction for Facebook...');
-          const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+          const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(normalizedUrl, cookieFile, req.headers['user-agent']);
           console.log(`✅ [Download] Browser extracted: ${title}`);
 
           // Use extracted direct video URL instead of page URL (if available)
@@ -3708,7 +3712,7 @@ app.post("/download", async (req, res) => {
           req.body._userAgent = userAgent;
         } catch (error) {
           console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
-          // Continue with original URL - yt-dlp will try
+          // Continue with normalized URL - yt-dlp will try
         }
       }
     }
