@@ -310,14 +310,21 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     let targetCookieFile = 'cookies.txt';
     if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
     else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
-    else if (url.includes("facebook.com") || url.includes("fb.watch")) targetCookieFile = "www.facebook.com_cookies.txt";
+    else if (url.includes("facebook.com") || url.includes("fb.watch")) {
+      // User Request: Prioritize v1 then v2 from downloads folder
+      const v1 = path.join(__dirname, 'downloads', 'www.facebook.com_cookies v1.txt');
+      const v2 = path.join(__dirname, 'downloads', 'www.facebook.com_cookies v2.txt');
+      if (fs.existsSync(v1)) targetCookieFile = path.relative(__dirname, v1);
+      else if (fs.existsSync(v2)) targetCookieFile = path.relative(__dirname, v2);
+      else targetCookieFile = "www.facebook.com_cookies.txt";
+    }
     else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
     else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
     else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
-    const cookiesPath = path.resolve(__dirname, targetCookieFile);
+    const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
     if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
 
@@ -3274,17 +3281,33 @@ app.post("/get-qualities", async (req, res) => {
 
     // Aggressive Playwright Discovery for Meta to ensure HD streams
     if (videoUrl.includes('facebook.com') || videoUrl.includes('fb.watch') || videoUrl.includes('instagram.com')) {
-      try {
-        console.log('🌐 [Qualities] Launching aggressive Playwright discovery for Meta...');
-        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-        capturedExtractions = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
+      const fbCookieDir = path.join(__dirname, 'downloads');
+      const fbCookieV1 = path.join(fbCookieDir, 'www.facebook.com_cookies v1.txt');
+      const fbCookieV2 = path.join(fbCookieDir, 'www.facebook.com_cookies v2.txt');
+      const fbCookieDefault = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
 
-        if (capturedExtractions.freshCookiePath) freshCookiePath = capturedExtractions.freshCookiePath;
-        if (capturedExtractions.userAgent) browserUA = capturedExtractions.userAgent;
+      const cookieFilesToTry = [];
+      if (fs.existsSync(fbCookieV1)) cookieFilesToTry.push(fbCookieV1);
+      if (fs.existsSync(fbCookieV2)) cookieFilesToTry.push(fbCookieV2);
+      if (fs.existsSync(fbCookieDefault) && !cookieFilesToTry.includes(fbCookieDefault)) cookieFilesToTry.push(fbCookieDefault);
 
-        console.log(`✅ [Qualities] Browser discovery complete for: ${capturedExtractions.title}`);
-      } catch (err) {
-        console.warn('⚠️ [Qualities] Browser discovery failed, falling back to standard yt-dlp:', err.message);
+      console.log(`🌐 [Qualities] Launching aggressive Playwright discovery for Meta. Found ${cookieFilesToTry.length} cookie candidates.`);
+
+      for (const cookieFile of cookieFilesToTry) {
+        try {
+          console.log(`📡 [Qualities] Attempting extraction with: ${path.basename(cookieFile)}`);
+          capturedExtractions = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
+
+          if (capturedExtractions && capturedExtractions.videoUrl) {
+            if (capturedExtractions.freshCookiePath) freshCookiePath = capturedExtractions.freshCookiePath;
+            if (capturedExtractions.userAgent) browserUA = capturedExtractions.userAgent;
+            console.log(`✅ [Qualities] Browser discovery successful with: ${path.basename(cookieFile)}`);
+            break; // Stop on first success
+          }
+        } catch (err) {
+          console.warn(`⚠️ [Qualities] Attempt failed with ${path.basename(cookieFile)}: ${err.message}`);
+          // Continue to next cookie file
+        }
       }
     }
 
