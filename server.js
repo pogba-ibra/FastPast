@@ -112,13 +112,11 @@ async function resolveFacebookUrl(url) {
 
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
-  // We consolidated to use Pip-installed version for ALL platforms (YouTube, Meta, etc.)
-  // This ensures curl-cffi support is always available for --impersonate.
   const command = getPythonCommand();
-  const finalArgs = [...args];
+  // Always ensure we run as a module to leverage pip-installed packages and curl-cffi
+  const finalArgs = ["-m", "yt_dlp", ...args];
 
-  // Log usage
-  logger.info("Using yt-dlp Nightly (pip -m)", { command });
+  logger.info("Spawning yt-dlp module", { command, args: finalArgs.filter(a => !a.includes('cookie')) });
 
   return spawn(command, finalArgs, options);
 }
@@ -309,7 +307,7 @@ function tryParseJson(stdout) {
 function getMetaFormatSelector(qualityLabel) {
   // Extract numeric height from labels like "720p", "1080p HD", or "Auto"
   const heightMatch = qualityLabel && typeof qualityLabel === 'string' ? qualityLabel.match(/(\d+)/) : null;
-  const height = heightMatch ? heightMatch[1] : '720';
+  const height = heightMatch ? heightMatch[1] : '1080'; // User Request Dec 2025: Default to 1080 for HD
 
   // Template to force extensions (mp4+m4a) to avoid transcoding on Fly.io
   // User Request Dec 2025: Use generic but high-quality string for compatibility
@@ -726,7 +724,7 @@ const downloadQueue = new Queue(function (task, cb) {
   // Use correct command for OS
   // Use hybrid helper
   logger.info("Spawning batch yt-dlp", { args });
-  const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
+  const ytDlp = spawnYtDlp(args);
 
   let stderr = "";
 
@@ -2858,7 +2856,7 @@ app.get("/video-info", async (req, res) => {
     const command = getPythonCommand();
     logger.info("Spawning info fetch", { command, url });
 
-    const infoArgs = ["-m", "yt_dlp", "-J"];
+    const infoArgs = ["-J"];
     // Extract User-Agent from request if possible (for debug/test endpoints we might not have it)
     const requestUA = req ? req.headers['user-agent'] : null;
     configureAntiBlockingArgs(infoArgs, url, requestUA); // Apply global anti-blocking (UA, IPv4)
@@ -3878,7 +3876,7 @@ app.post("/download", async (req, res) => {
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          const fbFormat = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"; // User Request Dec 2025: Robust generic selector
+          const fbFormat = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best";
 
           formatArgs = [
             "-f",
@@ -3976,7 +3974,7 @@ app.post("/download", async (req, res) => {
 
       console.log(`🚀 Attempting Download Strategy: ${strategyName}`);
 
-      const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...currentArgs], {
+      const ytDlpProcess = spawnYtDlp(currentArgs, {
         stdio: ["ignore", "pipe", "pipe"],
       });
 
