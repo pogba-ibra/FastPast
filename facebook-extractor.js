@@ -59,27 +59,38 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         let snortedAudio = null;
         let candidateStreams = [];
 
-        page.on('request', request => {
-            const reqUrl = request.url();
-            // User Request: Target HD streams (usually DASH or specific CDNs)
-            if (reqUrl.includes('fbcdn.net')) {
-                const isVideo = reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('cat=video');
-                const isAudio = reqUrl.includes('audio') || reqUrl.includes('.m4a') || reqUrl.includes('cat=audio');
+        // User Request: "Ultimate Fallback" Sniffer (fdownloader style)
+        // Intercept network responses to find confirmed video/audio stream URLs
+        page.on('response', async response => {
+            const resUrl = response.url();
+            const contentType = response.headers()['content-type'] || '';
+
+            // Focus on common video/audio patterns and CDN sources
+            if (resUrl.includes('.mp4') || resUrl.includes('dash') || resUrl.includes('fbcdn.net') || contentType.includes('video') || contentType.includes('audio')) {
+                const isVideo = resUrl.includes('video') || resUrl.includes('.mp4') || resUrl.includes('cat=video') || contentType.includes('video');
+                const isAudio = resUrl.includes('audio') || resUrl.includes('.m4a') || resUrl.includes('cat=audio') || contentType.includes('audio');
 
                 if (isVideo || isAudio) {
                     candidateStreams.push({
-                        url: reqUrl,
+                        url: resUrl,
                         type: isVideo ? 'video' : 'audio',
-                        isDash: reqUrl.includes('bytestart') || reqUrl.includes('.mpd')
+                        isDash: resUrl.includes('bytestart') || resUrl.includes('.mpd') || resUrl.includes('dash'),
+                        contentType: contentType
                     });
 
-                    // Prioritize DASH segments for HD
-                    if (isVideo && reqUrl.includes('bytestart')) snortedVideo = reqUrl;
-                    if (isAudio && (reqUrl.includes('bytestart') || reqUrl.includes('audio'))) snortedAudio = reqUrl;
+                    // Prioritize DASH segments for HD (often contains 'bytestart' or 'dash')
+                    if (isVideo && (resUrl.includes('bytestart') || resUrl.includes('dash'))) {
+                        snortedVideo = resUrl;
+                        console.log(`💎 [Sniffer] High-quality video stream captured: ${resUrl.substring(0, 80)}...`);
+                    }
+                    if (isAudio && (resUrl.includes('bytestart') || resUrl.includes('audio'))) {
+                        snortedAudio = resUrl;
+                        console.log(`💎 [Sniffer] Audio stream captured: ${resUrl.substring(0, 80)}...`);
+                    }
 
                     // Fallback for simple MP4/M4A if nothing better found yet
-                    if (!snortedVideo && isVideo) snortedVideo = reqUrl;
-                    if (!snortedAudio && isAudio) snortedAudio = reqUrl;
+                    if (!snortedVideo && isVideo) snortedVideo = resUrl;
+                    if (!snortedAudio && isAudio) snortedAudio = resUrl;
                 }
             }
         });
