@@ -68,36 +68,39 @@ async function resolveFacebookUrl(url) {
       if (response.request && response.request.res && response.request.res.responseUrl) {
         let finalUrl = response.request.res.responseUrl;
         console.log('Resolved (GET) to:', finalUrl);
-        // Optimization: Use mbasic.facebook.com (simplest version, most resilient to parsing errors)
+
+        // Save the original resolved URL (www/mobile) for metadata-rich processing (Playwright)
+        const originalResolvedUrl = finalUrl;
+
+        // Optimization: Use mbasic.facebook.com for yt-dlp compatibility
         if (finalUrl.includes('facebook.com')) {
           finalUrl = finalUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
-          // Fix: mbasic does not support /reel/ paths, convert to video.php?v=ID
           const reelMatch = finalUrl.match(/\/(?:reel|reels)\/(\d+)\/?/);
           if (reelMatch && reelMatch[1]) {
             finalUrl = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
           }
           console.log('Converted to mbasic URL:', finalUrl);
         }
-        return finalUrl;
+        return { normalizedUrl: finalUrl, originalUrl: originalResolvedUrl };
       }
-      // If resolution fails but we have a URL, check if we should convert original
+
+      // If resolution fails, fallback to converting original
       if (url.includes('facebook.com')) {
         let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
         const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
         if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-        return normalized;
+        return { normalizedUrl: normalized, originalUrl: url };
       }
-      return url;
+      return { normalizedUrl: url, originalUrl: url };
     } catch (error) {
       console.log('Failed to resolve URL:', error.message);
-      // Fallback: convert original if possible
       if (url.includes('facebook.com')) {
         let normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.)?facebook\.com/, 'https://mbasic.facebook.com');
         const reelMatch = normalized.match(/\/(?:reel|reels)\/(\d+)\/?/);
         if (reelMatch && reelMatch[1]) normalized = `https://mbasic.facebook.com/video.php?v=${reelMatch[1]}`;
-        return normalized;
+        return { normalizedUrl: normalized, originalUrl: url };
       }
-      return url;
+      return { normalizedUrl: url, originalUrl: url };
     }
   }
   // Basic mobile conversion for direct non-share links too
@@ -3272,7 +3275,9 @@ app.post("/get-qualities", async (req, res) => {
 
 
     // Resolve shortened Meta links
-    videoUrl = await resolveFacebookUrl(videoUrl);
+    const urls = await resolveFacebookUrl(videoUrl);
+    videoUrl = urls.normalizedUrl;
+    const playwrightUrl = urls.originalUrl;
 
     let freshCookiePath = null;
     let browserUA = null;
@@ -3295,8 +3300,8 @@ app.post("/get-qualities", async (req, res) => {
 
       for (const cookieFile of cookieFilesToTry) {
         try {
-          console.log(`📡 [Qualities] Attempting extraction with: ${path.basename(cookieFile)}`);
-          capturedExtractions = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']);
+          console.log(`📡 [Qualities] Attempting extraction with: ${path.basename(cookieFile)} tracking ${playwrightUrl}`);
+          capturedExtractions = await extractFacebookVideoUrl(playwrightUrl, cookieFile, req.headers['user-agent']);
 
           if (capturedExtractions && capturedExtractions.videoUrl) {
             if (capturedExtractions.freshCookiePath) freshCookiePath = capturedExtractions.freshCookiePath;
@@ -3591,21 +3596,34 @@ app.post("/get-qualities", async (req, res) => {
             stderr: stderrTrimmed.substring(0, 500),
           });
 
-          // User Request: Fail-Safe Fallback for Meta (FB/IG)
+          // User Request: Fail-Safe Fallback v2 for Meta (FB/IG)
           // If yt-dlp fails (Exit Code 1), and we have Playwright data, use it!
           const isMeta = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com");
-          if (code === 1 && isMeta && capturedExtractions && (capturedExtractions.videoUrl || capturedExtractions.thumbnail)) {
-            console.log("🛡️ [Qualities] yt-dlp failed (Exit 1). Triggering Playwright-only fallback.");
 
-            // Construct a mock videoInfo that processVideoInfo can handle
-            const mockVideoInfo = JSON.stringify({
-              title: capturedExtractions.title || "Meta Video",
-              thumbnail: capturedExtractions.thumbnail,
-              duration: 0,
-              formats: [] // processVideoInfo will use capturedExtractions for HD anyway
+          if (code === 1 && isMeta) {
+            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform.");
+            console.log("📊 [Diagnostic] capturedExtractions state:", {
+              hasVideo: !!(capturedExtractions && capturedExtractions.videoUrl),
+              hasThumb: !!(capturedExtractions && capturedExtractions.thumbnail),
+              hasTitle: !!(capturedExtractions && capturedExtractions.title),
+              urlDetected: videoUrl
             });
 
-            return processVideoInfo(mockVideoInfo, stderr);
+            if (capturedExtractions && (capturedExtractions.videoUrl || capturedExtractions.thumbnail)) {
+              console.log("✅ [Qualities Fallback V2] Recovering with Playwright data.");
+
+              // Construct a mock videoInfo that processVideoInfo can handle
+              const mockVideoInfo = JSON.stringify({
+                title: capturedExtractions.title || "Meta Video",
+                thumbnail: capturedExtractions.thumbnail,
+                duration: 0,
+                formats: [] // processVideoInfo will use capturedExtractions for HD anyway
+              });
+
+              return processVideoInfo(mockVideoInfo, stderr);
+            } else {
+              console.warn("❌ [Qualities Fallback V2] Fallback skipped: No valid Playwright data captured.");
+            }
           }
 
           if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {

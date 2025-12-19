@@ -57,40 +57,32 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         // Sniffer: Intercept network requests to find direct video/audio files
         let snortedVideo = null;
         let snortedAudio = null;
-        let candidateStreams = [];
+        let snortedThumb = null;
+        const candidateStreams = [];
 
-        // User Request: "Ultimate Fallback" Sniffer (fdownloader style)
-        // Intercept network responses to find confirmed video/audio stream URLs
-        page.on('response', async response => {
-            const resUrl = response.url();
+        page.on('response', async (response) => {
+            const url = response.url();
             const contentType = response.headers()['content-type'] || '';
 
-            // Focus on common video/audio patterns and CDN sources
-            if (resUrl.includes('.mp4') || resUrl.includes('dash') || resUrl.includes('fbcdn.net') || contentType.includes('video') || contentType.includes('audio')) {
-                const isVideo = resUrl.includes('video') || resUrl.includes('.mp4') || resUrl.includes('cat=video') || contentType.includes('video');
-                const isAudio = resUrl.includes('audio') || resUrl.includes('.m4a') || resUrl.includes('cat=audio') || contentType.includes('audio');
+            // 1. Sniff for Video/Audio streams
+            if (url.includes('fbcdn.net') && (url.includes('bytestart=') || url.includes('.mp4') || url.includes('.m4a') || url.includes('.mpd'))) {
+                const isVideo = contentType.includes('video') || url.includes('video') || (url.includes('bytestart=') && !url.includes('audio'));
+                const isAudio = contentType.includes('audio') || url.includes('audio') || (url.includes('bytestart=') && url.includes('audio'));
 
-                if (isVideo || isAudio) {
-                    candidateStreams.push({
-                        url: resUrl,
-                        type: isVideo ? 'video' : 'audio',
-                        isDash: resUrl.includes('bytestart') || resUrl.includes('.mpd') || resUrl.includes('dash'),
-                        contentType: contentType
-                    });
+                if (isVideo) {
+                    snortedVideo = url;
+                    candidateStreams.push({ url, type: 'video', contentType });
+                } else if (isAudio) {
+                    snortedAudio = url;
+                    candidateStreams.push({ url, type: 'audio', contentType });
+                }
+            }
 
-                    // Prioritize DASH segments for HD (often contains 'bytestart' or 'dash')
-                    if (isVideo && (resUrl.includes('bytestart') || resUrl.includes('dash'))) {
-                        snortedVideo = resUrl;
-                        console.log(`💎 [Sniffer] High-quality video stream captured: ${resUrl.substring(0, 80)}...`);
-                    }
-                    if (isAudio && (resUrl.includes('bytestart') || resUrl.includes('audio'))) {
-                        snortedAudio = resUrl;
-                        console.log(`💎 [Sniffer] Audio stream captured: ${resUrl.substring(0, 80)}...`);
-                    }
-
-                    // Fallback for simple MP4/M4A if nothing better found yet
-                    if (!snortedVideo && isVideo) snortedVideo = resUrl;
-                    if (!snortedAudio && isAudio) snortedAudio = resUrl;
+            // 2. Sniff for Thumbnail Images
+            if (url.includes('fbcdn.net') && contentType.includes('image') && (url.includes('/v/t') || url.includes('/p/'))) {
+                // Heuristic: Prefer larger images or those containing specific keywords
+                if (!snortedThumb || url.includes('cover') || url.includes('poster') || url.includes('_n.jpg')) {
+                    snortedThumb = url;
                 }
             }
         });
@@ -248,7 +240,10 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         const userAgent = await page.evaluate(() => navigator.userAgent);
         await browser.close();
 
-        return { videoUrl, audioUrl, title, thumbnail, freshCookiePath, userAgent, candidateStreams };
+        // Final thumbnail decision: prefer network-snorted cover if DOM extraction returned nothing or low quality
+        const finalThumbnail = snortedThumb || thumbnail;
+
+        return { videoUrl, audioUrl, title, thumbnail: finalThumbnail, freshCookiePath, userAgent, candidateStreams };
 
     } catch (error) {
         if (browser) await browser.close().catch(() => { });
