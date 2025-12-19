@@ -210,8 +210,9 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
                 // 4. Search for high-quality fbcdn images in DOM
                 try {
-                    const imgs = Array.from(document.querySelectorAll('img[src*="fbcdn.net"]'));
-                    for (const img of imgs) {
+                    // Try to find image within Reel or Video containers first
+                    const reelImgs = Array.from(document.querySelectorAll('div[aria-label="Reel"] img[src*="fbcdn.net"], img[src*="fbcdn.net"]'));
+                    for (const img of reelImgs) {
                         // Usually covers are larger or have specific classes, but we can check dimensions
                         if (img.width > 200 || img.height > 200) {
                             results.push({ url: img.src, priority: 5 });

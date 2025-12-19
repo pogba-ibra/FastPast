@@ -3591,6 +3591,23 @@ app.post("/get-qualities", async (req, res) => {
             stderr: stderrTrimmed.substring(0, 500),
           });
 
+          // User Request: Fail-Safe Fallback for Meta (FB/IG)
+          // If yt-dlp fails (Exit Code 1), and we have Playwright data, use it!
+          const isMeta = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com");
+          if (code === 1 && isMeta && capturedExtractions && (capturedExtractions.videoUrl || capturedExtractions.thumbnail)) {
+            console.log("🛡️ [Qualities] yt-dlp failed (Exit 1). Triggering Playwright-only fallback.");
+
+            // Construct a mock videoInfo that processVideoInfo can handle
+            const mockVideoInfo = JSON.stringify({
+              title: capturedExtractions.title || "Meta Video",
+              thumbnail: capturedExtractions.thumbnail,
+              duration: 0,
+              formats: [] // processVideoInfo will use capturedExtractions for HD anyway
+            });
+
+            return processVideoInfo(mockVideoInfo, stderr);
+          }
+
           if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
             return res.status(403).json({ error: "This video is private. Please close Chrome to allow cookie access for private videos." });
           }
