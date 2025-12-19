@@ -125,6 +125,34 @@ async function resolveFacebookUrl(url) {
   }
   return { normalizedUrl: url, originalUrl: url };
 }
+/**
+ * Lightweight Meta Metadata Scraper (OpenGraph)
+ */
+async function fetchMetaBrowserLess(url, userAgent) {
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      timeout: 10000
+    });
+
+    const html = response.data;
+    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<title>([^<]+)<\/title>/i);
+    const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/i) || html.match(/"thumbnailUrl":"([^"]+)"/i);
+
+    return {
+      title: titleMatch ? titleMatch[1].replace(/&amp;/g, '&') : 'Meta Video',
+      thumbnail: thumbMatch ? thumbMatch[1].replace(/\\/g, '') : null
+    };
+  } catch (error) {
+    console.error('Lightweight scrap failed:', error.message);
+    return { title: 'Meta Video', thumbnail: null };
+  }
+}
+
 // Helper to verify if a video file has both video and audio streams using ffprobe
 async function verifyStreamCompleteness(filePath) {
   return new Promise((resolve) => {
@@ -3290,44 +3318,15 @@ app.post("/get-qualities", async (req, res) => {
     // Resolve shortened Meta links
     const urls = await resolveFacebookUrl(videoUrl);
     videoUrl = urls.normalizedUrl;
-    const playwrightUrl = urls.originalUrl;
+    // playwrightUrl removed as it's not needed for yt-dlp info fetching
 
     let freshCookiePath = null;
     let browserUA = null;
 
     let capturedExtractions = null;
 
-    // Aggressive Playwright Discovery for Meta to ensure HD streams
-    if (videoUrl?.includes('facebook.com') || videoUrl?.includes('fb.watch') || videoUrl?.includes('instagram.com')) {
-      const fbCookieDir = path.join(__dirname, 'downloads');
-      const fbCookieV1 = path.join(fbCookieDir, 'www.facebook.com_cookies v1.txt');
-      const fbCookieV2 = path.join(fbCookieDir, 'www.facebook.com_cookies v2.txt');
-      const fbCookieDefault = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-
-      const cookieFilesToTry = [];
-      if (fs.existsSync(fbCookieV1)) cookieFilesToTry.push(fbCookieV1);
-      if (fs.existsSync(fbCookieV2)) cookieFilesToTry.push(fbCookieV2);
-      if (fs.existsSync(fbCookieDefault) && !cookieFilesToTry.includes(fbCookieDefault)) cookieFilesToTry.push(fbCookieDefault);
-
-      console.log(`🌐 [Qualities] Launching aggressive Playwright discovery for Meta. Found ${cookieFilesToTry.length} cookie candidates.`);
-
-      for (const cookieFile of cookieFilesToTry) {
-        try {
-          console.log(`📡 [Qualities] Attempting extraction with: ${path.basename(cookieFile)} tracking ${playwrightUrl}`);
-          capturedExtractions = await extractFacebookVideoUrl(playwrightUrl, cookieFile, req.headers['user-agent']);
-
-          if (capturedExtractions && capturedExtractions.videoUrl) {
-            if (capturedExtractions.freshCookiePath) freshCookiePath = capturedExtractions.freshCookiePath;
-            if (capturedExtractions.userAgent) browserUA = capturedExtractions.userAgent;
-            console.log(`✅ [Qualities] Browser discovery successful with: ${path.basename(cookieFile)}`);
-            break; // Stop on first success
-          }
-        } catch (err) {
-          console.warn(`⚠️ [Qualities] Attempt failed with ${path.basename(cookieFile)}: ${err.message}`);
-          // Continue to next cookie file
-        }
-      }
-    }
+    // Playwright discovery removed from /get-qualities per User Request
+    // It will be used as a fallback during the download phase instead
 
     if (videoUrl?.includes("threads.net") || videoUrl?.includes("threads.com")) {
       const threadsData = await getThreadsVideoData(videoUrl, req.headers['user-agent']);
@@ -3587,7 +3586,7 @@ app.post("/get-qualities", async (req, res) => {
 
       let responseSent = false;
 
-      ytDlpProcess.on("close", (code) => {
+      ytDlpProcess.on("close", async (code) => {
         if (responseSent) return;
         responseSent = true;
 
@@ -3610,32 +3609,28 @@ app.post("/get-qualities", async (req, res) => {
           });
 
           // User Request: Fail-Safe Fallback v2 for Meta (FB/IG)
-          // If yt-dlp fails (Exit Code 1), and we have Playwright data, use it!
+          // If yt-dlp fails (Exit Code 1) on Meta, attempt lightweight axios scrap as fallback
           const isMeta = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com");
 
           if (code === 1 && isMeta) {
-            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform.");
-            console.log("📊 [Diagnostic] capturedExtractions state:", {
-              hasVideo: !!(capturedExtractions && capturedExtractions.videoUrl),
-              hasThumb: !!(capturedExtractions && capturedExtractions.thumbnail),
-              hasTitle: !!(capturedExtractions && capturedExtractions.title),
-              urlDetected: videoUrl
-            });
+            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform. Attempting lightweight scrap...");
 
-            if (capturedExtractions && (capturedExtractions.videoUrl || capturedExtractions.thumbnail)) {
-              console.log("✅ [Qualities Fallback V2] Recovering with Playwright data.");
+            try {
+              const metaData = await fetchMetaBrowserLess(videoUrl, req.headers['user-agent']);
+              console.log("✅ [Qualities Fallback V2] Recovered with lightweight metadata.");
 
-              // Construct a mock videoInfo that processVideoInfo can handle
               const mockVideoInfo = JSON.stringify({
-                title: capturedExtractions.title || "Meta Video",
-                thumbnail: capturedExtractions.thumbnail,
+                title: metaData.title || "Meta Video",
+                thumbnail: metaData.thumbnail,
                 duration: 0,
-                formats: [] // processVideoInfo will use capturedExtractions for HD anyway
+                formats: [
+                  { format_id: "direct_hd", ext: "mp4", resolution: "unknown", vcodec: "h264", acodec: "aac", filesize: 0, url: videoUrl }
+                ]
               });
 
               return processVideoInfo(mockVideoInfo, stderr);
-            } else {
-              console.warn("❌ [Qualities Fallback V2] Fallback skipped: No valid Playwright data captured.");
+            } catch (scrapErr) {
+              console.warn("❌ [Qualities Fallback V2] Fallback failed:", scrapErr.message);
             }
           }
 
@@ -3708,26 +3703,30 @@ app.post("/download", async (req, res) => {
   if (url) {
     url = await resolveFacebookUrl(url);
 
-    // Use headless browser for Facebook video extraction (bypasses detection)
+    // Use headless browser for Facebook video extraction if yt-dlp is likely to fail or if Direct HD requested
     if (url.includes('facebook.com') || url.includes('fb.watch')) {
-      try {
-        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-        console.log('🌐 Using Playwright browser extraction for Facebook...');
-        const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
-        console.log(`✅ Browser extracted: ${title}`);
+      const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
 
-        // Use extracted direct video URL instead of page URL (if available)
-        if (videoUrl) {
-          url = videoUrl;
+      if (isDirectHD) {
+        try {
+          const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+          console.log('🌐 [Download] User requested Direct HD. Launching Playwright browser extraction for Facebook...');
+          const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+          console.log(`✅ [Download] Browser extracted: ${title}`);
+
+          // Use extracted direct video URL instead of page URL (if available)
+          if (videoUrl) {
+            url = videoUrl;
+          }
+
+          // Store title, fresh cookies, and UA for later use
+          req.body._browserExtractedTitle = title;
+          req.body._freshCookiePath = freshCookiePath;
+          req.body._userAgent = userAgent;
+        } catch (error) {
+          console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
+          // Continue with original URL - yt-dlp will try
         }
-
-        // Store title, fresh cookies, and UA for later use
-        req.body._browserExtractedTitle = title;
-        req.body._freshCookiePath = freshCookiePath;
-        req.body._userAgent = userAgent;
-      } catch (error) {
-        console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
-        // Continue with original URL - yt-dlp will try
       }
     }
   }

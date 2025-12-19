@@ -1,4 +1,4 @@
-const { chromium } = require('playwright');
+// Playwright is now lazy-loaded inside extractFacebookVideoUrl to avoid startup crashes if not installed
 const fs = require('fs');
 
 /**
@@ -10,6 +10,15 @@ const fs = require('fs');
  */
 async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
     let browser;
+    let chromium;
+    try {
+        const playwright = require('playwright');
+        chromium = playwright.chromium;
+    } catch (e) {
+        console.error('❌ Playwright module not found. Please run: npm install playwright');
+        throw new Error("Playwright not installed: " + (e.message || "Unknown error"));
+    }
+
     try {
         console.log('📱 Launching stealth browser for Facebook extraction...');
 
