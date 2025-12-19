@@ -51,30 +51,34 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         let snortedUrl = null;
         page.on('request', request => {
             const reqUrl = request.url();
-            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4'))) {
+            // User Request Dec 2025: Target HD streams (usually DASH or specific CDNs)
+            if (reqUrl.includes('fbcdn.net') && (reqUrl.includes('video') || reqUrl.includes('.mp4') || reqUrl.includes('bytestart'))) {
+                // If it's a bytestart/range request, it's likely a high-quality DASH segment
+                if (reqUrl.includes('bytestart')) {
+                    console.log(`🎬 Potential HD Stream detected: ${reqUrl.substring(0, 50)}...`);
+                }
                 snortedUrl = reqUrl;
             }
         });
 
-        // Fix URL Formatting: Convert /reel/ to /video.php?v= for mbasic stability
-        let mbasicUrl = url;
-        const idMatch = url.match(/(?:videos\/|video\.php\?v=|reel\/)(\d+)/);
-        if (idMatch && idMatch[1]) {
-            mbasicUrl = `https://mbasic.facebook.com/video.php?v=${idMatch[1]}`;
-        } else {
-            mbasicUrl = url
-                .replace('www.facebook.com', 'mbasic.facebook.com')
-                .replace('m.facebook.com', 'mbasic.facebook.com');
+        // Use FULL site for better extraction and HD support
+        let fullUrl = url;
+        if (url.includes('facebook.com/share') || url.includes('fb.watch')) {
+            // These should be resolved by server.js first, but as a guard:
+            console.log('🔗 Shortened URL detected in extractor, relying on redirect...');
         }
 
-        console.log(`🔍 Navigating to: ${mbasicUrl}`);
+        // Ensure we are on www or m (not mbasic) for better DOM/Features
+        fullUrl = url.replace('mbasic.facebook.com', 'www.facebook.com');
+
+        console.log(`🔍 Navigating to FULL site: ${fullUrl}`);
 
         try {
-            // Navigate and wait for commit (Faster than networkidle)
-            await page.goto(mbasicUrl, { waitUntil: 'commit', timeout: 15000 });
+            // Navigate and wait for reasonable load
+            await page.goto(fullUrl, { waitUntil: 'load', timeout: 30000 });
         } catch (navError) {
             console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
-            await page.screenshot({ path: 'debug_nav_error.png' });
+            // Fallback: try to continue anyway as sniffer might have worked
         }
 
         // 1. Check for Login Wall immediately (Cookie Verification)
@@ -85,24 +89,29 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             throw new Error("Cookies Expired or IP Blocked");
         }
 
-        // 2. Search for the link directly in HTML without waiting for selectors (FDown Method)
-        let videoUrl = null;
+        // 2. Playback Simulation: Trigger HD streams by interacting with the video
+        console.log('👇 Simulating playback to trigger HD streams...');
         try {
-            const html = await page.content();
-            const match = html.match(/href="([^"]+video_redirect[^"]+)"/);
-            if (match) {
-                videoUrl = match[1].replace(/&amp;/g, '&');
-                console.log(`✅ Found direct link via Regex: ${videoUrl.substring(0, 100)}...`);
+            // Wait for any video element and click it
+            const videoElement = await page.$('video');
+            if (videoElement) {
+                await videoElement.click();
+            } else {
+                // Try clicking common play button areas
+                await page.click('div[role="button"][aria-label*="Play"]', { timeout: 2000 }).catch(() => { });
             }
-        } catch (regexErr) {
-            console.log('⚠️ Regex extraction failed:', regexErr.message);
+            // Wait for network activity to settle/streams to start
+            await page.waitForTimeout(5000);
+        } catch (simError) {
+            console.log('⚠️ Playback simulation interaction failed:', simError.message);
         }
 
-        // 3. Fallback to DOM if regex failed
+        // 3. Robust URL Selection
+        let videoUrl = snortedUrl;
+
+        // Fallback: DOM Search
         if (!videoUrl) {
             videoUrl = await page.evaluate(() => {
-                const anchor = document.querySelector('a[href*="video_redirect"]');
-                if (anchor) return anchor.href;
                 const video = document.querySelector('video');
                 return video ? video.src : null;
             });
@@ -111,28 +120,13 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         // Extract title
         let title = 'Unknown Title';
         try {
-            const titleSelectors = ['h3', 'h1', 'div[role="article"] strong', 'p'];
-            for (const selector of titleSelectors) {
-                const element = await page.$(selector);
-                if (element) {
-                    const text = await element.innerText();
-                    if (text && text.trim().length > 0 && text.length < 100) {
-                        title = text.trim();
-                        break;
-                    }
-                }
+            title = await page.title();
+            if (!title || title === 'Facebook') {
+                const h1 = await page.$('h1');
+                if (h1) title = await h1.innerText();
             }
-            if (title === 'Unknown Title') title = await page.title();
         } catch {
-            title = await page.title().catch(() => 'Unknown Title');
-        }
-
-        // Force interaction if still no URL (to trigger snortedUrl)
-        if (!videoUrl) {
-            console.log('👆 Triggering sniffer...');
-            await page.click('div[role="button"], [aria-label*="Play"]', { force: true }).catch(() => { });
-            await page.waitForTimeout(5000);
-            if (snortedUrl) videoUrl = snortedUrl;
+            title = 'Facebook Video';
         }
 
         // Export fresh cookies
@@ -144,11 +138,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         const userAgent = await page.evaluate(() => navigator.userAgent);
         await browser.close();
 
-        if (videoUrl) {
-            return { videoUrl, title, freshCookiePath, userAgent };
-        } else {
-            return { videoUrl: null, title, freshCookiePath, userAgent };
-        }
+        return { videoUrl, title, freshCookiePath, userAgent };
 
     } catch (error) {
         if (browser) await browser.close().catch(() => { });

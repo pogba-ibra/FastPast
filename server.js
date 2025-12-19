@@ -187,14 +187,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
 
   // 6. Cookies Authentication
   // Priority: freshCookiePath > domain-specific cookies.txt
-  if (freshCookiePath && !url.includes("facebook.com") && !url.includes("fb.watch")) {
+  if (freshCookiePath) {
     console.log(`🍪 Using fresh cookies: ${freshCookiePath}`);
     pushUnique("--cookies", freshCookiePath);
   } else {
-    if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      console.log(`🚫 Skipping cookies for Facebook to test public access (User Request Dec 2025)`);
-    }
-
     let targetCookieFile = 'cookies.txt';
     if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
     else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
@@ -206,9 +202,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
     const cookiesPath = path.resolve(__dirname, targetCookieFile);
-    const isFacebook = url.includes("facebook.com") || url.includes("fb.watch");
-
-    if (fs.existsSync(cookiesPath) && !isFacebook) {
+    if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
 
       // 7. Rate Limiting for YouTube (Avoid IP blocks)
