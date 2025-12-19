@@ -113,10 +113,16 @@ async function resolveFacebookUrl(url) {
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
   const command = getPythonCommand();
-  // Always ensure we run as a module to leverage pip-installed packages and curl-cffi
-  const finalArgs = ["-m", "yt_dlp", ...args];
 
-  logger.info("Spawning yt-dlp module", { command, args: finalArgs.filter(a => !a.includes('cookie')) });
+  // Robust Guard: Ensure -m yt_dlp is prepended EXACTLY once
+  // We check if the first two args are already -m and yt_dlp
+  let finalArgs = [...args];
+  if (!(args[0] === "-m" && args[1] === "yt_dlp")) {
+    finalArgs = ["-m", "yt_dlp", ...args];
+  }
+
+  // Log usage (strip cookies for security)
+  logger.info("Spawning yt-dlp module", { command, args: finalArgs.filter(a => typeof a === 'string' && !a.includes('cookie')) });
 
   return spawn(command, finalArgs, options);
 }
@@ -307,7 +313,7 @@ function tryParseJson(stdout) {
 function getMetaFormatSelector(qualityLabel) {
   // Extract numeric height from labels like "720p", "1080p HD", or "Auto"
   const heightMatch = qualityLabel && typeof qualityLabel === 'string' ? qualityLabel.match(/(\d+)/) : null;
-  const height = heightMatch ? heightMatch[1] : '1080'; // User Request Dec 2025: Default to 1080 for HD
+  const height = heightMatch ? heightMatch[1] : '720';
 
   // Template to force extensions (mp4+m4a) to avoid transcoding on Fly.io
   // User Request Dec 2025: Use generic but high-quality string for compatibility
@@ -724,7 +730,7 @@ const downloadQueue = new Queue(function (task, cb) {
   // Use correct command for OS
   // Use hybrid helper
   logger.info("Spawning batch yt-dlp", { args });
-  const ytDlp = spawnYtDlp(args);
+  const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
   let stderr = "";
 
@@ -2856,7 +2862,7 @@ app.get("/video-info", async (req, res) => {
     const command = getPythonCommand();
     logger.info("Spawning info fetch", { command, url });
 
-    const infoArgs = ["-J"];
+    const infoArgs = ["-m", "yt_dlp", "-J"];
     // Extract User-Agent from request if possible (for debug/test endpoints we might not have it)
     const requestUA = req ? req.headers['user-agent'] : null;
     configureAntiBlockingArgs(infoArgs, url, requestUA); // Apply global anti-blocking (UA, IPv4)
@@ -3135,187 +3141,177 @@ app.post("/get-qualities", async (req, res) => {
 
     // Build yt-dlp args for getting video info (single call with duration)
     let ytDlpInfoArgs = [
-      // "-m", "yt_dlp", // Removed to prevent duplication in executeFetch
       "--print-json",
       "--no-download",
       "--no-playlist",
       "--no-check-certificate",
-      // "--ffmpeg-location",
-      // ffmpeg,
     ];
 
-    // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
-    configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl);
-
-    // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
-    // or if they are supplemental referring headers
-    if (videoUrl.includes("shorts")) {
-      ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
-    }
-
-    if (videoUrl.includes("instagram.com")) {
-      ytDlpInfoArgs.push("--add-header", "Referer:https://www.instagram.com/");
-    }
-
-
-    // Add Vimeo-specific handling
-    if (videoUrl.includes("vimeo.com")) {
-      ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-      // ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
-    }
-
-    // Add VK-specific handling (use cookies for private/wall posts)
-    // if (videoUrl.includes("vk.com") || videoUrl.includes("vk.ru")) {
-    //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
-    // }
-
-    // Use request-synced User-Agent for all platforms
-    ytDlpInfoArgs.push("--user-agent", req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
-
-    ytDlpInfoArgs.push(videoUrl);
-
-    // Helper to process valid JSON output
-    const processVideoInfo = async (jsonString, stderrString) => {
-      try {
-        const videoInfo = JSON.parse(jsonString);
-
-        let qualities = [];
-
-        if (format === "mp4") {
-          const videoFormats = Array.isArray(videoInfo.formats)
-            ? videoInfo.formats
-            : [];
-
-          logger.info(
-            `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
-          );
-
-          qualities = selectVideoQualities(videoFormats);
-
-          if (qualities.length === 0) {
-            qualities = [
-              buildFallbackQuality(720),
-              buildFallbackQuality(1080),
-              buildFallbackQuality(1440),
-              buildFallbackQuality(2160),
-            ];
-          }
-
-          logger.info(`Selected formats for ${videoUrl}`, {
-            selections: qualities.map((q) => ({
-              height: q.height,
-              selector: q.value,
-              hasAudio: q.hasAudio,
-            })),
-          });
-        } else if (format === "mp3") {
-          // For MP3, return standard audio qualities
-          qualities.push(
-            { value: "128kbps", text: "128 kbps (Standard Quality)" },
-            { value: "192kbps", text: "192 kbps (High Quality)" },
-            { value: "256kbps", text: "256 kbps (Very High Quality)" },
-            { value: "320kbps", text: "320 kbps (Lossless Quality)" }
-          );
-        }
-
-        // Special handling for Instagram and Threads thumbnails
-        let finalThumbnail = videoInfo.thumbnail;
-
-        // Fallback to thumbnails array if top-level thumbnail is missing
-        if (!finalThumbnail && videoInfo.thumbnails && videoInfo.thumbnails.length > 0) {
-          finalThumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
-        }
-
-        if (videoUrl.includes("instagram.com") && !finalThumbnail) {
-          try {
-            // eslint-disable-next-line no-useless-escape
-            const instagramMatch = videoUrl.match(/\/(p|reel)\/([^\/]+)/);
-            if (instagramMatch) {
-              const postId = instagramMatch[2];
-              finalThumbnail = `https://www.instagram.com/p/${postId}/media/?size=l`;
-            }
-          } catch (e) {
-            logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
-          }
-        }
-
-        // List of domains where yt-dlp thumbnails are often broken (403/Expires) or missing
-        // For these, we PREFER the metadata scraped thumbnail if available.
-        const UNRELIABLE_THUMB_DOMAINS = [
-          "instagram.com",
-          "facebook.com",
-          "fb.watch",
-          "threads.net",
-          "reddit.com",
-          "pinterest.com",
-          "odysee.com",
-          "youtube.com/shorts"
-        ];
-
-        const isUnreliable = UNRELIABLE_THUMB_DOMAINS.some(d => videoUrl.includes(d));
-
-        // Generic Metadata Fallback for all platforms if still no thumbnail OR if domain is unreliable
-        if (!finalThumbnail || isUnreliable) {
-          logger.info("Attempting robust metadata thumbnail extraction", { url: videoUrl, forced: isUnreliable });
-          const metadataThumb = await fetchPageMetadata(videoUrl, req.headers['user-agent']);
-          // If we found a metadata thumb, use it. 
-          // Logic: If original was missing, use new. If original existed but is unreliable, overwrite it.
-          if (metadataThumb) {
-            finalThumbnail = metadataThumb;
-            logger.info("Overwrote/Set thumbnail from metadata", { url: videoUrl, thumbnail: finalThumbnail });
-          }
-        }
-
-        logger.info("Qualities thumbnail extracted", {
-          url: videoUrl,
-          thumbnail: finalThumbnail || "null"
-        });
-
-        const result = {
-          qualities,
-          thumbnail: finalThumbnail,
-          title: videoInfo.title,
-          duration: videoInfo.duration,
-        };
-
-        if (videoUrl.includes("instagram.com")) {
-          logger.info("Instagram video info", {
-            url: videoUrl,
-            finalThumbnail: finalThumbnail,
-            title: videoInfo.title,
-          });
-        }
-
-        logger.info("Video qualities fetched successfully", {
-          url: videoUrl,
-          format,
-          qualitiesCount: qualities.length,
-        });
-
-        res.json(result);
-      } catch (parseError) {
-        const stderrTrimmed = stderrString ? stderrString.trim() : "";
-        logger.error("JSON parse error in qualities", {
-          url: videoUrl,
-          error: parseError.message,
-          stdoutPreview: jsonString.substring(0, 100),
-          stderr: stderrTrimmed
-        });
-
-        if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
-          return res.status(403).json({ error: "This video is private or age-restricted. Please sign in to VK in Chrome and try again." });
-        }
-        res.status(500).json({ error: "Failed to parse video information." });
-      }
-    };
-
-    // Helper to execute yt-dlp with retry capability
     const executeFetch = (args, isRetry = false) => {
-      const baseProcessArgs = ["-m", "yt_dlp", ...args];
+      // spawnYtDlp now handles the -m yt_dlp prefix automatically and robustly
+      const baseProcessArgs = [...args];
 
-      // Spawn unified process
-      // Spawn unified process
-      // const command = getPythonCommand(); // Handled by spawnYtDlp
+      // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
+      args.push(videoUrl);
+
+      // Use unified anti-blocking logic (Android UA, Proxy, IPv4)
+      configureAntiBlockingArgs(ytDlpInfoArgs, videoUrl);
+
+      // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
+      // or if they are supplemental referring headers
+      if (videoUrl.includes("shorts")) {
+        ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
+      }
+
+      if (videoUrl.includes("instagram.com")) {
+        ytDlpInfoArgs.push("--add-header", "Referer:https://www.instagram.com/");
+      }
+
+      // Add Vimeo-specific handling
+      if (videoUrl.includes("vimeo.com")) {
+        ytDlpInfoArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
+      }
+
+      // Use request-synced User-Agent for all platforms
+      ytDlpInfoArgs.push("--user-agent", req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36");
+
+      ytDlpInfoArgs.push(videoUrl);
+
+      // Helper to process valid JSON output
+      const processVideoInfo = async (jsonString, stderrString) => {
+        try {
+          const videoInfo = JSON.parse(jsonString);
+
+          let qualities = [];
+
+          if (format === "mp4") {
+            const videoFormats = Array.isArray(videoInfo.formats)
+              ? videoInfo.formats
+              : [];
+
+            logger.info(
+              `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
+            );
+
+            qualities = selectVideoQualities(videoFormats);
+
+            if (qualities.length === 0) {
+              qualities = [
+                buildFallbackQuality(720),
+                buildFallbackQuality(1080),
+                buildFallbackQuality(1440),
+                buildFallbackQuality(2160),
+              ];
+            }
+
+            logger.info(`Selected formats for ${videoUrl}`, {
+              selections: qualities.map((q) => ({
+                height: q.height,
+                selector: q.value,
+                hasAudio: q.hasAudio,
+              })),
+            });
+          } else if (format === "mp3") {
+            // For MP3, return standard audio qualities
+            qualities.push(
+              { value: "128kbps", text: "128 kbps (Standard Quality)" },
+              { value: "192kbps", text: "192 kbps (High Quality)" },
+              { value: "256kbps", text: "256 kbps (Very High Quality)" },
+              { value: "320kbps", text: "320 kbps (Lossless Quality)" }
+            );
+          }
+
+          // Special handling for Instagram and Threads thumbnails
+          let finalThumbnail = videoInfo.thumbnail;
+
+          // Fallback to thumbnails array if top-level thumbnail is missing
+          if (!finalThumbnail && videoInfo.thumbnails && videoInfo.thumbnails.length > 0) {
+            finalThumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
+          }
+
+          if (videoUrl.includes("instagram.com") && !finalThumbnail) {
+            try {
+              // eslint-disable-next-line no-useless-escape
+              const instagramMatch = videoUrl.match(/\/(p|reel)\/([^\/]+)/);
+              if (instagramMatch) {
+                const postId = instagramMatch[2];
+                finalThumbnail = `https://www.instagram.com/p/${postId}/media/?size=l`;
+              }
+            } catch (e) {
+              logger.warn("Failed to construct Instagram thumbnail URL", { error: e.message });
+            }
+          }
+
+          // List of domains where yt-dlp thumbnails are often broken (403/Expires) or missing
+          // For these, we PREFER the metadata scraped thumbnail if available.
+          const UNRELIABLE_THUMB_DOMAINS = [
+            "instagram.com",
+            "facebook.com",
+            "fb.watch",
+            "threads.net",
+            "reddit.com",
+            "pinterest.com",
+            "odysee.com",
+            "youtube.com/shorts"
+          ];
+
+          const isUnreliable = UNRELIABLE_THUMB_DOMAINS.some(d => videoUrl.includes(d));
+
+          // Generic Metadata Fallback for all platforms if still no thumbnail OR if domain is unreliable
+          if (!finalThumbnail || isUnreliable) {
+            logger.info("Attempting robust metadata thumbnail extraction", { url: videoUrl, forced: isUnreliable });
+            const metadataThumb = await fetchPageMetadata(videoUrl, req.headers['user-agent']);
+            // If we found a metadata thumb, use it. 
+            // Logic: If original was missing, use new. If original existed but is unreliable, overwrite it.
+            if (metadataThumb) {
+              finalThumbnail = metadataThumb;
+              logger.info("Overwrote/Set thumbnail from metadata", { url: videoUrl, thumbnail: finalThumbnail });
+            }
+          }
+
+          logger.info("Qualities thumbnail extracted", {
+            url: videoUrl,
+            thumbnail: finalThumbnail || "null"
+          });
+
+          const result = {
+            qualities,
+            thumbnail: finalThumbnail,
+            title: videoInfo.title,
+            duration: videoInfo.duration,
+          };
+
+          if (videoUrl.includes("instagram.com")) {
+            logger.info("Instagram video info", {
+              url: videoUrl,
+              finalThumbnail: finalThumbnail,
+              title: videoInfo.title,
+            });
+          }
+
+          logger.info("Video qualities fetched successfully", {
+            url: videoUrl,
+            format,
+            qualitiesCount: qualities.length,
+          });
+
+          res.json(result);
+        } catch (parseError) {
+          const stderrTrimmed = stderrString ? stderrString.trim() : "";
+          logger.error("JSON parse error in qualities", {
+            url: videoUrl,
+            error: parseError.message,
+            stdoutPreview: jsonString.substring(0, 100),
+            stderr: stderrTrimmed
+          });
+
+          if (stderrTrimmed.includes("Sign in") || stderrTrimmed.includes("confirm your age") || stderrTrimmed.includes("Private video")) {
+            return res.status(403).json({ error: "This video is private or age-restricted. Please sign in to VK in Chrome and try again." });
+          }
+          res.status(500).json({ error: "Failed to parse video information." });
+        }
+      };
+
       logger.info("Spawning executeFetch", { args: baseProcessArgs });
       const ytDlpProcess = spawnYtDlp(baseProcessArgs, {
         stdio: ["pipe", "pipe", "pipe"],
@@ -3876,7 +3872,7 @@ app.post("/download", async (req, res) => {
 
         // Special handling for Facebook/Instagram which often have separate streams
         if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          const fbFormat = "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best";
+          const fbFormat = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"; // User Request Dec 2025: Robust generic selector
 
           formatArgs = [
             "-f",
