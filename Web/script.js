@@ -1728,11 +1728,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Store available qualities globally
-    window.availableQualities = {
-      mp4: mp4Data.qualities,
-      mp3: mp3Data.qualities,
-    };
-    window.videoDuration = mp4Data.duration || 0;
+  window.availableQualities = {
+    mp4: mp4Data.qualities,
+    mp3: mp3Data.qualities,
+  };
+  // User Request Dec 2025: Parse formatted duration string to seconds to avoid NaN in slider
+  window.videoDuration = parseTime(mp4Data.duration || "0");
 
     // Do not auto-select format, let user choose
     populateQualityOptions();
@@ -2018,21 +2019,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Function to parse MM:SS or seconds to seconds
+  // Function to parse HH:MM:SS, MM:SS or seconds to numeric seconds
   function parseTime(timeStr) {
-    if (!timeStr) return 0;
-    // Check if it has a colon
-    if (timeStr.includes(":")) {
-      const parts = timeStr.split(":");
-      const min = parseInt(parts[0]) || 0;
-      const sec = parseInt(parts[1]) || 0;
-      return min * 60 + sec;
-    } else {
-      // Must be just seconds? Or treat as minutes? 
-      // Usually users might type "90" for 90 seconds. 
-      // Let's assume raw number is seconds.
-      return parseInt(timeStr) || 0;
+    if (!timeStr || typeof timeStr !== "string") {
+      const num = parseFloat(timeStr);
+      return isNaN(num) ? 0 : num;
     }
+
+    const cleanStr = timeStr.trim();
+    if (!cleanStr.includes(":")) {
+      return parseFloat(cleanStr) || 0;
+    }
+
+    const parts = cleanStr.split(":").map(p => parseFloat(p) || 0);
+    if (parts.length === 3) {
+      // HH:MM:SS
+      return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      // MM:SS
+      return parts[0] * 60 + parts[1];
+    }
+    return parts[0] || 0;
   }
 
   // Function to format seconds to MM:SS
