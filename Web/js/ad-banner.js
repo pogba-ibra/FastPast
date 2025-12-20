@@ -20,6 +20,18 @@
         'params': {}
     };
 
+    // Set atOptions globally before ad scripts load
+    // The ad scripts will read from window.atOptions
+    const desktopBanner = document.getElementById('desktop-banner');
+    const mobileBanner = document.getElementById('mobile-banner');
+
+    if (desktopBanner) {
+        window.atOptions = window.atOptions_desktop;
+    }
+    if (mobileBanner) {
+        if (!window.atOptions) window.atOptions = window.atOptions_mobile;
+    }
+
     // Sticky banner with footer detection
     function initStickyBanner() {
         const banner = document.getElementById('sticky-banner-ad');

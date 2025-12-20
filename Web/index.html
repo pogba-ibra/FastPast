@@ -200,8 +200,8 @@
                         <div id="video-container" style="position: relative;">
                             <iframe id="video-player" src="" frameborder="0" allowfullscreen loading="lazy"
                                 allow="autoplay; encrypted-media; picture-in-picture" style="display: none;"></iframe>
-                            <img id="video-thumbnail" src="" alt="Video Thumbnail" style="display: none;" loading="lazy"
-                                onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZmZmIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9IiMwMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBUaHVtYm5haWw8L3RleHQ+PC9zdmc+';">
+                            <img id="video-thumbnail" src="" alt="Video Thumbnail" style="display: none;"
+                                loading="lazy">
                             <div class="loading-overlay" id="video-loading-overlay" style="display: none;">
                                 <div class="spinner"></div>
                                 <div class="loading-text">Loading video...</div>
@@ -989,8 +989,10 @@
     </button>
     <script src="js/scroll-animations.js"></script>
 
-    <!-- Real-time Session Handling -->
     <script src="/socket.io/socket.io.js"></script>
+    <script src="js/session-handler.js"></script>
+    <script src="js/morphing-cards.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize Socket.IO
@@ -1016,32 +1018,7 @@
             });
         });
     </script>
-    <script>
-        // Magical Morphing Cards Animation
-        document.addEventListener('DOMContentLoaded', function () {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const cards = entry.target.querySelectorAll('.morphing-card');
-                        cards.forEach((card, index) => {
-                            const delay = card.dataset.delay || index * 200;
-                            setTimeout(() => {
-                                card.classList.add('visible');
-                            }, delay);
-                        });
-                    }
-                });
-            }, {
-                threshold: 0.3,
-                rootMargin: '0px 0px -100px 0px'
-            });
 
-            const magicalSection = document.querySelector('.standout-features.magical-reveal');
-            if (magicalSection) {
-                observer.observe(magicalSection);
-            }
-        });
-    </script>
 
     <!-- Disclaimer Modal Integration -->
     <link rel="stylesheet" href="../style/disclaimer-modal-v2.css?v=V2-OVERLAY-FIX">
@@ -1049,52 +1026,17 @@
     <!-- Disclaimer Modal Container (loaded from disclaimer-modal.html) -->
     <div id="disclaimerModalContainer"></div>
 
-    <script>
-        // Load disclaimer modal content dynamically
-        (function () {
-            try {
-                const acknowledged = localStorage.getItem('fastpast_disclaimer_acknowledged') === 'true';
-                if (acknowledged) {
-                    console.log('Disclaimer already acknowledged; skipping modal.');
-                    return;
-                }
-            } catch (e) {
-                // If localStorage not available (e.g., cookies disabled), proceed to load modal
-                console.warn('LocalStorage access failed, proceeding with modal load:', e);
-            }
-
-            fetch('disclaimer-modal-v2.html')
-                .then(response => response.text())
-                .then(html => {
-                    // Extract only the modal overlay content
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const modalOverlay = doc.querySelector('.modal-overlay');
-
-                    if (modalOverlay) {
-                        document.getElementById('disclaimerModalContainer').appendChild(modalOverlay);
-
-                        // Load disclaimer JS
-                        const script = document.createElement('script');
-                        script.src = 'scripts/disclaimer-modal.js';
-                        document.body.appendChild(script);
-                    }
-                })
-                .catch(err => console.error('Error loading disclaimer modal:', err));
-        })();
-    </script>
+    <script src="js/disclaimer-loader.js"></script>
 
     <!-- Sticky Bottom Banner Ad -->
     <div id="sticky-banner-ad" class="sticky-bottom-banner">
         <!-- Desktop Banner (728x90) -->
-        <div id="desktop-banner" class="banner-container">
-            <script type="text/javascript">atOptions = window.atOptions_desktop;</script>
+        <div id="desktop-banner" class="banner-container" data-ad-key="desktop">
             <script type="text/javascript"
                 src="https://www.highperformanceformat.com/14d8dff183fa615fac59e9cf6507813c/invoke.js"></script>
         </div>
         <!-- Mobile Banner (320x50) -->
-        <div id="mobile-banner" class="banner-container">
-            <script type="text/javascript">atOptions = window.atOptions_mobile;</script>
+        <div id="mobile-banner" class="banner-container" data-ad-key="mobile">
             <script type="text/javascript"
                 src="https://www.highperformanceformat.com/d5249bc6c1a5fd336816be4c27cf7e1e/invoke.js"></script>
         </div>
