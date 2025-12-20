@@ -2344,9 +2344,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Back to Top Button
   const backToTopBtn = document.getElementById("back-to-top");
 
-  window.addEventListener("scroll", () => {
+  const handleScroll = () => {
     if (backToTopBtn) {
-      const scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      const scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0);
       if (scrollPos > 300) {
         backToTopBtn.classList.add("show");
       } else {
@@ -2369,15 +2369,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     });
-  });
+  };
+
+  // Listen for scroll on both window and body due to overflow: hidden on html
+  window.addEventListener("scroll", handleScroll, { passive: true });
+  if (document.body) {
+    document.body.addEventListener("scroll", handleScroll, { passive: true });
+  }
 
   if (backToTopBtn) {
     backToTopBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      window.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      });
+      // Scroll everything to be safe
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (document.body) document.body.scrollTo({ top: 0, behavior: "smooth" });
+      if (document.documentElement) document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
     });
   } // Close if (backToTopBtn)
 }); // Close DOMContentLoaded listener
