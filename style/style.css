@@ -4711,7 +4711,7 @@ header nav li:hover {
   max-height: 400px !important;
   min-height: 350px !important;
   object-fit: cover !important;
-  width: auto !important;
+  max-width: 100% !important;
   /* display: block !important; REMOVED to allow JS toggle */
   margin: 0 auto 20px auto !important;
 }
@@ -4727,7 +4727,7 @@ header nav li:hover {
   max-height: 400px !important;
   min-height: 350px !important;
   object-fit: cover !important;
-  width: auto !important;
+  max-width: 100% !important;
   /* display: block !important; REMOVED */
   margin: 0 auto 20px auto !important;
 }
@@ -4741,7 +4741,7 @@ header nav li:hover {
   max-height: 400px !important;
   min-height: 350px !important;
   object-fit: cover !important;
-  width: auto !important;
+  max-width: 100% !important;
   /* display: block !important; REMOVED */
   margin: 0 auto 20px auto !important;
 }
@@ -4856,12 +4856,6 @@ header nav li:hover {
 }
 
 .download-btn {
-  background: linear-gradient(135deg,
-      #ff416c 0%,
-      #ff4b2b 25%,
-      #ff6b6b 50%,
-      #ee5a24 75%,
-      #fd79a8 100%);
   background-size: 300% 300%;
   color: #ffffff;
   padding: clamp(14px, 2.2vw, 18px) clamp(28px, 4.5vw, 36px);
@@ -4882,12 +4876,7 @@ header nav li:hover {
   justify-content: center;
   gap: clamp(8px, 1.5vw, 12px);
   white-space: nowrap;
-  box-shadow:
-    0 12px 35px rgba(255, 107, 107, 0.5),
-    0 6px 20px rgba(238, 90, 36, 0.4),
-    0 0 40px rgba(255, 65, 108, 0.3),
-    inset 0 2px 0 rgba(255, 255, 255, 0.3),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0px 0px 3px black;
   position: relative;
   overflow: hidden;
   min-width: 200px;
@@ -4927,22 +4916,11 @@ header nav li:hover {
 }
 
 .download-btn:hover {
-  background: linear-gradient(135deg,
-      #ff6b6b 0%,
-      #fd79a8 25%,
-      #ff9ff3 50%,
-      #ee5a24 75%,
-      #ff416c 100%);
+  background: black;
   background-size: 400% 400%;
   animation: gradientShift 2s ease infinite;
   transform: translateY(-8px) scale(1.08);
-  box-shadow:
-    0 20px 45px rgba(255, 107, 107, 0.7),
-    0 12px 30px rgba(238, 90, 36, 0.5),
-    0 0 60px rgba(255, 65, 108, 0.4),
-    0 0 100px rgba(255, 159, 243, 0.2),
-    inset 0 3px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0px 0px 3px black;
   text-shadow:
     0 4px 8px rgba(0, 0, 0, 0.5),
     0 0 30px rgba(255, 255, 255, 0.5);
