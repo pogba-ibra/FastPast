@@ -4934,9 +4934,31 @@ header nav li:hover {
 .download-btn:active {
   transform: translateY(-4px) scale(1.04);
   box-shadow:
-    0 12px 30px rgba(255, 107, 107, 0.6),
-    0 6px 20px rgba(238, 90, 36, 0.4),
     0 0 40px rgba(255, 65, 108, 0.3);
+}
+
+.wait-message {
+  font-family: "Montserrat", sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 15px;
+  text-align: center;
+  color: #000000;
+  opacity: 0;
+  transform: translateY(-30px);
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  z-index: 10;
+  position: relative;
+}
+
+.wait-message.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dark-mode .wait-message {
+  color: #ffffff;
 }
 
 @keyframes gradientShift {

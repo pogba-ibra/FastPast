@@ -1843,6 +1843,14 @@ document.addEventListener("DOMContentLoaded", () => {
         token: localStorage.getItem("sessionToken") || "",
       };
 
+      const waitMessage = document.getElementById("download-wait-message");
+      if (waitMessage) {
+        waitMessage.style.display = "block";
+        // Force reflow for animation
+        void waitMessage.offsetWidth;
+        waitMessage.classList.add("show");
+      }
+
       submitDownloadRequest(fields);
 
       // Show success message after delay (10s for Facebook, 4s for others)
@@ -1852,6 +1860,14 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           successMessage.style.display = "flex";
           successMessage.classList.add("show");
+          if (waitMessage) {
+            waitMessage.classList.remove("show");
+            setTimeout(() => {
+              if (!waitMessage.classList.contains("show")) {
+                waitMessage.style.display = "none";
+              }
+            }, 500); // Match CSS transition duration
+          }
         }, delay);
       }
     });
