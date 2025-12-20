@@ -995,12 +995,11 @@ app.disable('x-powered-by');
 
 // Add Security Headers
 app.use((req, res, next) => {
-  // Strict Content Security Policy (nonce-based)
-  // Note: The nonce is generated client-side via csp-bootstrap.js for static HTML pages
-  // For dynamically rendered pages, implement server-side nonce generation
+  // Content Security Policy - Strict policy without inline scripts
+  // Using 'self' for same-origin scripts + specific allowlist for ad provider
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'strict-dynamic' https:; " +
+    "script-src 'self' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
