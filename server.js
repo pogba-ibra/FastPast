@@ -1000,7 +1000,7 @@ app.use((req, res, next) => {
   // Hash values allow ONLY the specific ad configuration inline scripts
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'sha256-TpHpXfgMZ2oEyVNPa0mQuxubJLRbrPhN8wJefjuLx1M=' 'sha256-+SncrFJ7n0iKS/fvL/y3T3xOwmlQZR00AGSAK0Vp2pw=' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'sha256-j45KywNUZCYyk3X7P+3363p9G1WafWOFt+kfDIFsHkk=' 'sha256-x6r/W+y64zQP860Uo5dL9vjvLK/boYOPEtGTiez9X94=' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
