@@ -1132,20 +1132,36 @@
             padding: 10px;
             border-radius: 8px 8px 0 0;
             transition: bottom 0.3s ease;
+            min-height: 110px;
+            /* Ensure enough height for 728x90 banner + padding */
         }
 
         .banner-container {
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 90px;
+            /* Height for desktop banner */
+        }
+
+        /* Ensure iframe is visible */
+        .banner-container iframe {
+            display: block !important;
+            margin: 0 auto;
         }
 
         /* Desktop banner - show on screens wider than 768px */
+        #desktop-banner {
+            display: flex;
+            min-height: 90px;
+            width: 728px;
+        }
+
+        /* Mobile banner - show on screens 768px and below */
         #mobile-banner {
             display: none;
         }
 
-        /* Mobile banner - show on screens 768px and below */
         @media (max-width: 768px) {
             #desktop-banner {
                 display: none;
@@ -1153,6 +1169,17 @@
 
             #mobile-banner {
                 display: flex;
+                min-height: 50px;
+                width: 320px;
+            }
+
+            .sticky-bottom-banner {
+                min-height: 70px;
+                /* Smaller height for mobile banner */
+            }
+
+            .banner-container {
+                min-height: 50px;
             }
         }
 
@@ -1173,6 +1200,7 @@
             align-items: center;
             justify-content: center;
             transition: background 0.3s;
+            z-index: 10000;
         }
 
         .close-banner-btn:hover {
