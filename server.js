@@ -1068,6 +1068,12 @@ const apiKeys = [
   process.env.YOUTUBE_API_KEY_10
 ].filter(key => key && key !== 'YOUR_API_KEY_HERE').map(key => key.trim());
 
+// DEBUG: Log loaded keys
+logger.info('--- SERVER STARTUP API KEY CHECK ---', {
+  totalKeys: apiKeys.length,
+  keys: apiKeys.map((k, i) => `Key ${i + 1}: ${k.substring(0, 5)}...`)
+});
+
 function getNextApiKey() {
   if (apiKeys.length === 0) return null;
   return apiKeys[apiKeyIndex];
@@ -2018,8 +2024,12 @@ app.post("/get-playlist-videos", async (req, res) => {
     let attempts = 0;
     const maxAttempts = apiKeys.length;
 
+    logger.info('Starting playlist fetch loop', { maxAttempts, currentKeyIndex: apiKeyIndex });
+
     while (attempts < maxAttempts) {
       const apiKey = getNextApiKey();
+
+      console.log(`[DEBUG] Attempt ${attempts + 1}/${maxAttempts} using Key Index ${apiKeyIndex}`);
 
       if (!apiKey) {
         return res.status(503).json({
