@@ -2128,6 +2128,20 @@ app.post("/get-playlist-videos", async (req, res) => {
           }
         }
 
+        // For other errors (like 401 Invalid Key, or transient network issues), 
+        // also try rotating if we have more keys.
+        // But NOT for 404 (Not Found) which is likely a user error.
+        if (error.response?.status !== 404 && attempts < maxAttempts - 1) {
+          logger.warn('API call failed, rotating to next key', {
+            status: error.response?.status,
+            message: error.message,
+            attempts: attempts + 1
+          });
+          rotateApiKey();
+          attempts++;
+          continue;
+        }
+
         break;
       }
     }
