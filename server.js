@@ -995,16 +995,19 @@ app.disable('x-powered-by');
 
 // Add Security Headers
 app.use((req, res, next) => {
-  // Content Security Policy
+  // Strict Content Security Policy (nonce-based)
+  // Note: The nonce is generated client-side via csp-bootstrap.js for static HTML pages
+  // For dynamically rendered pages, implement server-side nonce generation
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com https://platform.twitter.com https://www.paypal.com https://*.paypal.com; " +
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
+    "script-src 'strict-dynamic' https:; " +
+    "object-src 'none'; " +
+    "base-uri 'none'; " +
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
     "img-src 'self' data: https:; " +
-    "frame-src 'self' https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://syndication.twitter.com https://x.com https://www.x.com https://player.vimeo.com https://www.dailymotion.com https://*.dailymotion.com https://vk.com https://*.vk.com https://vk.ru https://www.paypal.com https://*.paypal.com; " +
-    "connect-src 'self' ws: wss: https://www.youtube.com https://www.paypal.com https://*.paypal.com;"
+    "frame-src 'self' https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com; " +
+    "connect-src 'self' ws: wss: https:;"
   );
 
   // HTTP Strict Transport Security (HSTS)
