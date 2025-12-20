@@ -996,11 +996,11 @@ app.disable('x-powered-by');
 // Add Security Headers
 app.use((req, res, next) => {
   // Content Security Policy - Balanced security with ad compatibility
-  // Note: 'unsafe-inline' required for 3rd-party ad scripts that inject dynamic code
+  // Note: 'unsafe-inline' and 'unsafe-eval' required for 3rd-party ad scripts
   // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
