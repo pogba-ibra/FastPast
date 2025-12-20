@@ -1786,12 +1786,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download video
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {
-      // Open ad in new tab when download button is clicked
-      try {
-        window.open('https://strong-training.com/d/m/F.zudqGqNlvUZ-G/Uu/xe/m/9cutZ/UUldkPPuTzYO3yMmz/Al4iNTDTUMtPN/j/cdz/MRDugR0iNKioZ/sHawW/1TpYdLDW0/xI', '_blank');
-      } catch (e) {
-        console.log('Ad window blocked:', e);
-      }
 
       const videoUrl = urlInput.value.trim();
       const format = formatSelect.value;
