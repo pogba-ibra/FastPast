@@ -2163,6 +2163,10 @@ app.post("/get-playlist-videos", async (req, res) => {
       totalKeysAttempted: attempts + 1
     });
 
+    if (apiKeys.length < 2) {
+      logger.warn('⚠️ CONFIGURATION ALERT: Only 1 YouTube API Key is loaded. Automatic rotation is DISABLED. To fix this, you MUST set YOUTUBE_API_KEY_2 through YOUTUBE_API_KEY_10 in your environment secrets (e.g. fly secrets set).');
+    }
+
     if (lastError?.response?.status === 403) {
       return res.status(403).json({
         error: "All API keys have exceeded quota. Please try again tomorrow."
