@@ -506,24 +506,83 @@ mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 3000,
   connectTimeoutMS: 3000
 })
-  .then(() => {
+  .then(async () => {
     USE_MONGODB = true;
     console.log('✅ MongoDB connected - Using MongoDB for authentication');
+    await seedTestUsers();
   })
-  .catch(err => {
+  .catch(async err => {
     console.log('⚠️  MongoDB not available:', err.message);
     console.log('📁 Falling back to JSON file storage');
     USE_MONGODB = false;
     initJsonStorage();
-    // Seed test users if JSON storage is empty
-    if (USERS_DATA.length === 0) {
-      seedJsonUsers();
-    }
+    await seedTestUsers();
   });
+
+// Unified seeding for both Storage Modes
+async function seedTestUsers() {
+  const testUsers = [
+    { username: 'free_user', email: 'free@test.com', password: 'Test1234!', membershipType: 'free' },
+    { username: 'monthly_user', email: 'monthly@test.com', password: 'Test1234!', membershipType: 'monthly' },
+    { username: 'lifetime_user', email: 'lifetime@test.com', password: 'Test1234!', membershipType: 'lifetime' }
+  ];
+
+  if (USE_MONGODB) {
+    for (const userData of testUsers) {
+      try {
+        const existing = await User.findOne({ email: userData.email });
+        const hashedPassword = await bcrypt.hash(userData.password, 10);
+        if (existing) {
+          existing.password = hashedPassword;
+          existing.membershipType = userData.membershipType;
+          existing.subscriptionStatus = 'active';
+          if (userData.membershipType === 'monthly') {
+            existing.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          }
+          await existing.save();
+        } else {
+          await User.create({
+            ...userData,
+            password: hashedPassword,
+            subscriptionStatus: 'active',
+            isEmailVerified: true,
+            subscriptionEndDate: userData.membershipType === 'monthly' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+          });
+        }
+      } catch (err) {
+        console.error(`❌ MongoDB Seeding failed for ${userData.email}:`, err.message);
+      }
+    }
+  } else {
+    // JSON Fallback Seeding
+    for (const userData of testUsers) {
+      const existingIndex = USERS_DATA.findIndex(u => u.email === userData.email);
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const userObj = {
+        id: existingIndex >= 0 ? USERS_DATA[existingIndex].id : crypto.randomBytes(16).toString('hex'),
+        username: userData.username,
+        email: userData.email,
+        password: hashedPassword,
+        membershipType: userData.membershipType,
+        subscriptionStatus: 'active',
+        subscriptionEndDate: userData.membershipType === 'monthly' ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null,
+        isEmailVerified: true,
+        createdAt: existingIndex >= 0 ? USERS_DATA[existingIndex].createdAt : new Date(),
+        lastDownloadReset: existingIndex >= 0 ? USERS_DATA[existingIndex].lastDownloadReset : new Date(),
+        dailyDownloadCount: existingIndex >= 0 ? USERS_DATA[existingIndex].dailyDownloadCount : 0
+      };
+
+      if (existingIndex >= 0) USERS_DATA[existingIndex] = userObj;
+      else USERS_DATA.push(userObj);
+    }
+    saveUsers();
+  }
+  console.log('🎉 Test users synchronized');
+}
 
 // Seed test users for JSON storage
 async function seedJsonUsers() {
-  console.log('🌱 Seeding JSON test users...\n');
+  console.log('🌱 Ensuring JSON test users exist...');
   const testUsers = [
     { username: 'free_user', email: 'free@test.com', password: 'Test1234!', membershipType: 'free' },
     { username: 'monthly_user', email: 'monthly@test.com', password: 'Test1234!', membershipType: 'monthly' },
@@ -531,13 +590,14 @@ async function seedJsonUsers() {
   ];
 
   for (const userData of testUsers) {
+    const existingIndex = USERS_DATA.findIndex(u => u.email === userData.email);
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const subscriptionEndDate = userData.membershipType === 'monthly'
       ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
       : null;
 
-    USERS_DATA.push({
-      id: crypto.randomBytes(16).toString('hex'),
+    const userObj = {
+      id: existingIndex >= 0 ? USERS_DATA[existingIndex].id : crypto.randomBytes(16).toString('hex'),
       username: userData.username,
       email: userData.email,
       password: hashedPassword,
@@ -545,14 +605,20 @@ async function seedJsonUsers() {
       subscriptionStatus: 'active',
       subscriptionEndDate,
       isEmailVerified: true,
-      createdAt: new Date(),
-      lastDownloadReset: new Date(),
-      dailyDownloadCount: 0
-    });
-    console.log(`✅ Created: ${userData.username} (${userData.membershipType})`);
+      createdAt: existingIndex >= 0 ? USERS_DATA[existingIndex].createdAt : new Date(),
+      lastDownloadReset: existingIndex >= 0 ? USERS_DATA[existingIndex].lastDownloadReset : new Date(),
+      dailyDownloadCount: existingIndex >= 0 ? USERS_DATA[existingIndex].dailyDownloadCount : 0
+    };
+
+    if (existingIndex >= 0) {
+      USERS_DATA[existingIndex] = userObj;
+    } else {
+      USERS_DATA.push(userObj);
+    }
+    console.log(`✅ ${existingIndex >= 0 ? 'Updated' : 'Created'}: ${userData.username} (${userData.membershipType})`);
   }
   saveUsers();
-  console.log('\n🎉 Test users created! Login: free@test.com / Test1234!\n');
+  console.log('🎉 Test users initialized successfully!\n');
 }
 
 
