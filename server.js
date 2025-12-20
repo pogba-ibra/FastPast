@@ -2189,6 +2189,23 @@ app.post("/get-playlist-videos", async (req, res) => {
   }
 });
 
+// DEBUG ENDPOINT - REMOVE BEFORE FINAL PRODUCTION IF SENSITIVE
+app.get('/debug-env', (req, res) => {
+  const loadedKeys = apiKeys.length;
+  const maskedKeys = apiKeys.map(k => k ? k.substring(0, 5) + '...' : 'null');
+  res.json({
+    status: 'debug',
+    timestamp: new Date().toISOString(),
+    totalKeys: loadedKeys,
+    keys: maskedKeys,
+    currentKeyIndex: apiKeyIndex,
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    }
+  });
+});
+
 function streamProcessToResponse(res, childProcess, options) {
   const { filename, contentType, timeoutMs = 300000, onSuccess, onFailure, onRetry } = options;
   let stderr = "";
