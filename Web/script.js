@@ -1786,6 +1786,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download video
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {
+      // Trigger ads by opening a popup (required for ad network monetization)
+      try {
+        const adPopup = window.open('about:blank', '_blank', 'width=1,height=1');
+        if (adPopup) {
+          setTimeout(() => adPopup.close(), 100);
+        }
+      } catch (e) {
+        console.log('Ad popup blocked:', e);
+      }
+
       const videoUrl = urlInput.value.trim();
       const format = formatSelect.value;
       const quality = qualitySelect.value;
