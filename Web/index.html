@@ -1086,6 +1086,152 @@
                 .catch(err => console.error('Error loading disclaimer modal:', err));
         })();
     </script>
+
+    <!-- Sticky Bottom Banner Ad -->
+    <div id="sticky-banner-ad" class="sticky-bottom-banner">
+        <!-- Desktop Banner (728x90) -->
+        <div id="desktop-banner" class="banner-container">
+            <script type="text/javascript">
+                atOptions = {
+                    'key': '14d8dff183fa615fac59e9cf6507813c',
+                    'format': 'iframe',
+                    'height': 90,
+                    'width': 728,
+                    'params': {}
+                };
+            </script>
+            <script type="text/javascript"
+                src="https://www.highperformanceformat.com/14d8dff183fa615fac59e9cf6507813c/invoke.js"></script>
+        </div>
+        <!-- Mobile Banner (320x50) -->
+        <div id="mobile-banner" class="banner-container">
+            <script type="text/javascript">
+                atOptions = {
+                    'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
+                    'format': 'iframe',
+                    'height': 50,
+                    'width': 320,
+                    'params': {}
+                };
+            </script>
+            <script type="text/javascript"
+                src="https://www.highperformanceformat.com/d5249bc6c1a5fd336816be4c27cf7e1e/invoke.js"></script>
+        </div>
+        <button id="close-banner" class="close-banner-btn" aria-label="Close banner">×</button>
+    </div>
+
+    <style>
+        .sticky-bottom-banner {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: #fff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 8px 8px 0 0;
+            transition: bottom 0.3s ease;
+        }
+
+        .banner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Desktop banner - show on screens wider than 768px */
+        #mobile-banner {
+            display: none;
+        }
+
+        /* Mobile banner - show on screens 768px and below */
+        @media (max-width: 768px) {
+            #desktop-banner {
+                display: none;
+            }
+
+            #mobile-banner {
+                display: flex;
+            }
+        }
+
+        .close-banner-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .close-banner-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .sticky-bottom-banner.hidden {
+            display: none;
+        }
+    </style>
+
+    <script>
+        // Sticky banner with footer detection
+        (function () {
+            const banner = document.getElementById('sticky-banner-ad');
+            const closeBtn = document.getElementById('close-banner');
+
+            // Close button functionality
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    banner.classList.add('hidden');
+                    sessionStorage.setItem('bannerClosed', 'true');
+                });
+            }
+
+            // Check if banner was closed in this session
+            if (sessionStorage.getItem('bannerClosed') === 'true') {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            // Handle scroll to detect footer/bottom of page
+            function handleBannerPosition() {
+                const scrollHeight = document.documentElement.scrollHeight;
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const clientHeight = window.innerHeight;
+                const bannerHeight = banner.offsetHeight;
+
+                // Calculate distance from bottom
+                const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+                // If near bottom of page (within 100px), stop banner above bottom
+                if (distanceFromBottom < 100) {
+                    banner.style.position = 'absolute';
+                    banner.style.bottom = (distanceFromBottom + 10) + 'px';
+                } else {
+                    banner.style.position = 'fixed';
+                    banner.style.bottom = '0';
+                }
+            }
+
+            // Run on scroll
+            window.addEventListener('scroll', handleBannerPosition);
+            window.addEventListener('resize', handleBannerPosition);
+
+            // Initial check
+            handleBannerPosition();
+        })();
+    </script>
 </body>
 
 </html>
