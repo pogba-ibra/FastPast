@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+    <script src="js/csp-bootstrap.js"></script>
     <script src="js/auth-precheck.js"></script>
     <meta name="google-site-verification" content="anhr7W-dvTtIV1ES3mKUB7Fj6XC7PpAQoEL9g3m9Cxs" />
     <meta charset="UTF-8">
@@ -10,7 +11,7 @@
     <meta name="description"
         content="FastPast - Rapidly download and clip videos from YouTube, TikTok, and more. No account required, free and secure.">
     <meta http-equiv="Content-Security-Policy"
-        content="script-src 'self' 'unsafe-inline' https://www.highperformanceformat.com https://highperformanceformat.com https://cdnjs.cloudflare.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-src 'self' https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com;">
+        content="script-src 'nonce-PLACEHOLDER' 'strict-dynamic' https:; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; frame-src 'self' https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com;">
     <title>FastPast</title>
     <link rel="canonical" href="https://fastpast-app.fly.dev/" />
     <link rel="preload" as="image"
@@ -20,13 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <link rel="icon" href="Images/logo.png">
 
-    <script>
-        // Force reload if cached
-        if (!sessionStorage.getItem('scriptReloaded')) {
-            sessionStorage.setItem('scriptReloaded', 'true');
-            location.reload(true);
-        }
-    </script>
+    <script src="js/force-reload.js"></script>
     <script src="script.js?v=20251208-1640" defer></script>
     <script src="slider.js" defer></script>
     <script src="mobile-input.js" defer></script>
@@ -1093,32 +1088,17 @@
     <div id="sticky-banner-ad" class="sticky-bottom-banner">
         <!-- Desktop Banner (728x90) -->
         <div id="desktop-banner" class="banner-container">
-            <script type="text/javascript">
-                atOptions = {
-                    'key': '14d8dff183fa615fac59e9cf6507813c',
-                    'format': 'iframe',
-                    'height': 90,
-                    'width': 728,
-                    'params': {}
-                };
-            </script>
+            <script type="text/javascript">atOptions = window.atOptions_desktop;</script>
             <script type="text/javascript"
                 src="https://www.highperformanceformat.com/14d8dff183fa615fac59e9cf6507813c/invoke.js"></script>
         </div>
         <!-- Mobile Banner (320x50) -->
         <div id="mobile-banner" class="banner-container">
-            <script type="text/javascript">
-                atOptions = {
-                    'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
-                    'format': 'iframe',
-                    'height': 50,
-                    'width': 320,
-                    'params': {}
-                };
-            </script>
+            <script type="text/javascript">atOptions = window.atOptions_mobile;</script>
             <script type="text/javascript"
                 src="https://www.highperformanceformat.com/d5249bc6c1a5fd336816be4c27cf7e1e/invoke.js"></script>
         </div>
+        <script src="js/ad-banner.js"></script>
         <button id="close-banner" class="close-banner-btn" aria-label="Close banner">×</button>
     </div>
 
@@ -1214,54 +1194,7 @@
         }
     </style>
 
-    <script>
-        // Sticky banner with footer detection
-        (function () {
-            const banner = document.getElementById('sticky-banner-ad');
-            const closeBtn = document.getElementById('close-banner');
 
-            // Close button functionality
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    banner.classList.add('hidden');
-                    sessionStorage.setItem('bannerClosed', 'true');
-                });
-            }
-
-            // Check if banner was closed in this session
-            if (sessionStorage.getItem('bannerClosed') === 'true') {
-                banner.classList.add('hidden');
-                return;
-            }
-
-            // Handle scroll to detect footer/bottom of page
-            function handleBannerPosition() {
-                const scrollHeight = document.documentElement.scrollHeight;
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                const clientHeight = window.innerHeight;
-                const bannerHeight = banner.offsetHeight;
-
-                // Calculate distance from bottom
-                const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-                // If near bottom of page (within 100px), stop banner above bottom
-                if (distanceFromBottom < 100) {
-                    banner.style.position = 'absolute';
-                    banner.style.bottom = (distanceFromBottom + 10) + 'px';
-                } else {
-                    banner.style.position = 'fixed';
-                    banner.style.bottom = '0';
-                }
-            }
-
-            // Run on scroll
-            window.addEventListener('scroll', handleBannerPosition);
-            window.addEventListener('resize', handleBannerPosition);
-
-            // Initial check
-            handleBannerPosition();
-        })();
-    </script>
 </body>
 
 </html>
