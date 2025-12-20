@@ -438,12 +438,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Check for saved preference on load - ONLY for desktop screens
-    if (window.matchMedia("(min-width: 960px)").matches) {
-      const savedDarkMode = localStorage.getItem("theme");
-      if (savedDarkMode === "dark") {
-        updateDarkModeUI(true);
-      }
+    // Check for saved preference on load
+    const savedDarkMode = localStorage.getItem("theme");
+    if (savedDarkMode === "dark") {
+      updateDarkModeUI(true);
     }
 
     // Variables for drag functionality
@@ -598,11 +596,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Theme toggle mobile for dark mode
   const themeToggleMobile = document.getElementById("input");
   if (themeToggleMobile) {
-    // Always start in light mode for mobile (as per requirement)
-    if (localStorage.getItem("fastpast-dark-mode") === "true" && window.innerWidth <= 959) {
-      // Explicitly ensure light mode if we are on mobile, 
-      // though we simply won't load the preference which is cleaner.
-    }
+    // Initial state set by theme-toggle-final.js
 
     themeToggleMobile.addEventListener("change", () => {
       // const isDark = document.body.classList.contains("dark-mode"); // Unused

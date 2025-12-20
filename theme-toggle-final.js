@@ -153,16 +153,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Default to light mode if no preference is saved
   let isDark;
 
-  // Requirement: Only persist dark mode for screens where lamp rope is visible (>= 960px)
-  const isDesktop = window.matchMedia("(min-width: 960px)").matches;
-
   if (savedTheme === null || savedTheme === undefined) {
     isDark = false; // Default to light mode for new users
     console.log("🔆 No saved theme found, defaulting to light mode");
-  } else if (!isDesktop) {
-    // If not desktop, force light mode regardless of saved preference
-    isDark = false;
-    console.log("📱 Mobile/Tablet detected, ignoring saved dark mode preference");
   } else {
     isDark = savedTheme === "dark";
   }
