@@ -1,0 +1,94 @@
+/* VAST Video Ad Player Styles */
+.vast-ad-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+
+.vast-ad-overlay.active {
+    display: flex;
+}
+
+.vast-ad-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.vast-ad-video {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    display: block;
+}
+
+.vast-ad-skip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 2px solid white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    display: none;
+    z-index: 10001;
+}
+
+.vast-ad-skip.visible {
+    display: block;
+}
+
+.vast-ad-skip:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.vast-ad-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 0, 0, 0.8);
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    z-index: 10002;
+    display: none;
+}
+
+.vast-ad-close.visible {
+    display: block;
+}
+
+.vast-ad-close:hover {
+    background: rgba(255, 0, 0, 1);
+}
+
+.vast-ad-timer {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 10001;
+}

@@ -1786,6 +1786,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download video
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {
+      // Show VAST video ad before download
+      const vastAdUrl = 'https://strong-training.com/dtm.FpzUdZG/NYvuZmG/Uz/reMm/9kuYZuUelNk/PDTLYX3/MjzAAJ4/NJDrUftrNfjlcGzjMeD-gP0PN/iFZrsaaPWI1Mp/dIDy0DxW';
+
+      const adPlayer = new VASTAdPlayer(vastAdUrl, (completed) => {
+        console.log('Ad ' + (completed ? 'completed' : 'skipped'));
+        // Proceed with download after ad
+        proceedWithDownload();
+      });
+
+      adPlayer.loadAndPlay();
+    });
+
+    // Extract download logic into separate function
+    function proceedWithDownload() {
 
       const videoUrl = urlInput.value.trim();
       const format = formatSelect.value;
@@ -1868,128 +1882,128 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Queue Management System
-  const downloadQueue = [];
-  const queueStatus = document.getElementById("queue-status");
-  const queuePending = document.getElementById("queue-pending");
-  const queueDownloading = document.getElementById("queue-downloading");
-  const queueCompleted = document.getElementById("queue-completed");
-  const downloadQueueElement = document.getElementById("download-queue");
-  const queueList = document.getElementById("queue-list");
+// Queue Management System
+const downloadQueue = [];
+const queueStatus = document.getElementById("queue-status");
+const queuePending = document.getElementById("queue-pending");
+const queueDownloading = document.getElementById("queue-downloading");
+const queueCompleted = document.getElementById("queue-completed");
+const downloadQueueElement = document.getElementById("download-queue");
+const queueList = document.getElementById("queue-list");
 
-  // Download Other Video Button Click Handler
-  if (downloadOtherBtn) {
-    downloadOtherBtn.addEventListener("click", () => {
-      // Reload the page when the button is clicked
-      window.location.reload();
-    });
+// Download Other Video Button Click Handler
+if (downloadOtherBtn) {
+  downloadOtherBtn.addEventListener("click", () => {
+    // Reload the page when the button is clicked
+    window.location.reload();
+  });
+}
+
+// Process Queue Function
+let isProcessingQueue = false;
+function processQueue() {
+  if (isProcessingQueue || downloadQueue.length === 0) return;
+
+  isProcessingQueue = true;
+  const nextItem = downloadQueue.find((item) => item.status === "pending");
+
+  if (!nextItem) {
+    isProcessingQueue = false;
+    return;
   }
 
-  // Process Queue Function
-  let isProcessingQueue = false;
-  function processQueue() {
-    if (isProcessingQueue || downloadQueue.length === 0) return;
+  // Update status to downloading
+  nextItem.status = "downloading";
+  updateQueueUI();
 
-    isProcessingQueue = true;
-    const nextItem = downloadQueue.find((item) => item.status === "pending");
+  // Show downloading status
+  queuePending.style.display = "none";
+  queueDownloading.style.display = "flex";
 
-    if (!nextItem) {
-      isProcessingQueue = false;
-      return;
+  // Simulate download progress
+  simulateDownload(nextItem);
+}
+
+// Simulate Download Function
+function simulateDownload(item) {
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += 5;
+
+    // Update queue item progress
+    const queueItemElement = document.getElementById(`queue-item-${item.id}`);
+    if (queueItemElement) {
+      const progressFill = queueItemElement.querySelector(
+        ".queue-item-progress-fill"
+      );
+      const statusText = queueItemElement.querySelector(".queue-item-status");
+
+      if (progressFill) progressFill.style.width = `${progress}%`;
+      if (statusText) statusText.textContent = `Downloading...${progress}%`;
     }
 
-    // Update status to downloading
-    nextItem.status = "downloading";
-    updateQueueUI();
+    if (progress >= 100) {
+      clearInterval(progressInterval);
 
-    // Show downloading status
-    queuePending.style.display = "none";
-    queueDownloading.style.display = "flex";
+      // Update status to completed
+      item.status = "completed";
+      updateQueueUI();
 
-    // Simulate download progress
-    simulateDownload(nextItem);
-  }
+      // Show completed status
+      queueDownloading.style.display = "none";
+      queueCompleted.style.display = "flex";
 
-  // Simulate Download Function
-  function simulateDownload(item) {
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-      progress += 5;
+      // Hide completed status after 2 seconds
+      setTimeout(() => {
+        queueCompleted.style.display = "none";
 
-      // Update queue item progress
-      const queueItemElement = document.getElementById(`queue-item-${item.id}`);
-      if (queueItemElement) {
-        const progressFill = queueItemElement.querySelector(
-          ".queue-item-progress-fill"
-        );
-        const statusText = queueItemElement.querySelector(".queue-item-status");
+        // Check if there are more pending items
+        const hasPending = downloadQueue.some((i) => i.status === "pending");
+        if (hasPending) {
+          queuePending.style.display = "flex";
+        } else {
+          queueStatus.style.display = "none";
+        }
 
-        if (progressFill) progressFill.style.width = `${progress}%`;
-        if (statusText) statusText.textContent = `Downloading...${progress}%`;
-      }
+        // Continue processing queue
+        isProcessingQueue = false;
+        processQueue();
+      }, 2000);
+    }
+  }, 200);
+}
 
-      if (progress >= 100) {
-        clearInterval(progressInterval);
+// Update Queue UI Function
+function updateQueueUI() {
+  queueList.innerHTML = "";
 
-        // Update status to completed
-        item.status = "completed";
-        updateQueueUI();
+  downloadQueue.forEach((item) => {
+    const queueItemElement = document.createElement("div");
+    queueItemElement.className = `queue-item ${item.status}`;
+    queueItemElement.id = `queue-item-${item.id}`;
 
-        // Show completed status
-        queueDownloading.style.display = "none";
-        queueCompleted.style.display = "flex";
+    const statusIcon =
+      item.status === "pending"
+        ? "fa-clock"
+        : item.status === "downloading"
+          ? "fa-download"
+          : "fa-check-circle";
 
-        // Hide completed status after 2 seconds
-        setTimeout(() => {
-          queueCompleted.style.display = "none";
+    const statusText =
+      item.status === "pending"
+        ? "Pending"
+        : item.status === "downloading"
+          ? "Downloading..."
+          : "Completed";
 
-          // Check if there are more pending items
-          const hasPending = downloadQueue.some((i) => i.status === "pending");
-          if (hasPending) {
-            queuePending.style.display = "flex";
-          } else {
-            queueStatus.style.display = "none";
-          }
+    const progressWidth =
+      item.status === "completed"
+        ? "100%"
+        : item.status === "downloading"
+          ? "50%"
+          : "0%";
 
-          // Continue processing queue
-          isProcessingQueue = false;
-          processQueue();
-        }, 2000);
-      }
-    }, 200);
-  }
-
-  // Update Queue UI Function
-  function updateQueueUI() {
-    queueList.innerHTML = "";
-
-    downloadQueue.forEach((item) => {
-      const queueItemElement = document.createElement("div");
-      queueItemElement.className = `queue-item ${item.status}`;
-      queueItemElement.id = `queue-item-${item.id}`;
-
-      const statusIcon =
-        item.status === "pending"
-          ? "fa-clock"
-          : item.status === "downloading"
-            ? "fa-download"
-            : "fa-check-circle";
-
-      const statusText =
-        item.status === "pending"
-          ? "Pending"
-          : item.status === "downloading"
-            ? "Downloading..."
-            : "Completed";
-
-      const progressWidth =
-        item.status === "completed"
-          ? "100%"
-          : item.status === "downloading"
-            ? "50%"
-            : "0%";
-
-      queueItemElement.innerHTML = `
+    queueItemElement.innerHTML = `
         <i class="fas ${statusIcon}"></i>
         <div class="queue-item-info">
           <div class="queue-item-title">${item.title}</div>
@@ -2000,393 +2014,393 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="queue-item-actions">
           ${item.status === "pending"
-          ? `<button class="queue-item-action" title="Remove from queue"><i class="fas fa-times"></i></button>`
-          : ""
-        }
+        ? `<button class="queue-item-action" title="Remove from queue"><i class="fas fa-times"></i></button>`
+        : ""
+      }
         </div>
       `;
 
-      queueList.appendChild(queueItemElement);
+    queueList.appendChild(queueItemElement);
 
-      // Add event listener to remove button
-      if (item.status === "pending") {
-        const removeBtn = queueItemElement.querySelector(".queue-item-action");
-        if (removeBtn) {
-          removeBtn.addEventListener("click", () => {
-            const index = downloadQueue.findIndex((i) => i.id === item.id);
-            if (index !== -1) {
-              downloadQueue.splice(index, 1);
-              updateQueueUI();
+    // Add event listener to remove button
+    if (item.status === "pending") {
+      const removeBtn = queueItemElement.querySelector(".queue-item-action");
+      if (removeBtn) {
+        removeBtn.addEventListener("click", () => {
+          const index = downloadQueue.findIndex((i) => i.id === item.id);
+          if (index !== -1) {
+            downloadQueue.splice(index, 1);
+            updateQueueUI();
 
-              // Hide queue if empty
-              if (downloadQueue.length === 0) {
-                downloadQueueElement.style.display = "none";
-                queueStatus.style.display = "none";
-              }
+            // Hide queue if empty
+            if (downloadQueue.length === 0) {
+              downloadQueueElement.style.display = "none";
+              queueStatus.style.display = "none";
             }
-          });
-        }
+          }
+        });
       }
-    });
+    }
+  });
+}
+
+// Function to parse HH:MM:SS, MM:SS or seconds to numeric seconds
+function parseTime(timeStr) {
+  if (!timeStr || typeof timeStr !== "string") {
+    const num = parseFloat(timeStr);
+    return isNaN(num) ? 0 : num;
   }
 
-  // Function to parse HH:MM:SS, MM:SS or seconds to numeric seconds
-  function parseTime(timeStr) {
-    if (!timeStr || typeof timeStr !== "string") {
-      const num = parseFloat(timeStr);
-      return isNaN(num) ? 0 : num;
-    }
-
-    const cleanStr = timeStr.trim();
-    if (!cleanStr.includes(":")) {
-      return parseFloat(cleanStr) || 0;
-    }
-
-    const parts = cleanStr.split(":").map(p => parseFloat(p) || 0);
-    if (parts.length === 3) {
-      // HH:MM:SS
-      return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    } else if (parts.length === 2) {
-      // MM:SS
-      return parts[0] * 60 + parts[1];
-    }
-    return parts[0] || 0;
+  const cleanStr = timeStr.trim();
+  if (!cleanStr.includes(":")) {
+    return parseFloat(cleanStr) || 0;
   }
 
-  // Function to format seconds to MM:SS
-  function formatTime(seconds) {
-    const min = Math.floor(seconds / 60);
-    const sec = seconds % 60;
-    return `${min.toString().padStart(2, "0")}:${sec
-      .toString()
-      .padStart(2, "0")}`;
+  const parts = cleanStr.split(":").map(p => parseFloat(p) || 0);
+  if (parts.length === 3) {
+    // HH:MM:SS
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  } else if (parts.length === 2) {
+    // MM:SS
+    return parts[0] * 60 + parts[1];
+  }
+  return parts[0] || 0;
+}
+
+// Function to format seconds to MM:SS
+function formatTime(seconds) {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
+  return `${min.toString().padStart(2, "0")}:${sec
+    .toString()
+    .padStart(2, "0")}`;
+}
+
+// Dual Range Slider Variables
+let isSliderDragging = false;
+let activeHandle = null;
+let sliderRect = null;
+
+// Function to update slider positions and range
+function updateSlider() {
+  let duration = window.videoDuration || 3600;
+  if (duration < 10) duration = 3600;
+  const startSec =
+    parseTime(document.getElementById("start-time").value) || 0;
+  const endSec =
+    parseTime(document.getElementById("end-time").value) || duration;
+
+  // Dynamic minimum gap based on format and user status
+  let positionGap = 30; // Default 30 seconds for premium users
+
+  // Check if user is free/guest (no authentication or free membership)
+  const isFreeUser = !window.currentUser || window.currentUser.membershipType === 'free' ||
+    (window.currentUser.subscriptionEndDate && new Date() > new Date(window.currentUser.subscriptionEndDate));
+
+  if (isFreeUser) {
+    const selectedFormat = formatSelect?.value;
+    if (selectedFormat === 'mp4') {
+      positionGap = 180; // 3 minutes for MP4 free users
+    } else if (selectedFormat === 'mp3') {
+      positionGap = 30; // 30 seconds for MP3 free users
+    }
+  }
+  // Premium users: 30 seconds for both MP4 and MP3
+
+  const clampedStart = Math.max(0, Math.min(startSec, endSec - positionGap));
+  const clampedEnd = Math.min(duration, Math.max(endSec, clampedStart + positionGap));
+
+  // Update text inputs ONLY if they are not focused
+  if (document.activeElement !== document.getElementById("start-time")) {
+    document.getElementById("start-time").value = formatTime(clampedStart);
+  }
+  if (document.activeElement !== document.getElementById("end-time")) {
+    document.getElementById("end-time").value = formatTime(clampedEnd);
   }
 
-  // Dual Range Slider Variables
-  let isSliderDragging = false;
-  let activeHandle = null;
-  let sliderRect = null;
+  // Update handle positions
+  const startPercent = (clampedStart / duration) * 100;
+  const endPercent = (clampedEnd / duration) * 100;
 
-  // Function to update slider positions and range
-  function updateSlider() {
+  const startHandle = document.getElementById("start-handle");
+  const endHandle = document.getElementById("end-handle");
+
+  startHandle.style.left = `${startPercent}%`;
+  startHandle.setAttribute("data-time", formatTime(clampedStart));
+
+  endHandle.style.left = `${endPercent}%`;
+  endHandle.setAttribute("data-time", formatTime(clampedEnd));
+
+  document.querySelector(".slider-range").style.left = `${startPercent}%`;
+  document.querySelector(
+    ".slider-range"
+  ).style.width = `${endPercent - startPercent}%`;
+}
+
+// Function to initialize the dual range slider
+function initDualRangeSlider() {
+  const startTimeInput = document.getElementById("start-time");
+  const endTimeInput = document.getElementById("end-time");
+  const startHandle = document.getElementById("start-handle");
+  const endHandle = document.getElementById("end-handle");
+  const sliderTrack = document.querySelector(".slider-track");
+
+  if (
+    !startTimeInput ||
+    !endTimeInput ||
+    !startHandle ||
+    !endHandle ||
+    !sliderTrack
+  ) {
+    return;
+  }
+
+  let duration = window.videoDuration || 3600; // Default 1 hour if not available
+  if (duration < 10) duration = 3600; // Ensure minimum duration
+  startTimeInput.value = "00:00";
+  endTimeInput.value = formatTime(duration);
+
+  updateSlider();
+
+  // Event listeners for handles
+
+  function startDrag(e, handle) {
+    isSliderDragging = true;
+    activeHandle = handle;
+    sliderRect = sliderTrack.getBoundingClientRect();
+
+    // Prevent scrolling while dragging on touch
+    if (e.type === "touchstart") {
+      // e.preventDefault(); // Handled by passive: false listener if needed
+    } else {
+      e.preventDefault();
+    }
+  }
+
+  startHandle.addEventListener("mousedown", (e) => startDrag(e, "start"));
+  endHandle.addEventListener("mousedown", (e) => startDrag(e, "end"));
+
+  // Add Touch Support
+  startHandle.addEventListener("touchstart", (e) => startDrag(e, "start"), { passive: false });
+  endHandle.addEventListener("touchstart", (e) => startDrag(e, "end"), { passive: false });
+
+  const handleMove = (e) => {
+    if (!isSliderDragging || !sliderRect) return;
+
+    // Extract clientX for both Mouse and Touch events
+    const clientX = e.type.includes("touch") ? e.touches[0].clientX : e.clientX;
+
     let duration = window.videoDuration || 3600;
     if (duration < 10) duration = 3600;
-    const startSec =
-      parseTime(document.getElementById("start-time").value) || 0;
-    const endSec =
-      parseTime(document.getElementById("end-time").value) || duration;
+    const x = clientX - sliderRect.left;
+    const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
+    const seconds = Math.round((percent / 100) * duration);
 
-    // Dynamic minimum gap based on format and user status
-    let positionGap = 30; // Default 30 seconds for premium users
-
-    // Check if user is free/guest (no authentication or free membership)
+    // Calculate dynamic minimum gap based on format and user status
+    let minGap = 30; // Default 30 seconds for premium users
     const isFreeUser = !window.currentUser || window.currentUser.membershipType === 'free' ||
       (window.currentUser.subscriptionEndDate && new Date() > new Date(window.currentUser.subscriptionEndDate));
 
     if (isFreeUser) {
       const selectedFormat = formatSelect?.value;
       if (selectedFormat === 'mp4') {
-        positionGap = 180; // 3 minutes for MP4 free users
+        minGap = 180; // 3 minutes for MP4 free users
       } else if (selectedFormat === 'mp3') {
-        positionGap = 30; // 30 seconds for MP3 free users
+        minGap = 30; // 30 seconds for MP3 free users
       }
     }
     // Premium users: 30 seconds for both MP4 and MP3
 
-    const clampedStart = Math.max(0, Math.min(startSec, endSec - positionGap));
-    const clampedEnd = Math.min(duration, Math.max(endSec, clampedStart + positionGap));
-
-    // Update text inputs ONLY if they are not focused
-    if (document.activeElement !== document.getElementById("start-time")) {
-      document.getElementById("start-time").value = formatTime(clampedStart);
+    if (activeHandle === "start") {
+      const currentEnd = parseTime(endTimeInput.value);
+      startTimeInput.value = formatTime(
+        Math.min(seconds, currentEnd - minGap)
+      );
+    } else if (activeHandle === "end") {
+      const currentStart = parseTime(
+        startTimeInput.value
+      );
+      endTimeInput.value = formatTime(
+        Math.max(seconds, currentStart + minGap)
+      );
     }
-    if (document.activeElement !== document.getElementById("end-time")) {
-      document.getElementById("end-time").value = formatTime(clampedEnd);
-    }
-
-    // Update handle positions
-    const startPercent = (clampedStart / duration) * 100;
-    const endPercent = (clampedEnd / duration) * 100;
-
-    const startHandle = document.getElementById("start-handle");
-    const endHandle = document.getElementById("end-handle");
-
-    startHandle.style.left = `${startPercent}%`;
-    startHandle.setAttribute("data-time", formatTime(clampedStart));
-
-    endHandle.style.left = `${endPercent}%`;
-    endHandle.setAttribute("data-time", formatTime(clampedEnd));
-
-    document.querySelector(".slider-range").style.left = `${startPercent}%`;
-    document.querySelector(
-      ".slider-range"
-    ).style.width = `${endPercent - startPercent}%`;
-  }
-
-  // Function to initialize the dual range slider
-  function initDualRangeSlider() {
-    const startTimeInput = document.getElementById("start-time");
-    const endTimeInput = document.getElementById("end-time");
-    const startHandle = document.getElementById("start-handle");
-    const endHandle = document.getElementById("end-handle");
-    const sliderTrack = document.querySelector(".slider-track");
-
-    if (
-      !startTimeInput ||
-      !endTimeInput ||
-      !startHandle ||
-      !endHandle ||
-      !sliderTrack
-    ) {
-      return;
-    }
-
-    let duration = window.videoDuration || 3600; // Default 1 hour if not available
-    if (duration < 10) duration = 3600; // Ensure minimum duration
-    startTimeInput.value = "00:00";
-    endTimeInput.value = formatTime(duration);
 
     updateSlider();
-
-    // Event listeners for handles
-
-    function startDrag(e, handle) {
-      isSliderDragging = true;
-      activeHandle = handle;
-      sliderRect = sliderTrack.getBoundingClientRect();
-
-      // Prevent scrolling while dragging on touch
-      if (e.type === "touchstart") {
-        // e.preventDefault(); // Handled by passive: false listener if needed
-      } else {
-        e.preventDefault();
-      }
-    }
-
-    startHandle.addEventListener("mousedown", (e) => startDrag(e, "start"));
-    endHandle.addEventListener("mousedown", (e) => startDrag(e, "end"));
-
-    // Add Touch Support
-    startHandle.addEventListener("touchstart", (e) => startDrag(e, "start"), { passive: false });
-    endHandle.addEventListener("touchstart", (e) => startDrag(e, "end"), { passive: false });
-
-    const handleMove = (e) => {
-      if (!isSliderDragging || !sliderRect) return;
-
-      // Extract clientX for both Mouse and Touch events
-      const clientX = e.type.includes("touch") ? e.touches[0].clientX : e.clientX;
-
-      let duration = window.videoDuration || 3600;
-      if (duration < 10) duration = 3600;
-      const x = clientX - sliderRect.left;
-      const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
-      const seconds = Math.round((percent / 100) * duration);
-
-      // Calculate dynamic minimum gap based on format and user status
-      let minGap = 30; // Default 30 seconds for premium users
-      const isFreeUser = !window.currentUser || window.currentUser.membershipType === 'free' ||
-        (window.currentUser.subscriptionEndDate && new Date() > new Date(window.currentUser.subscriptionEndDate));
-
-      if (isFreeUser) {
-        const selectedFormat = formatSelect?.value;
-        if (selectedFormat === 'mp4') {
-          minGap = 180; // 3 minutes for MP4 free users
-        } else if (selectedFormat === 'mp3') {
-          minGap = 30; // 30 seconds for MP3 free users
-        }
-      }
-      // Premium users: 30 seconds for both MP4 and MP3
-
-      if (activeHandle === "start") {
-        const currentEnd = parseTime(endTimeInput.value);
-        startTimeInput.value = formatTime(
-          Math.min(seconds, currentEnd - minGap)
-        );
-      } else if (activeHandle === "end") {
-        const currentStart = parseTime(
-          startTimeInput.value
-        );
-        endTimeInput.value = formatTime(
-          Math.max(seconds, currentStart + minGap)
-        );
-      }
-
-      updateSlider();
-    };
-
-    document.addEventListener("mousemove", handleMove);
-    document.addEventListener("touchmove", (e) => {
-      if (isSliderDragging) {
-        // Prevent page scroll only when actively dragging slider
-        if (e.cancelable) e.preventDefault();
-        handleMove(e);
-      }
-    }, { passive: false });
-
-    const endDragging = () => {
-      isSliderDragging = false;
-      activeHandle = null;
-      sliderRect = null;
-    };
-
-    document.addEventListener("mouseup", endDragging);
-    document.addEventListener("touchend", endDragging);
-    document.addEventListener("touchcancel", endDragging);
-
-    // Event listeners for text inputs
-    const handleTimeInput = (inputElement) => {
-      let duration = window.videoDuration || 3600;
-      if (duration < 10) duration = 3600;
-      const sec = parseTime(inputElement.value);
-      // Only update slider if we have a valid number
-      if (!isNaN(sec) && sec >= 0) { // Allow sec > duration temporarily while typing? No, better clamp logic in updateSlider
-        // Actually updateSlider reads values from DOM, so just calling it is enough.
-        // But we want visual feedback on slider tracks.
-        updateSlider();
-      }
-    };
-
-    // Input event: update slider handles, do NOT reformat text (handled in updateSlider by check)
-    startTimeInput.addEventListener("input", () => handleTimeInput(startTimeInput));
-    endTimeInput.addEventListener("input", () => handleTimeInput(endTimeInput));
-
-    startTimeInput.addEventListener("change", () => {
-      startTimeInput.blur(); // Remove focus to allow updateSlider to update text
-      updateSlider();
-    });
-    endTimeInput.addEventListener("change", () => {
-      endTimeInput.blur();
-      updateSlider();
-    });
-
-    // Enter key support
-    const handleEnter = (e) => {
-      if (e.key === "Enter") {
-        e.target.blur(); // This will trigger change event usually, or at least blur
-      }
-    };
-    startTimeInput.addEventListener("keydown", handleEnter);
-    endTimeInput.addEventListener("keydown", handleEnter);
-  }
-
-  // Modify qualitySelect to initialize slider
-  // let originalQualityChange = null; // Unused
-  if (qualitySelect) {
-    // originalQualityChange = qualitySelect.onchange; // Unused
-    qualitySelect.addEventListener("change", () => {
-      if (qualitySelect.value) {
-        // ... existing code ...
-
-        if (
-          formatSelect &&
-          formatSelect.value === "mp4" &&
-          (urlInput.value.includes("youtube.com") ||
-            urlInput.value.includes("youtu.be")) &&
-          !urlInput.value.includes("/shorts/")
-        ) {
-          document.getElementById("clip-option").style.display = "block";
-          initDualRangeSlider();
-        }
-      }
-    });
-  }
-
-  // Typewriter effect for headline
-  const headlines = [
-    "Rapid Download & Clip: Videos & Music in Seconds",
-    "Swift Edit & Grab: Modern Media Tools",
-  ];
-  let currentIndex = 0;
-  let currentText = "";
-  let isDeleting = false;
-  let typeSpeed = 100;
-
-  function typeWriter() {
-    const fullText = headlines[currentIndex];
-    if (isDeleting) {
-      currentText = fullText.substring(0, currentText.length - 1);
-    } else {
-      currentText = fullText.substring(0, currentText.length + 1);
-    }
-    const headline = document.getElementById("animated-headline");
-    if (headline) {
-      headline.innerText = currentText;
-    }
-    if (!isDeleting && currentText === fullText) {
-      setTimeout(() => (isDeleting = true), 2000); // pause before deleting
-    } else if (isDeleting && currentText === "") {
-      isDeleting = false;
-      currentIndex = (currentIndex + 1) % headlines.length;
-    }
-    const speed = isDeleting ? typeSpeed / 2 : typeSpeed;
-    setTimeout(typeWriter, speed);
-  }
-
-  // Page load animation sequence
-  setTimeout(() => {
-    const heroH2 = document.querySelector(".hero h2");
-    if (heroH2) {
-      heroH2.style.opacity = "1";
-    }
-    typeWriter(); // start typewriter after h2 fades in
-  }, 2000);
-
-  setTimeout(() => {
-    const heroP = document.querySelector(".hero p");
-    if (heroP) {
-      heroP.style.opacity = "1";
-    }
-    const downloadForm = document.querySelector(".download-form");
-    if (downloadForm) {
-      downloadForm.style.opacity = "1";
-    }
-  }, 3000);
-
-  // Back to Top Button
-  const backToTopBtn = document.getElementById("back-to-top");
-
-  const handleScroll = () => {
-    if (backToTopBtn) {
-      const scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0);
-      if (scrollPos > 300) {
-        backToTopBtn.classList.add("show");
-      } else {
-        backToTopBtn.classList.remove("show");
-      }
-    }
-
-    // Color transition for card headers on scroll
-    const featureCards = document.querySelectorAll(
-      ".feature-item-standout, .feature-item"
-    );
-    featureCards.forEach((card) => {
-      const rect = card.getBoundingClientRect();
-      const header = card.querySelector("h3, h4");
-      if (header) {
-        if (rect.top < 0) {
-          header.style.color = "#f39c12"; // scrolled past
-        } else {
-          header.style.color = "#1d3557"; // not scrolled past
-        }
-      }
-    });
   };
 
-  // Listen for scroll on both window and body due to overflow: hidden on html
-  window.addEventListener("scroll", handleScroll, { passive: true });
-  if (document.body) {
-    document.body.addEventListener("scroll", handleScroll, { passive: true });
+  document.addEventListener("mousemove", handleMove);
+  document.addEventListener("touchmove", (e) => {
+    if (isSliderDragging) {
+      // Prevent page scroll only when actively dragging slider
+      if (e.cancelable) e.preventDefault();
+      handleMove(e);
+    }
+  }, { passive: false });
+
+  const endDragging = () => {
+    isSliderDragging = false;
+    activeHandle = null;
+    sliderRect = null;
+  };
+
+  document.addEventListener("mouseup", endDragging);
+  document.addEventListener("touchend", endDragging);
+  document.addEventListener("touchcancel", endDragging);
+
+  // Event listeners for text inputs
+  const handleTimeInput = (inputElement) => {
+    let duration = window.videoDuration || 3600;
+    if (duration < 10) duration = 3600;
+    const sec = parseTime(inputElement.value);
+    // Only update slider if we have a valid number
+    if (!isNaN(sec) && sec >= 0) { // Allow sec > duration temporarily while typing? No, better clamp logic in updateSlider
+      // Actually updateSlider reads values from DOM, so just calling it is enough.
+      // But we want visual feedback on slider tracks.
+      updateSlider();
+    }
+  };
+
+  // Input event: update slider handles, do NOT reformat text (handled in updateSlider by check)
+  startTimeInput.addEventListener("input", () => handleTimeInput(startTimeInput));
+  endTimeInput.addEventListener("input", () => handleTimeInput(endTimeInput));
+
+  startTimeInput.addEventListener("change", () => {
+    startTimeInput.blur(); // Remove focus to allow updateSlider to update text
+    updateSlider();
+  });
+  endTimeInput.addEventListener("change", () => {
+    endTimeInput.blur();
+    updateSlider();
+  });
+
+  // Enter key support
+  const handleEnter = (e) => {
+    if (e.key === "Enter") {
+      e.target.blur(); // This will trigger change event usually, or at least blur
+    }
+  };
+  startTimeInput.addEventListener("keydown", handleEnter);
+  endTimeInput.addEventListener("keydown", handleEnter);
+}
+
+// Modify qualitySelect to initialize slider
+// let originalQualityChange = null; // Unused
+if (qualitySelect) {
+  // originalQualityChange = qualitySelect.onchange; // Unused
+  qualitySelect.addEventListener("change", () => {
+    if (qualitySelect.value) {
+      // ... existing code ...
+
+      if (
+        formatSelect &&
+        formatSelect.value === "mp4" &&
+        (urlInput.value.includes("youtube.com") ||
+          urlInput.value.includes("youtu.be")) &&
+        !urlInput.value.includes("/shorts/")
+      ) {
+        document.getElementById("clip-option").style.display = "block";
+        initDualRangeSlider();
+      }
+    }
+  });
+}
+
+// Typewriter effect for headline
+const headlines = [
+  "Rapid Download & Clip: Videos & Music in Seconds",
+  "Swift Edit & Grab: Modern Media Tools",
+];
+let currentIndex = 0;
+let currentText = "";
+let isDeleting = false;
+let typeSpeed = 100;
+
+function typeWriter() {
+  const fullText = headlines[currentIndex];
+  if (isDeleting) {
+    currentText = fullText.substring(0, currentText.length - 1);
+  } else {
+    currentText = fullText.substring(0, currentText.length + 1);
+  }
+  const headline = document.getElementById("animated-headline");
+  if (headline) {
+    headline.innerText = currentText;
+  }
+  if (!isDeleting && currentText === fullText) {
+    setTimeout(() => (isDeleting = true), 2000); // pause before deleting
+  } else if (isDeleting && currentText === "") {
+    isDeleting = false;
+    currentIndex = (currentIndex + 1) % headlines.length;
+  }
+  const speed = isDeleting ? typeSpeed / 2 : typeSpeed;
+  setTimeout(typeWriter, speed);
+}
+
+// Page load animation sequence
+setTimeout(() => {
+  const heroH2 = document.querySelector(".hero h2");
+  if (heroH2) {
+    heroH2.style.opacity = "1";
+  }
+  typeWriter(); // start typewriter after h2 fades in
+}, 2000);
+
+setTimeout(() => {
+  const heroP = document.querySelector(".hero p");
+  if (heroP) {
+    heroP.style.opacity = "1";
+  }
+  const downloadForm = document.querySelector(".download-form");
+  if (downloadForm) {
+    downloadForm.style.opacity = "1";
+  }
+}, 3000);
+
+// Back to Top Button
+const backToTopBtn = document.getElementById("back-to-top");
+
+const handleScroll = () => {
+  if (backToTopBtn) {
+    const scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || (document.body ? document.body.scrollTop : 0);
+    if (scrollPos > 300) {
+      backToTopBtn.classList.add("show");
+    } else {
+      backToTopBtn.classList.remove("show");
+    }
   }
 
-  if (backToTopBtn) {
-    backToTopBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      // Scroll everything to be safe
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      if (document.body) document.body.scrollTo({ top: 0, behavior: "smooth" });
-      if (document.documentElement) document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
-    });
-  } // Close if (backToTopBtn)
+  // Color transition for card headers on scroll
+  const featureCards = document.querySelectorAll(
+    ".feature-item-standout, .feature-item"
+  );
+  featureCards.forEach((card) => {
+    const rect = card.getBoundingClientRect();
+    const header = card.querySelector("h3, h4");
+    if (header) {
+      if (rect.top < 0) {
+        header.style.color = "#f39c12"; // scrolled past
+      } else {
+        header.style.color = "#1d3557"; // not scrolled past
+      }
+    }
+  });
+};
+
+// Listen for scroll on both window and body due to overflow: hidden on html
+window.addEventListener("scroll", handleScroll, { passive: true });
+if (document.body) {
+  document.body.addEventListener("scroll", handleScroll, { passive: true });
+}
+
+if (backToTopBtn) {
+  backToTopBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    // Scroll everything to be safe
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (document.body) document.body.scrollTo({ top: 0, behavior: "smooth" });
+    if (document.documentElement) document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+  });
+} // Close if (backToTopBtn)
 }); // Close DOMContentLoaded listener
 
 
