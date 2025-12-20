@@ -995,12 +995,12 @@ app.disable('x-powered-by');
 
 // Add Security Headers
 app.use((req, res, next) => {
-  // Content Security Policy - Strong policy with hash allowlisting for ad scripts
-  // Using 'self' for same-origin scripts + specific allowlists for ad provider
-  // Hash values allow ONLY the specific ad configuration inline scripts
+  // Content Security Policy - Balanced security with ad compatibility
+  // Note: 'unsafe-inline' required for 3rd-party ad scripts that inject dynamic code
+  // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'sha256-j45KywNUZCYyk3X7P+3363p9G1WafWOFt+kfDIFsHkk=' 'sha256-x6r/W+y64zQP860Uo5dL9vjvLK/boYOPEtGTiez9X94=' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'unsafe-inline' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
