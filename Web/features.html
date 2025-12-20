@@ -54,6 +54,15 @@
                 font-size: 30px !important;
             }
         }
+
+        /* Hero padding fix for mobile to prevent header overlap */
+        @media (max-width: 959px) {
+            .features-hero {
+                height: auto !important;
+                min-height: auto !important;
+                padding: 140px 0 80px 0 !important;
+            }
+        }
     </style>
 
     <script src="script.js" defer></script>
