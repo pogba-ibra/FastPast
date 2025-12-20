@@ -993,31 +993,8 @@
     <script src="js/session-handler.js"></script>
     <script src="js/morphing-cards.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize Socket.IO
-            const socket = io();
 
-            // Listen for session invalidation event
-            socket.on('session-invalidated', (data) => {
-                console.log('Received session invalidation event', data);
-                const currentSessionToken = localStorage.getItem('sessionToken');
 
-                // If my session is in the list of invalidated tokens
-                if (currentSessionToken && data.sessionTokens && data.sessionTokens.includes(currentSessionToken)) {
-                    // Clear local storage
-                    localStorage.removeItem('sessionToken');
-                    localStorage.removeItem('currentUser');
-
-                    // Alert user
-                    alert('You have logged in on another device. This session has been terminated.');
-
-                    // Redirect to login or reload
-                    window.location.href = 'index.html';
-                }
-            });
-        });
-    </script>
 
 
     <!-- Disclaimer Modal Integration -->
