@@ -580,48 +580,6 @@ async function seedTestUsers() {
   console.log('🎉 Test users synchronized');
 }
 
-// Seed test users for JSON storage
-async function seedJsonUsers() {
-  console.log('🌱 Ensuring JSON test users exist...');
-  const testUsers = [
-    { username: 'free_user', email: 'free@test.com', password: 'Test1234!', membershipType: 'free' },
-    { username: 'monthly_user', email: 'monthly@test.com', password: 'Test1234!', membershipType: 'monthly' },
-    { username: 'lifetime_user', email: 'lifetime@test.com', password: 'Test1234!', membershipType: 'lifetime' }
-  ];
-
-  for (const userData of testUsers) {
-    const existingIndex = USERS_DATA.findIndex(u => u.email === userData.email);
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
-    const subscriptionEndDate = userData.membershipType === 'monthly'
-      ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      : null;
-
-    const userObj = {
-      id: existingIndex >= 0 ? USERS_DATA[existingIndex].id : crypto.randomBytes(16).toString('hex'),
-      username: userData.username,
-      email: userData.email,
-      password: hashedPassword,
-      membershipType: userData.membershipType,
-      subscriptionStatus: 'active',
-      subscriptionEndDate,
-      isEmailVerified: true,
-      createdAt: existingIndex >= 0 ? USERS_DATA[existingIndex].createdAt : new Date(),
-      lastDownloadReset: existingIndex >= 0 ? USERS_DATA[existingIndex].lastDownloadReset : new Date(),
-      dailyDownloadCount: existingIndex >= 0 ? USERS_DATA[existingIndex].dailyDownloadCount : 0
-    };
-
-    if (existingIndex >= 0) {
-      USERS_DATA[existingIndex] = userObj;
-    } else {
-      USERS_DATA.push(userObj);
-    }
-    console.log(`✅ ${existingIndex >= 0 ? 'Updated' : 'Created'}: ${userData.username} (${userData.membershipType})`);
-  }
-  saveUsers();
-  console.log('🎉 Test users initialized successfully!\n');
-}
-
-
 // Configure Winston logger
 const logger = winston.createLogger({
   level: "info",
@@ -1108,7 +1066,7 @@ const apiKeys = [
   process.env.YOUTUBE_API_KEY_8,
   process.env.YOUTUBE_API_KEY_9,
   process.env.YOUTUBE_API_KEY_10
-].filter(key => key && key !== 'YOUR_API_KEY_HERE');
+].filter(key => key && key !== 'YOUR_API_KEY_HERE').map(key => key.trim());
 
 function getNextApiKey() {
   if (apiKeys.length === 0) return null;
