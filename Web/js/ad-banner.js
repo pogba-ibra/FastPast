@@ -1,56 +1,45 @@
-// Ad banner configuration and sticky behavior
+// Ad banner configuration - MUST execute immediately before ad scripts load
+// Set atOptions based on screen width so ad invoke.js can read it
+
+// Desktop Banner Configuration (728x90)
+const atOptions_desktop = {
+    'key': '14d8dff183fa615fac59e9cf6507813c',
+    'format': 'iframe',
+    'height': 90,
+    'width': 728,
+    'params': {}
+};
+
+// Mobile Banner Configuration (320x50)
+const atOptions_mobile = {
+    'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
+    'format': 'iframe',
+    'height': 50,
+    'width': 320,
+    'params': {}
+};
+
+// Set global atOptions based on screen width
+// Ad scripts will read window.atOptions when they load
+if (window.innerWidth >= 768) {
+    window.atOptions = atOptions_desktop;
+} else {
+    window.atOptions = atOptions_mobile;
+}
+
+// Sticky banner with footer detection
 (function () {
     'use strict';
 
-    // Desktop Banner Configuration (728x90)
-    window.atOptions_desktop = {
-        'key': '14d8dff183fa615fac59e9cf6507813c',
-        'format': 'iframe',
-        'height': 90,
-        'width': 728,
-        'params': {}
-    };
-
-    // Mobile Banner Configuration (320x50)
-    window.atOptions_mobile = {
-        'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
-        'format': 'iframe',
-        'height': 50,
-        'width': 320,
-        'params': {}
-    };
-
-    // Set atOptions globally before ad scripts load
-    // The ad scripts will read from window.atOptions
-    const desktopBanner = document.getElementById('desktop-banner');
-    const mobileBanner = document.getElementById('mobile-banner');
-
-    if (desktopBanner) {
-        window.atOptions = window.atOptions_desktop;
-    }
-    if (mobileBanner) {
-        if (!window.atOptions) window.atOptions = window.atOptions_mobile;
-    }
-
-    // Sticky banner with footer detection
     function initStickyBanner() {
         const banner = document.getElementById('sticky-banner-ad');
-        const closeBtn = document.getElementById('close-banner');
-
         if (!banner) return;
 
-        // Close button functionality
+        const closeBtn = document.getElementById('close-banner');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                banner.classList.add('hidden');
-                sessionStorage.setItem('bannerClosed', 'true');
+                banner.style.display = 'none';
             });
-        }
-
-        // Check if banner was closed in this session
-        if (sessionStorage.getItem('bannerClosed') === 'true') {
-            banner.classList.add('hidden');
-            return;
         }
 
         // Handle scroll to detect footer/bottom of page
@@ -72,15 +61,23 @@
             }
         }
 
-        // Run on scroll
-        window.addEventListener('scroll', handleBannerPosition);
-        window.addEventListener('resize', handleBannerPosition);
+        // Throttle scroll event
+        let ticking = false;
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    handleBannerPosition();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
 
-        // Initial check
+        // Initial position
         handleBannerPosition();
     }
 
-    // Initialize when DOM is ready
+    // Wait for DOM to initialize sticky behavior
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initStickyBanner);
     } else {
