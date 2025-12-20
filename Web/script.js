@@ -1728,12 +1728,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Store available qualities globally
-  window.availableQualities = {
-    mp4: mp4Data.qualities,
-    mp3: mp3Data.qualities,
-  };
-  // User Request Dec 2025: Parse formatted duration string to seconds to avoid NaN in slider
-  window.videoDuration = parseTime(mp4Data.duration || "0");
+    window.availableQualities = {
+      mp4: mp4Data.qualities,
+      mp3: mp3Data.qualities,
+    };
+    // User Request Dec 2025: Parse formatted duration string to seconds to avoid NaN in slider
+    window.videoDuration = parseTime(mp4Data.duration || "0");
 
     // Do not auto-select format, let user choose
     populateQualityOptions();
@@ -1848,7 +1848,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Show success message after delay (10s for Facebook, 4s for others)
       if (successMessage) {
         const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
-        const delay = isFacebook ? 20000 : 5000;
+        const delay = isFacebook ? 15000 : 5000;
         setTimeout(() => {
           successMessage.style.display = "flex";
           successMessage.classList.add("show");
@@ -2143,18 +2143,31 @@ document.addEventListener("DOMContentLoaded", () => {
       isSliderDragging = true;
       activeHandle = handle;
       sliderRect = sliderTrack.getBoundingClientRect();
-      e.preventDefault();
+
+      // Prevent scrolling while dragging on touch
+      if (e.type === "touchstart") {
+        // e.preventDefault(); // Handled by passive: false listener if needed
+      } else {
+        e.preventDefault();
+      }
     }
 
     startHandle.addEventListener("mousedown", (e) => startDrag(e, "start"));
     endHandle.addEventListener("mousedown", (e) => startDrag(e, "end"));
 
-    document.addEventListener("mousemove", (e) => {
+    // Add Touch Support
+    startHandle.addEventListener("touchstart", (e) => startDrag(e, "start"), { passive: false });
+    endHandle.addEventListener("touchstart", (e) => startDrag(e, "end"), { passive: false });
+
+    const handleMove = (e) => {
       if (!isSliderDragging || !sliderRect) return;
+
+      // Extract clientX for both Mouse and Touch events
+      const clientX = e.type.includes("touch") ? e.touches[0].clientX : e.clientX;
 
       let duration = window.videoDuration || 3600;
       if (duration < 10) duration = 3600;
-      const x = e.clientX - sliderRect.left;
+      const x = clientX - sliderRect.left;
       const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
       const seconds = Math.round((percent / 100) * duration);
 
@@ -2188,13 +2201,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       updateSlider();
-    });
+    };
 
-    document.addEventListener("mouseup", () => {
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("touchmove", (e) => {
+      if (isSliderDragging) {
+        // Prevent page scroll only when actively dragging slider
+        if (e.cancelable) e.preventDefault();
+        handleMove(e);
+      }
+    }, { passive: false });
+
+    const endDragging = () => {
       isSliderDragging = false;
       activeHandle = null;
       sliderRect = null;
-    });
+    };
+
+    document.addEventListener("mouseup", endDragging);
+    document.addEventListener("touchend", endDragging);
+    document.addEventListener("touchcancel", endDragging);
 
     // Event listeners for text inputs
     const handleTimeInput = (inputElement) => {
@@ -2212,14 +2238,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // Input event: update slider handles, do NOT reformat text (handled in updateSlider by check)
     startTimeInput.addEventListener("input", () => handleTimeInput(startTimeInput));
     endTimeInput.addEventListener("input", () => handleTimeInput(endTimeInput));
-
-    // Change/Blur event: Force reformat to MM:SS
-    // const finalizeInput = () => { // Unused
-    //   updateSlider();
-    //   // ...
-    //   let duration = window.videoDuration || 3600;
-    //   if (duration < 10) duration = 3600;
-    // };
 
     startTimeInput.addEventListener("change", () => {
       startTimeInput.blur(); // Remove focus to allow updateSlider to update text
