@@ -20788,3 +20788,8 @@ button {
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
+
+/* Make playlist header title white in dark mode */
+.dark-mode .playlist-header .header-text h3 {
+  color: #ffffff !important;
+}

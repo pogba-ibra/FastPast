@@ -252,10 +252,20 @@ function spawnYtDlp(args, options = {}) {
   const command = getPythonCommand();
   const finalArgs = [...args];
 
+  // FORCE UTF-8 for subprocess communication to prevent mangling non-Latin characters
+  const env = {
+    ...process.env,
+    PYTHONIOENCODING: 'utf-8',
+    LANG: 'en_US.UTF-8',
+    LC_ALL: 'en_US.UTF-8'
+  };
+
+  const spawnOptions = { ...options, env };
+
   // Log usage
   logger.info("Using yt-dlp Nightly (pip -m)", { command });
 
-  return spawn(command, finalArgs, options);
+  return spawn(command, finalArgs, spawnOptions);
 }
 
 // Hardcoded Desktop User-Agent (Forced for all platforms to ensure HD/4K discovery)
@@ -1005,7 +1015,7 @@ app.use((req, res, next) => {
   // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.highperformanceformat.com https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
@@ -4115,8 +4125,9 @@ app.post("/download", async (req, res) => {
 
     // Sanitize title for filename while preserving Unicode (Arabic, Cyrillic, etc.)
     // Only strip strictly illegal filesystem characters: \ / : * ? " < > |
+    // eslint-disable-next-line no-control-regex
     const safeTitle = videoTitle
-      .replace(/[\x00-\x1f\x7f]/g, "") // Strip control characters only
+      .replace(/[\u0000-\u001f\u007f]/g, "") // Strip control characters only
       .replace(/[\\/:*?"<>|]/g, "_")  // Replace illegal FS chars with underscore
       .replace(/\s+/g, " ")           // Collapse multiple spaces
       .trim()
@@ -4129,6 +4140,7 @@ app.post("/download", async (req, res) => {
       "-v", // Enable verbose logging for debugging
       "--no-check-certificate",
       "--no-playlist",
+      "--no-restrict-filenames", // CRITICAL: Preserve Unicode characters in internal temp files
       "--ffmpeg-location", "/usr/local/bin/ffmpeg",
       "--ignore-no-formats-error",
       "--check-formats"
