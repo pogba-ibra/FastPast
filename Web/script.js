@@ -2458,12 +2458,19 @@ async function renderPlaylist(videos) {
         `;
     container.appendChild(item);
 
-    // Auto-fetch options immediately (Staggered to prevent freezing)
-    setTimeout(() => {
-      const btn = item.querySelector('.pl-load-options-btn');
-      // Call function directly to ensure execution, bypassing potential event listener issues
-      if (btn && typeof window.toggleItemOptions === 'function') {
-        window.toggleItemOptions(index, video.url, btn);
+    // Silent Background Fetch (Staggered)
+    // Fetches data into cache so it's ready instantly when user clicks "Options"
+    setTimeout(async () => {
+      try {
+        if (typeof fetchVideoCacheAware === 'function') {
+          await fetchVideoCacheAware(index, video.url);
+        } else if (typeof fetchVideoData === 'function') {
+          // Fallback manual cache population
+          const data = await fetchVideoData(video.url);
+          window.playlistItemState[index] = data;
+        }
+      } catch (e) {
+        console.warn(`Background fetch failed for item ${index}`, e);
       }
     }, 300 * (index + 1)); // 300ms delay per item
   });
