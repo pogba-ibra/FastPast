@@ -1230,6 +1230,11 @@ document.addEventListener("DOMContentLoaded", () => {
     processBtn.addEventListener("click", async () => {
       const videoUrl = urlInput.value.trim();
 
+      // Validate URL input before processing
+      if (!videoUrl) {
+        alert("Please enter a video URL.");
+        return;
+      }
 
       // Check if it's a playlist URL
       if (isPlaylistUrl(videoUrl)) {
