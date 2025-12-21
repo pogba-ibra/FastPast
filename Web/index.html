@@ -990,145 +990,147 @@
     </button>
     <script src="js/scroll-animations.js"></script>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="js/session-handler.js"></script>
-    <script src="js/morphing-cards.js"></script>
+    <!-- Socket.IO disabled to prevent console errors (session sync is non-critical) -->
+    <!-- <script src="/socket.io/socket.io.js"></script> -->
+    <!-- <script src="js/session-handler.js"></script> -->
+    <parameter name="StartLine">993
+        <script src="js/morphing-cards.js"></script>
 
 
 
 
 
-    <!-- Disclaimer Modal Integration -->
-    <link rel="stylesheet" href="../style/disclaimer-modal-v2.css?v=V2-OVERLAY-FIX">
+        <!-- Disclaimer Modal Integration -->
+        <link rel="stylesheet" href="../style/disclaimer-modal-v2.css?v=V2-OVERLAY-FIX">
 
-    <!-- Disclaimer Modal Container (loaded from disclaimer-modal.html) -->
-    <div id="disclaimerModalContainer"></div>
+        <!-- Disclaimer Modal Container (loaded from disclaimer-modal.html) -->
+        <div id="disclaimerModalContainer"></div>
 
-    <script src="js/disclaimer-loader.js"></script>
+        <script src="js/disclaimer-loader.js"></script>
 
-    <!-- Sticky Bottom Banner Ad -->
-    <div id="sticky-banner-ad" class="sticky-bottom-banner">
-        <!-- Desktop Banner (728x90) -->
-        <div id="desktop-banner" class="banner-container" data-ad-key="desktop">
-            <script type="text/javascript">
-                atOptions = {
-                    'key': '14d8dff183fa615fac59e9cf6507813c',
-                    'format': 'iframe',
-                    'height': 90,
-                    'width': 728,
-                    'params': {}
-                };
-            </script>
-            <script type="text/javascript"
-                src="https://www.highperformanceformat.com/14d8dff183fa615fac59e9cf6507813c/invoke.js"></script>
+        <!-- Sticky Bottom Banner Ad -->
+        <div id="sticky-banner-ad" class="sticky-bottom-banner">
+            <!-- Desktop Banner (728x90) -->
+            <div id="desktop-banner" class="banner-container" data-ad-key="desktop">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key': '14d8dff183fa615fac59e9cf6507813c',
+                        'format': 'iframe',
+                        'height': 90,
+                        'width': 728,
+                        'params': {}
+                    };
+                </script>
+                <script type="text/javascript"
+                    src="https://www.highperformanceformat.com/14d8dff183fa615fac59e9cf6507813c/invoke.js"></script>
+            </div>
+            <!-- Mobile Banner (320x50) -->
+            <div id="mobile-banner" class="banner-container" data-ad-key="mobile">
+                <script type="text/javascript">
+                    atOptions = {
+                        'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
+                        'format': 'iframe',
+                        'height': 50,
+                        'width': 320,
+                        'params': {}
+                    };
+                </script>
+                <script type="text/javascript"
+                    src="https://www.highperformanceformat.com/d5249bc6c1a5fd336816be4c27cf7e1e/invoke.js"></script>
+            </div>
         </div>
-        <!-- Mobile Banner (320x50) -->
-        <div id="mobile-banner" class="banner-container" data-ad-key="mobile">
-            <script type="text/javascript">
-                atOptions = {
-                    'key': 'd5249bc6c1a5fd336816be4c27cf7e1e',
-                    'format': 'iframe',
-                    'height': 50,
-                    'width': 320,
-                    'params': {}
-                };
-            </script>
-            <script type="text/javascript"
-                src="https://www.highperformanceformat.com/d5249bc6c1a5fd336816be4c27cf7e1e/invoke.js"></script>
-        </div>
-    </div>
 
-    <style>
-        .sticky-bottom-banner {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            background: #fff;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-            padding: 10px;
-            border-radius: 8px 8px 0 0;
-            transition: bottom 0.3s ease;
-            min-height: 110px;
-            /* Ensure enough height for 728x90 banner + padding */
-        }
-
-        .banner-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 90px;
-            /* Height for desktop banner */
-        }
-
-        /* Ensure iframe is visible */
-        .banner-container iframe {
-            display: block !important;
-            margin: 0 auto;
-        }
-
-        /* Desktop banner - show on screens wider than 768px */
-        #desktop-banner {
-            display: flex;
-            min-height: 90px;
-            width: 728px;
-        }
-
-        /* Mobile banner - show on screens 768px and below */
-        #mobile-banner {
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            #desktop-banner {
-                display: none;
-            }
-
-            #mobile-banner {
-                display: flex;
-                min-height: 50px;
-                width: 320px;
-            }
-
+        <style>
             .sticky-bottom-banner {
-                min-height: 70px;
-                /* Smaller height for mobile banner */
+                position: fixed;
+                bottom: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 9999;
+                background: #fff;
+                box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+                padding: 10px;
+                border-radius: 8px 8px 0 0;
+                transition: bottom 0.3s ease;
+                min-height: 110px;
+                /* Ensure enough height for 728x90 banner + padding */
             }
 
             .banner-container {
-                min-height: 50px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 90px;
+                /* Height for desktop banner */
             }
-        }
 
-        .close-banner-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(0, 0, 0, 0.6);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            font-size: 18px;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.3s;
-            z-index: 10000;
-        }
+            /* Ensure iframe is visible */
+            .banner-container iframe {
+                display: block !important;
+                margin: 0 auto;
+            }
 
-        .close-banner-btn:hover {
-            background: rgba(0, 0, 0, 0.8);
-        }
+            /* Desktop banner - show on screens wider than 768px */
+            #desktop-banner {
+                display: flex;
+                min-height: 90px;
+                width: 728px;
+            }
 
-        .sticky-bottom-banner.hidden {
-            display: none;
-        }
-    </style>
+            /* Mobile banner - show on screens 768px and below */
+            #mobile-banner {
+                display: none;
+            }
+
+            @media (max-width: 768px) {
+                #desktop-banner {
+                    display: none;
+                }
+
+                #mobile-banner {
+                    display: flex;
+                    min-height: 50px;
+                    width: 320px;
+                }
+
+                .sticky-bottom-banner {
+                    min-height: 70px;
+                    /* Smaller height for mobile banner */
+                }
+
+                .banner-container {
+                    min-height: 50px;
+                }
+            }
+
+            .close-banner-btn {
+                position: absolute;
+                top: 5px;
+                right: 5px;
+                background: rgba(0, 0, 0, 0.6);
+                color: white;
+                border: none;
+                border-radius: 50%;
+                width: 25px;
+                height: 25px;
+                font-size: 18px;
+                line-height: 1;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.3s;
+                z-index: 10000;
+            }
+
+            .close-banner-btn:hover {
+                background: rgba(0, 0, 0, 0.8);
+            }
+
+            .sticky-bottom-banner.hidden {
+                display: none;
+            }
+        </style>
 
 
 </body>
