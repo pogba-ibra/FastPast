@@ -20418,7 +20418,7 @@ body[data-page="pricing"] .plan-dragon {
     margin-top: 0px !important;
     /* Moved up more aggressively */
     position: absolute;
-    top: -25px !important;
+    top: 62px !important;
     /* Extra nudge */
   }
 }
