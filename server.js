@@ -1052,6 +1052,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// SEO Routes - Serve explicitly with correct Content-Type to avoid issues
+app.get('/sitemap.xml', (req, res) => {
+  res.header('Content-Type', 'application/xml');
+  res.sendFile(path.join(__dirname, 'Web', 'sitemap.xml'));
+});
+
+app.get('/robots.txt', (req, res) => {
+  res.header('Content-Type', 'text/plain');
+  res.sendFile(path.join(__dirname, 'Web', 'robots.txt'));
+});
+
 app.use(express.static(path.join(__dirname, "Web"), { extensions: ['html'] }));
 app.use("/style", express.static(path.join(__dirname, "style")));
 app.use("/js", express.static(path.join(__dirname, "js")));

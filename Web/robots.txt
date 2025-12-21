@@ -1,17 +1,3 @@
 User-agent: *
 Allow: /
-
-# Disallow admin pages
-Disallow: /test-login
-Disallow: /disclaimer-loader
-
-# Allow all crawlers access to public pages
-Allow: /index
-Allow: /features
-Allow: /pricing
-Allow: /faq
-Allow: /privacy
-Allow: /terms
-
-# Sitemap location
 Sitemap: https://fastpast-app.fly.dev/sitemap.xml
