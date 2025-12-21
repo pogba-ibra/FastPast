@@ -1015,14 +1015,14 @@ app.use((req, res, next) => {
   // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://cdnjs.cloudflare.com; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-    "img-src 'self' data: https:; " +
-    "frame-src 'self' https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com; " +
-    "connect-src 'self' ws: wss: https:;"
+    "img-src 'self' data: https: https://www.google.com; " +
+    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com; " +
+    "connect-src 'self' ws: wss: https: https://pagead2.googlesyndication.com;"
   );
 
   // HTTP Strict Transport Security (HSTS)
