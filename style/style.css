@@ -20702,3 +20702,32 @@ button {
     width: 100%;
   }
 }
+
+/* Improved Playlist Content Card Container */
+.playlist-content-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 24px;
+  padding: 30px;
+  margin: 40px auto;
+  max-width: 1200px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0,0,0,0.03);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.3s ease;
+}
+
+/* Dark Mode for Content Card */
+.dark-mode .playlist-content-card {
+  background: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .playlist-content-card {
+    padding: 20px;
+    margin: 20px 10px;
+    border-radius: 20px;
+  }
+}
