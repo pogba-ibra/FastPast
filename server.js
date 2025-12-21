@@ -646,13 +646,16 @@ function parsePTDuration(ptDuration) {
 
 function encodeRFC5987Value(value) {
   return encodeURIComponent(value)
-    .replace(/['()]/g, (char) => `% ${char.charCodeAt(0).toString(16).toUpperCase()} `)
+    .replace(/['()]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
     .replace(/\*/g, "%2A");
 }
 
 function getContentDisposition(filename) {
+  // Fallback for very old browsers (ASCII only)
   const fallback = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
-  return `attachment; filename = "${fallback}"; filename *= UTF - 8''${encodeRFC5987Value(filename)} `;
+  // UTF-8 encoded filename for modern browsers (RFC 5987)
+  // CRITICAL: Remove extra spaces in 'filename*' and 'UTF-8' to follow spec strictly
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeRFC5987Value(filename)}`;
 }
 
 function getFormatScore(format) {
@@ -4108,15 +4111,14 @@ app.post("/download", async (req, res) => {
     }
 
 
-    /* eslint-disable no-control-regex */
-    const INVALID_FILENAME_CHARS = /[\x00-\x1f\x80-\x9f/?<>\\:*|"]/g;
-    /* eslint-enable no-control-regex */
+    // Sanitize title for filename while preserving Unicode (Arabic, Cyrillic, etc.)
+    // Only strip strictly illegal filesystem characters: \ / : * ? " < > |
     const safeTitle = videoTitle
-      .replace(INVALID_FILENAME_CHARS, "")
-      .replace(/[<>:"|?*\\]/g, "_")
-      .replace(/\s+/g, " ")
+      .replace(/[\x00-\x1f\x7f]/g, "") // Strip control characters only
+      .replace(/[\\/:*?"<>|]/g, "_")  // Replace illegal FS chars with underscore
+      .replace(/\s+/g, " ")           // Collapse multiple spaces
       .trim()
-      .substring(0, 100);
+      .substring(0, 150);             // Allow slightly longer titles
     const finalTitle = safeTitle || "Video";
     const downloadFilename = `FastPast – ${finalTitle}.${fmt}`;
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
