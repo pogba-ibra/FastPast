@@ -2457,6 +2457,15 @@ async function renderPlaylist(videos) {
             </div>
         `;
     container.appendChild(item);
+
+    // Auto-fetch options immediately (Staggered to prevent freezing)
+    setTimeout(() => {
+      const btn = item.querySelector('.pl-load-options-btn');
+      // Call function directly to ensure execution, bypassing potential event listener issues
+      if (btn && typeof window.toggleItemOptions === 'function') {
+        window.toggleItemOptions(index, video.url, btn);
+      }
+    }, 300 * (index + 1)); // 300ms delay per item
   });
 
   // Batch Selection Logic
