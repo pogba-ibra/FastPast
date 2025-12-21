@@ -1799,16 +1799,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      // Show VAST video ad before download for non-premium users
-      const vastAdUrl = 'https://strong-training.com/dtm.FpzUdZG/NYvuZmG/Uz/reMm/9kuYZuUelNk/PDTLYX3/MjzAAJ4/NJDrUftrNfjlcGzjMeD-gP0PN/iFZrsaaPWI1Mp/dIDy0DxW';
-
-      const adPlayer = new VASTAdPlayer(vastAdUrl, (completed) => {
-        console.log('Ad ' + (completed ? 'completed' : 'skipped'));
-        // Proceed with download after ad
-        proceedWithDownload();
-      });
-
-      adPlayer.loadAndPlay();
+      // Proceed with download directly (ads removed)
+      proceedWithDownload();
     });
 
     // Extract download logic into separate function
