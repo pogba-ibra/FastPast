@@ -1,4 +1,3 @@
-/* global VASTAdPlayer */
 // This file will contain the JavaScript logic for video downloading.
 
 // Global variable for tracking drag state (used by both rope and theme toggle)
@@ -2615,6 +2614,13 @@ async function renderPlaylist(videos) {
              `;
 
             downloadSelectedBtn.innerHTML = `<span class="btn-content"><i class="fas fa-check"></i> Done!</span>`;
+
+            // Update "Downloads Complete" stat
+            const completedStat = document.getElementById("pl-completed");
+            if (completedStat) {
+              const currentCount = parseInt(completedStat.textContent) || 0;
+              completedStat.textContent = currentCount + items.length;
+            }
 
             // Trigger Download
             window.location.href = `/download-zip-result/${jobId}`;
