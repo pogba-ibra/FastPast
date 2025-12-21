@@ -20731,3 +20731,29 @@ button {
     border-radius: 20px;
   }
 }
+
+/* Improved Playlist Header & Footer */
+.playlist-header {
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+.playlist-actions-footer {
+  padding-top: 25px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Dark Mode Styles for Header/Footer Borders */
+.dark-mode .playlist-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .playlist-actions-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
