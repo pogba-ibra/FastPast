@@ -6,70 +6,70 @@
   
   <!-- Main Pages -->
   <url>
-    <loc>https://fastpast-app.fly.dev/</loc>
+    <loc>https://fastpast.io/</loc>
     <priority>1.0</priority>
     <changefreq>daily</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/features</loc>
+    <loc>https://fastpast.io/features</loc>
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/pricing</loc>
+    <loc>https://fastpast.io/pricing</loc>
     <priority>0.9</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/gopremium</loc>
+    <loc>https://fastpast.io/gopremium</loc>
     <priority>0.8</priority>
     <changefreq>weekly</changefreq>
   </url>
   
   <!-- Information Pages -->
   <url>
-    <loc>https://fastpast-app.fly.dev/faq</loc>
+    <loc>https://fastpast.io/faq</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/features-complete</loc>
+    <loc>https://fastpast.io/features-complete</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/features-interactive</loc>
+    <loc>https://fastpast.io/features-interactive</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
 
   <url>
-    <loc>https://fastpast-app.fly.dev/features-grid</loc>
+    <loc>https://fastpast.io/features-grid</loc>
     <priority>0.7</priority>
     <changefreq>monthly</changefreq>
   </url>
   
   <!-- Authentication Pages -->
   <url>
-    <loc>https://fastpast-app.fly.dev/login</loc>
+    <loc>https://fastpast.io/login</loc>
     <priority>0.6</priority>
     <changefreq>yearly</changefreq>
   </url>
   
   <!-- Legal Pages -->
   <url>
-    <loc>https://fastpast-app.fly.dev/privacy</loc>
+    <loc>https://fastpast.io/privacy</loc>
     <priority>0.5</priority>
     <changefreq>yearly</changefreq>
   </url>
   
   <url>
-    <loc>https://fastpast-app.fly.dev/terms</loc>
+    <loc>https://fastpast.io/terms</loc>
     <priority>0.5</priority>
     <changefreq>yearly</changefreq>
   </url>
