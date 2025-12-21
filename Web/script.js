@@ -1,4 +1,4 @@
-/* global io, VASTAdPlayer */
+/* global VASTAdPlayer */
 // This file will contain the JavaScript logic for video downloading.
 
 // Global variable for tracking drag state (used by both rope and theme toggle)
