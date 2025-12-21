@@ -1078,6 +1078,11 @@ app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'Web', 'robots.txt'));
 });
 
+app.get('/ads.txt', (req, res) => {
+  res.header('Content-Type', 'text/plain');
+  res.sendFile(path.join(__dirname, 'Web', 'ads.txt'));
+});
+
 app.use(express.static(path.join(__dirname, "Web"), { extensions: ['html'] }));
 app.use("/style", express.static(path.join(__dirname, "style")));
 app.use("/js", express.static(path.join(__dirname, "js")));
