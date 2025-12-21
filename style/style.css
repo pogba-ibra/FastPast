@@ -20531,3 +20531,36 @@ button {
   min-height: 44px;
   min-width: 44px;
 }
+/* Header Text Improvements */
+.header-text {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 10px;
+}
+
+.header-text h3 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #2c3e50, #4ca1af);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: #2c3e50;
+}
+
+.header-text p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  font-weight: 400;
+}
+
+/* Dark Mode - Header Text Specific Request */
+.dark-mode .header-text h3,
+.dark-mode .header-text p {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important; /* Override gradient */
+  background: none; /* Remove gradient for solid black */
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3); /* Add subtle light shadow for readability on dark */
+}
