@@ -1,4 +1,4 @@
-/* global VASTAdPlayer */
+/* global */
 // This file will contain the JavaScript logic for video downloading.
 
 // Global variable for tracking drag state (used by both rope and theme toggle)
@@ -1787,27 +1787,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download video
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {
-      // Check if user is premium (ads disabled by ad-control.js)
-      if (window.skipVASTAds) {
-        console.log('Premium user - skipping VAST ad');
-        proceedWithDownload();
-        return;
-      }
-
-      // Show VAST video ad before download for non-premium users
-      const vastAdUrl = 'https://strong-training.com/dtm.FpzUdZG/NYvuZmG/Uz/reMm/9kuYZuUelNk/PDTLYX3/MjzAAJ4/NJDrUftrNfjlcGzjMeD-gP0PN/iFZrsaaPWI1Mp/dIDy0DxW';
-
-      const adPlayer = new VASTAdPlayer(vastAdUrl, (completed) => {
-        console.log('Ad ' + (completed ? 'completed' : 'skipped'));
-        // Proceed with download after ad
-        proceedWithDownload();
-      });
-
-      adPlayer.loadAndPlay();
-    });
-
-    // Extract download logic into separate function
-    function proceedWithDownload() {
 
       const videoUrl = urlInput.value.trim();
       const format = formatSelect.value;
