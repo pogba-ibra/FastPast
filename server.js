@@ -872,6 +872,7 @@ const downloadQueue = new Queue(function (task, cb) {
   let args = [
     "-o", outputTemplate,
     "--no-check-certificate",
+    "--no-restrict-filenames", // Preserve Unicode characters (Arabic, Russian, etc.) in filenames
     "--ffmpeg-location", "/usr/local/bin/ffmpeg",
     "--progress", // Ensure progress is printed
     "--newline", // Easier to parse
