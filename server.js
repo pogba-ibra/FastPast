@@ -654,8 +654,9 @@ function getContentDisposition(filename) {
   // Fallback for very old browsers (ASCII only)
   const fallback = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
   // UTF-8 encoded filename for modern browsers (RFC 5987)
-  // CRITICAL: Remove extra spaces in 'filename*' and 'UTF-8' to follow spec strictly
-  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeRFC5987Value(filename)}`;
+  // Ensure NO extra spaces and exact format: filename*=UTF-8''{encoded}
+  const encoded = encodeRFC5987Value(filename);
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 function getFormatScore(format) {
@@ -3993,6 +3994,7 @@ app.post("/download", async (req, res) => {
         "--no-download",
         "--no-playlist",
         "--no-check-certificate",
+        "--no-restrict-filenames", // CRITICAL: Stop yt-dlp from sanitizing output to ASCII
       ];
 
       // Add verbose logging for Facebook to diagnose issues
@@ -4120,7 +4122,7 @@ app.post("/download", async (req, res) => {
       .trim()
       .substring(0, 150);             // Allow slightly longer titles
     const finalTitle = safeTitle || "Video";
-    const downloadFilename = `FastPast – ${finalTitle}.${fmt}`;
+    const downloadFilename = `FastPast - ${finalTitle}.${fmt}`; // Use standard hyphen '-' instead of en-dash '–'
     const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
 
     let ytDlpArgs = [
