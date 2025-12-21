@@ -1022,7 +1022,7 @@ app.use((req, res, next) => {
     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
     "img-src 'self' data: https: https://www.google.com; " +
     "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com; " +
-    "connect-src 'self' ws: wss: https: https://pagead2.googlesyndication.com;"
+    "connect-src 'self' ws: wss: https: https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google;"
   );
 
   // HTTP Strict Transport Security (HSTS)
@@ -4125,9 +4125,10 @@ app.post("/download", async (req, res) => {
 
     // Sanitize title for filename while preserving Unicode (Arabic, Cyrillic, etc.)
     // Only strip strictly illegal filesystem characters: \ / : * ? " < > |
-    // eslint-disable-next-line no-control-regex
+    /* eslint-disable no-control-regex */
     const safeTitle = videoTitle
       .replace(/[\u0000-\u001f\u007f]/g, "") // Strip control characters only
+      /* eslint-enable no-control-regex */
       .replace(/[\\/:*?"<>|]/g, "_")  // Replace illegal FS chars with underscore
       .replace(/\s+/g, " ")           // Collapse multiple spaces
       .trim()
