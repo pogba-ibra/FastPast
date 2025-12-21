@@ -1787,7 +1787,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download video
   if (downloadBtn) {
     downloadBtn.addEventListener("click", () => {
-      // Show VAST video ad before download
+      // Check if user is premium (ads disabled by ad-control.js)
+      if (window.skipVASTAds) {
+        console.log('Premium user - skipping VAST ad');
+        proceedWithDownload();
+        return;
+      }
+
+      // Show VAST video ad before download for non-premium users
       const vastAdUrl = 'https://strong-training.com/dtm.FpzUdZG/NYvuZmG/Uz/reMm/9kuYZuUelNk/PDTLYX3/MjzAAJ4/NJDrUftrNfjlcGzjMeD-gP0PN/iFZrsaaPWI1Mp/dIDy0DxW';
 
       const adPlayer = new VASTAdPlayer(vastAdUrl, (completed) => {
