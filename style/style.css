@@ -20418,7 +20418,7 @@ body[data-page="pricing"] .plan-dragon {
     margin-top: 0px !important;
     /* Moved up more aggressively */
     position: absolute;
-    top: -20px;
+    top: -25px !important;
     /* Extra nudge */
   }
 }
@@ -20560,7 +20560,7 @@ button {
 .dark-mode .header-text h3,
 .dark-mode .header-text p {
   color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important; /* Override gradient */
+  -webkit-text-fill-color: #ffffff !important; /* Override gradient */
   background: none; /* Remove gradient for solid black */
   text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3); /* Add subtle light shadow for readability on dark */
 }
