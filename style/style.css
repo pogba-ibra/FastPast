@@ -20757,3 +20757,34 @@ button {
 .dark-mode .playlist-actions-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+/* Enhanced Playlist Header & Footer - Card Style */
+.playlist-header {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.playlist-actions-footer {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 20px;
+  margin-top: 25px;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Dark Mode Enhancements for Sub-cards */
+.dark-mode .playlist-header,
+.dark-mode .playlist-actions-footer {
+  background: rgba(40, 40, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
