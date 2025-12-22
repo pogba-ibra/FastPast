@@ -12,6 +12,7 @@ const winston = require("winston");
 const DailyRotateFile = require("winston-daily-rotate-file");
 const Queue = require('better-queue');
 const { Server } = require("socket.io");
+const https = require('https');
 const http = require('http');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
@@ -787,7 +788,7 @@ function normalizeVkUrl(url) {
   }
 }
 
-const https = require('https');
+
 
 /**
  * Global Task Limiter (Semaphore) to manage concurrent resource-intensive tasks.
@@ -863,7 +864,8 @@ let server;
 let httpsOptions = null;
 
 // User Request Dec 2025: Standardize on HTTP for Fly.io/Production to avoid 502 port mismatches.
-const isProduction = process.env.NODE_ENV === 'production';
+// Robust detection: check for NODE_ENV or Fly-specific environment variables
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.FLY_APP_NAME || !!process.env.FLY_REGION;
 const disableSSL = process.env.DISABLE_SSL === 'true';
 
 if (isProduction || disableSSL) {
