@@ -79,6 +79,16 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
         const page = await context.newPage();
 
+        // Load cookies if file exists
+        if (fs.existsSync(cookieFile)) {
+            console.log(`🍪 Loading cookies from: ${cookieFile}`);
+            const cookiesContent = fs.readFileSync(cookieFile, 'utf-8');
+            const cookies = parseFacebookCookies(cookiesContent);
+            if (cookies.length > 0) {
+                await context.addCookies(cookies);
+            }
+        }
+
         // User Request: Enhanced Stealth to bypass bot detection
         await page.addInitScript(() => {
             Object.defineProperty(navigator, 'webdriver', { get: () => false });
