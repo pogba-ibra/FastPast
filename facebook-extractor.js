@@ -1,58 +1,81 @@
-// Playwright is now lazy-loaded inside extractFacebookVideoUrl to avoid startup crashes if not installed
+const playwright = require('playwright');
 const fs = require('fs');
+let sharedBrowser = null;
+let browserLock = false;
 
 /**
- * Extract direct video URL from Facebook using headless browser
- * @param {string} url - Facebook video URL (will be converted to mbasic)
- * @param {string} cookieFile - Path to Facebook cookies file
- * @param {string} requestUA - Optional User-Agent to sync with
- * @returns {Promise<{videoUrl: string, title: string}>}
+ * Get or launch the shared browser instance
  */
-async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
-    let browser;
-    let chromium;
-    try {
-        const playwright = require('playwright');
-        chromium = playwright.chromium;
-    } catch (e) {
-        console.error('❌ Playwright module not found. Please run: npm install playwright');
-        throw new Error("Playwright not installed: " + (e.message || "Unknown error"));
+async function getSharedBrowser() {
+    if (sharedBrowser) {
+        // Check if browser is still connected
+        if (sharedBrowser.isConnected()) return sharedBrowser;
+        console.log('🔄 Shared browser disconnected, restarting...');
+        await sharedBrowser.close().catch(() => { });
+        sharedBrowser = null;
     }
 
+    if (browserLock) {
+        // Wait for other process to finish launching
+        while (browserLock) {
+            await new Promise(r => setTimeout(r, 100));
+        }
+        if (sharedBrowser) return sharedBrowser;
+    }
+
+    browserLock = true;
     try {
-        console.log('📱 Launching stealth browser for Facebook extraction...');
-
-        const proxies = require('./proxies');
-        const randomProxy = proxies[Math.floor(Math.random() * proxies.length)];
-
-        // Launch Chromium with stealth and memory-saving flags
-        browser = await chromium.launch({
+        console.log('🌐 Launching Shared Chromium Instance...');
+        sharedBrowser = await playwright.chromium.launch({
             headless: true,
-            proxy: { server: randomProxy }, // User Request: Use proxy to bypass tarpitting
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--single-process',
-                '--js-flags="--max-old-space-size=1024"' // User Request: Limit JS memory
+                '--single-process'
             ]
         });
 
-        // User Request: Use EXACT User-Agent provided by user for full synchronization
-        const context = await browser.newContext({
-            userAgent: requestUA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36'
-        });
-
-        // Load cookies if file exists
-        if (fs.existsSync(cookieFile)) {
-            console.log(`🍪 Loading cookies from: ${cookieFile}`);
-            const cookiesContent = fs.readFileSync(cookieFile, 'utf-8');
-            const cookies = parseFacebookCookies(cookiesContent);
-            if (cookies.length > 0) {
-                await context.addCookies(cookies);
+        // Auto-close browser after 30 mins of inactivity to free memory
+        sharedBrowser._lastUsed = Date.now();
+        if (sharedBrowser._cleanupInterval) clearInterval(sharedBrowser._cleanupInterval);
+        sharedBrowser._cleanupInterval = setInterval(async () => {
+            if (Date.now() - sharedBrowser._lastUsed > 30 * 60 * 1000) {
+                console.log('🧹 Closing idle shared browser...');
+                await sharedBrowser.close().catch(() => { });
+                sharedBrowser = null;
+                clearInterval(this);
             }
-        }
+        }, 5 * 60 * 1000);
+
+        return sharedBrowser;
+    } finally {
+        browserLock = false;
+    }
+}
+
+/**
+ * Extract direct video URL from Facebook using headless browser
+ * @param {string} url - Facebook video URL
+ * @param {string} cookieFile - Path to Facebook cookies file
+ * @param {string} requestUA - Optional User-Agent to sync with
+ * @returns {Promise<object>}
+ */
+async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
+    let context = null;
+    try {
+        const browser = await getSharedBrowser();
+        browser._lastUsed = Date.now();
+
+        const proxies = require('./proxies');
+        const randomProxy = proxies[Math.floor(Math.random() * proxies.length)];
+
+        // Create fresh context for each request
+        context = await browser.newContext({
+            userAgent: requestUA || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+            proxy: { server: randomProxy }
+        });
 
         const page = await context.newPage();
 
@@ -307,7 +330,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         fs.writeFileSync(freshCookiePath, netscapeCookies);
 
         const userAgent = await page.evaluate(() => navigator.userAgent);
-        await browser.close();
+        if (context) await context.close().catch(() => { });
 
         // Final thumbnail decision: prefer network-snorted cover if DOM extraction returned nothing or low quality
         const finalThumbnail = snortedThumb || thumbnail;
@@ -321,11 +344,10 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         return { videoUrl, audioUrl, title, thumbnail: finalThumbnail, freshCookiePath, userAgent, candidateStreams };
 
     } catch (error) {
-        if (browser) await browser.close().catch(() => { });
         console.error('❌ Facebook extraction error:', error.message);
         throw error;
     } finally {
-        if (browser) await browser.close().catch(() => { });
+        if (context) await context.close().catch(() => { });
     }
 }
 

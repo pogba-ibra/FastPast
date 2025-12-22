@@ -285,6 +285,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     }
   };
 
+  // User Request: Enable aria2c for fast multi-threaded downloads
+  pushUnique("--downloader", "aria2c");
+  pushUnique("--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
+
   const isRestricted = [
     "youtube.com", "youtu.be",
     "instagram.com",
@@ -801,7 +805,7 @@ class TaskLimiter {
     this.queue = [];
   }
 
-  async run(taskFn, meta = {}) {
+  async run(taskFn, meta = {}, timeoutMs = 20 * 60 * 1000) {
     return new Promise((resolve, reject) => {
       const wrappedTask = async () => {
         this.active++;
@@ -811,10 +815,17 @@ class TaskLimiter {
           ...meta
         });
 
+        let timer;
+        const timeoutPromise = new Promise((_, rej) => {
+          timer = setTimeout(() => rej(new Error(`Task timeout after ${timeoutMs}ms`)), timeoutMs);
+        });
+
         try {
-          const result = await taskFn();
+          const result = await Promise.race([taskFn(), timeoutPromise]);
+          clearTimeout(timer);
           resolve(result);
         } catch (err) {
+          clearTimeout(timer);
           reject(err);
         } finally {
           this.active--;
@@ -855,7 +866,7 @@ class TaskLimiter {
   }
 }
 
-const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4);
+const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 8);
 
 let app = express();
 let server;
@@ -4548,6 +4559,10 @@ app.post("/download", async (req, res) => {
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
+});
+
+app.get("/queue-status", (req, res) => {
+  res.json(downloadLimiter.getStatus());
 });
 
 app.get("/debug-env", (req, res) => {
