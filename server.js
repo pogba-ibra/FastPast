@@ -789,6 +789,73 @@ function normalizeVkUrl(url) {
 
 const https = require('https');
 
+/**
+ * Global Task Limiter (Semaphore) to manage concurrent resource-intensive tasks.
+ * Prevents OOM by limiting parallel Playwright, yt-dlp, and FFmpeg processes.
+ */
+class TaskLimiter {
+  constructor(concurrency = 4) {
+    this.concurrency = concurrency;
+    this.active = 0;
+    this.queue = [];
+  }
+
+  async run(taskFn, meta = {}) {
+    return new Promise((resolve, reject) => {
+      const wrappedTask = async () => {
+        this.active++;
+        logger.info("Task Limiter: Task started", {
+          active: this.active,
+          queued: this.queue.length,
+          ...meta
+        });
+
+        try {
+          const result = await taskFn();
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        } finally {
+          this.active--;
+          logger.info("Task Limiter: Task finished", {
+            active: this.active,
+            queued: this.queue.length
+          });
+          this.next();
+        }
+      };
+
+      if (this.active < this.concurrency) {
+        wrappedTask();
+      } else {
+        logger.info("Task Limiter: Task queued", {
+          active: this.active,
+          queued: this.queue.length + 1,
+          ...meta
+        });
+        this.queue.push(wrappedTask);
+      }
+    });
+  }
+
+  next() {
+    if (this.queue.length > 0 && this.active < this.concurrency) {
+      const nextTask = this.queue.shift();
+      nextTask();
+    }
+  }
+
+  getStats() {
+    return {
+      active: this.active,
+      queued: this.queue.length,
+      limit: this.concurrency
+    };
+  }
+}
+
+const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4);
+
 let app = express();
 let server;
 
@@ -849,156 +916,139 @@ if (!fs.existsSync(downloadDir)) {
 
 // Queue Processing Logic
 const downloadQueue = new Queue(function (task, cb) {
-  const { url, jobId, format, qualityLabel, startTime: start, endTime: end } = task;
-  const startTime = Date.now();
+  const { url, jobId } = task;
+  downloadLimiter.run(() => {
+    return new Promise((resolve, reject) => {
+      // Proxy callback to release limiter slot
+      const limiterCb = (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+        cb(err, result);
+      };
 
-  logger.info(`Starting batch download task`, { jobId, url, start, end });
-  console.log(`[BatchWorker] Processing ${jobId} - Clip: ${start} to ${end}`); // Direct console output
-  io.emit('job_start', { jobId, url });
+      const { format, qualityLabel, startTime: start, endTime: end } = task;
+      const startTime = Date.now();
 
-  // Default args - similar to standard download but writing to file
-  // Default args - writing to user's downloads folder without jobId prefix in filename
-  const outputTemplate = path.join(downloadDir, `%(title)s.%(ext)s`);
+      logger.info(`Starting batch download task`, { jobId, url, start, end });
+      console.log(`[BatchWorker] Processing ${jobId} - Clip: ${start} to ${end}`); // Direct console output
+      io.emit('job_start', { jobId, url });
 
-  // User Request: Handle Direct HD Capture (Bypass yt-dlp)
-  if (qualityLabel && qualityLabel.startsWith('direct_capture|')) {
-    console.log(`💎 [Batch] Processing Direct HD Capture for ${jobId}`);
-    const parts = qualityLabel.split('|');
-    const vUrl = parts[1];
-    const aUrl = parts[2]; // Might be undefined
-    const tempOutput = path.join(downloadDir, `DirectCapture_${jobId}.mp4`); // Temporary name, will try to fix if title available
+      // Default args - writing to user's downloads folder
+      const outputTemplate = path.join(downloadDir, `%(title)s.%(ext)s`);
 
-    (async () => {
-      try {
-        await downloadAndMergeDirectStreams(vUrl, aUrl, tempOutput, task.userAgent || DESKTOP_UA);
-        io.emit('job_complete', { jobId, url });
-        logger.info(`Batch direct download completed`, { jobId, duration: Date.now() - startTime });
-        return cb(null, { status: 'completed' });
-      } catch (err) {
-        console.error(`❌ [Batch] Direct capture failed:`, err.message);
-        io.emit('job_error', { jobId, error: err.message, url });
-        return cb(err);
+      // Handle Direct HD Capture
+      if (qualityLabel && qualityLabel.startsWith('direct_capture|')) {
+        console.log(`💎 [Batch] Processing Direct HD Capture for ${jobId}`);
+        const parts = qualityLabel.split('|');
+        const vUrl = parts[1];
+        const aUrl = parts[2];
+
+        (async () => {
+          try {
+            await downloadAndMergeDirectStreams(vUrl, aUrl, path.join(downloadDir, `DirectCapture_${jobId}.mp4`), task.userAgent || DESKTOP_UA);
+            io.emit('job_complete', { jobId, url });
+            logger.info(`Batch direct download completed`, { jobId, duration: Date.now() - startTime });
+            return limiterCb(null, { status: 'completed' });
+          } catch (err) {
+            console.error(`❌ [Batch] Direct capture failed:`, err.message);
+            io.emit('job_error', { jobId, error: err.message, url });
+            return limiterCb(err);
+          }
+        })();
+        return;
       }
-    })();
-    return; // Stop here, don't execute yt-dlp
-  }
 
-  let args = [
-    "-o", outputTemplate,
-    "--no-check-certificate",
-    "--no-restrict-filenames", // Preserve Unicode characters (Arabic, Russian, etc.) in filenames
-    "--ffmpeg-location", "/usr/local/bin/ffmpeg",
-    "--progress", // Ensure progress is printed
-    "--newline", // Easier to parse
-  ];
+      let args = [
+        "-o", outputTemplate,
+        "--no-check-certificate",
+        "--no-restrict-filenames",
+        "--ffmpeg-location", "/usr/local/bin/ffmpeg",
+        "--progress",
+        "--newline",
+      ];
 
-  // Unified Anti-Blocking Logic (2025 Standard) - Handles UA, Cookies, Impersonate
-  configureAntiBlockingArgs(args, url);
-  if (url.includes("vimeo.com")) {
-    args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-    // args.push("--cookies-from-browser", "chrome"); // Disabled
-  }
+      configureAntiBlockingArgs(args, url);
+      if (url.includes("vimeo.com")) {
+        args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
+      }
 
-  if (format) {
-    let finalFormat = format;
-    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-    if (isMeta && finalFormat !== "best") {
-      // Use flexible selector for robust audio merge
-      // User Request: avoid hardcoded IDs, use generic high-quality strings
-      finalFormat = getMetaFormatSelector(qualityLabel || "720p");
-      console.log(`🛠️ [Batch] Using flexible Meta selector: ${finalFormat}`);
-    }
-    args.push("-f", finalFormat);
-  } else {
-    args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
-  }
-
-  // Explicitly force MP4 merge for compatibility
-  args.push("--merge-output-format", "mp4");
-
-  // User Request: Server-Side Full Processing (Disk-Based + Verify) for Meta
-  const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
-  let tempMetaFile = null;
-  if (isMeta) {
-    tempMetaFile = path.join(downloadDir, `batch_verify_${jobId}_${Date.now()}.mp4`);
-    const oIndex = args.indexOf("-o");
-    if (oIndex !== -1) args[oIndex + 1] = tempMetaFile;
-    else args.push("-o", tempMetaFile);
-    console.log(`🛠️ [Batch] Meta full processing enabled. Temp file: ${tempMetaFile}`);
-  }
-
-  // Clip Support
-  if (start && end) {
-    args.push("--download-sections", `*${start}-${end}`);
-    args.push("--force-keyframes-at-cuts");
-  } else {
-    // Only check single start/end if both aren't present (partial clip support if needed)
-    // but simpler to enforce both for valid clip
-  }
-
-  args.push(url);
-
-  console.log("Spawn yt-dlp args:", args.join(" ")); // Debug logging
-  logger.info("Spawn yt-dlp args:", { args });
-
-  // Use correct command for OS
-  // Use hybrid helper
-  logger.info("Spawning batch yt-dlp", { args });
-  const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
-
-  let stderr = "";
-
-  ytDlp.stdout.on("data", (data) => {
-    const line = data.toString();
-    // Simple progress parsing: [download]  45.0% of 10.00MiB at 2.00MiB/s
-    const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-    if (match) {
-      const percent = parseFloat(match[1]);
-      io.emit('job_progress', { jobId, percent, url });
-    }
-  });
-
-  ytDlp.stderr.on("data", (data) => {
-    stderr += data.toString();
-  });
-
-  ytDlp.on("close", async (code) => {
-    if (code === 0) {
-      if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) {
-        console.log(`🔍 [Batch] Verifying Meta stream integrity for ${jobId}...`);
-        const isComplete = await verifyStreamCompleteness(tempMetaFile);
-        if (!isComplete) {
-          console.warn(`⚠️ [Batch] Meta verification failed for ${jobId}. Streams incomplete.`);
-          fs.unlink(tempMetaFile, () => { });
-          io.emit('job_error', { jobId, error: "Verification failed: missing audio or video stream", url });
-          return cb(new Error("Verification failed"));
+      if (format) {
+        let finalFormat = format;
+        const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+        if (isMeta && finalFormat !== "best") {
+          finalFormat = getMetaFormatSelector(qualityLabel || "720p");
+          console.log(`🛠️ [Batch] Using flexible Meta selector: ${finalFormat}`);
         }
-
-        // Finalize: For batch, we'd ideally rename to title, but without --print filename it's hard. 
-        // We'll keep it as jobId or try to guess. For now, we'll rename to a more friendly "Verified_Meta_{jobId}.mp4"
-        const finalPath = path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
-        fs.renameSync(tempMetaFile, finalPath);
-        console.log(`✅ [Batch] Verification passed. Final file: ${finalPath}`);
+        args.push("-f", finalFormat);
+      } else {
+        args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
       }
 
-      io.emit('job_complete', { jobId, url });
-      logger.info(`Batch download completed`, { jobId, duration: Date.now() - startTime });
-      cb(null, { status: 'completed' });
-    } else {
-      if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
-      io.emit('job_error', { jobId, error: "Process exited with code " + code, url });
-      logger.error(`Batch download process failed`, { jobId, code, stderr });
-      cb(new Error(`Process exited with code ${code}`));
-    }
-  });
+      args.push("--merge-output-format", "mp4");
 
-  ytDlp.on("error", (err) => {
-    io.emit('job_error', { jobId, error: err.message, url });
-    logger.error(`Batch download error`, { jobId, error: err.message });
-    cb(err);
-  });
+      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
+      let tempMetaFile = null;
+      if (isMeta) {
+        tempMetaFile = path.join(downloadDir, `batch_verify_${jobId}_${Date.now()}.mp4`);
+        const oIndex = args.indexOf("-o");
+        if (oIndex !== -1) args[oIndex + 1] = tempMetaFile;
+        else args.push("-o", tempMetaFile);
+        console.log(`🛠️ [Batch] Meta full processing enabled. Temp file: ${tempMetaFile}`);
+      }
 
-}, { concurrent: 2 });
+      if (start && end) {
+        args.push("--download-sections", `*${start}-${end}`);
+        args.push("--force-keyframes-at-cuts");
+      }
+
+      args.push(url);
+
+      console.log("Spawn yt-dlp args:", args.join(" "));
+      const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
+
+      let stderr = "";
+      ytDlp.stdout.on("data", (data) => {
+        const line = data.toString();
+        const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+        if (match) {
+          const percent = parseFloat(match[1]);
+          io.emit('job_progress', { jobId, percent, url });
+        }
+      });
+
+      ytDlp.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+
+      ytDlp.on("close", async (code) => {
+        if (code === 0) {
+          if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) {
+            const isComplete = await verifyStreamCompleteness(tempMetaFile);
+            if (!isComplete) {
+              fs.unlink(tempMetaFile, () => { });
+              io.emit('job_error', { jobId, error: "Verification failed", url });
+              return limiterCb(new Error("Verification failed"));
+            }
+            const finalPath = path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
+            fs.renameSync(tempMetaFile, finalPath);
+          }
+          io.emit('job_complete', { jobId, url });
+          limiterCb(null, { status: 'completed' });
+        } else {
+          if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
+          io.emit('job_error', { jobId, error: "Process exited with code " + code, url });
+          logger.error(`Batch download process failed`, { jobId, code, stderr });
+          limiterCb(new Error(`Process exited with code ${code}`));
+        }
+      });
+
+      ytDlp.on("error", (err) => {
+        io.emit('job_error', { jobId, error: err.message, url });
+        limiterCb(err);
+      });
+    });
+  }, { type: 'batch_download', jobId, url });
+}, { concurrent: 10 });
 
 
 
@@ -2852,33 +2902,21 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
 
       console.log(`[ZIP-JOB] ${jobId} Processing ${urls.length} items`);
 
-      // 1. Download Videos in Parallel (with controlled concurrency)
-      const MAX_CONCURRENT = 3; // Process 3 videos simultaneously
-      const chunks = [];
+      // 1. Download Videos in Parallel (respecting global concurrency)
+      await Promise.all(urls.map(async (item) => {
+        const url = typeof item === 'string' ? item : item.url;
+        const startTime = typeof item === 'object' ? item.startTime : null;
+        const endTime = typeof item === 'object' ? item.endTime : null;
+        const format = typeof item === 'object' ? (item.format || 'mp4') : 'mp4';
 
-      // Split URLs into chunks of MAX_CONCURRENT size
-      for (let i = 0; i < urls.length; i += MAX_CONCURRENT) {
-        chunks.push(urls.slice(i, i + MAX_CONCURRENT));
-      }
-
-      // Process each chunk in parallel
-      for (const chunk of chunks) {
-        await Promise.all(chunk.map(async (item) => {
-          const url = typeof item === 'string' ? item : item.url;
-          const startTime = typeof item === 'object' ? item.startTime : null;
-          const endTime = typeof item === 'object' ? item.endTime : null;
-          const format = typeof item === 'object' ? (item.format || 'mp4') : 'mp4';
-
+        return downloadLimiter.run(async () => {
           const args = [
             "--no-check-certificate",
             "--no-playlist",
-            // "--ffmpeg-location", ffmpeg // Removed
           ];
 
-          // Use unified anti-blocking logic (Android UA, Proxy, handles cookies/UA)
           configureAntiBlockingArgs(args, url);
 
-          // Format-specific arguments
           if (format === 'mp3') {
             args.push("-x", "--audio-format", "mp3", "--audio-quality", "192K");
             args.push("-o", path.join(fastpastDir, "%(title)s.mp3"));
@@ -2888,17 +2926,11 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             args.push("-o", path.join(fastpastDir, "%(title)s.%(ext)s"));
           }
 
-          // if (url.includes("youtube.com") || url.includes("youtu.be")) {
-          // Handled by configureAntiBlockingArgs
-          // }
           if (url.includes("vimeo.com")) {
             args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-            // args.push("--cookies-from-browser", "chrome"); // Disabled: Headless server cannot use browser cookies
           }
 
-          // Add clipping if startTime and endTime are provided
           if (startTime && endTime) {
-            // Parse time strings (MM:SS or HH:MM:SS) to seconds
             const parseTimeToSec = (t) => {
               const parts = t.split(':').map(Number);
               if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
@@ -2909,12 +2941,8 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             const endSec = parseTimeToSec(endTime);
             const clipDuration = endSec - startSec;
 
-            // Minimum 30 seconds for clips
             if (clipDuration >= 30) {
               args.push("--download-sections", `*${startSec}-${endSec}`);
-              console.log(`[ZIP-JOB] Clipping ${url} from ${startSec}s to ${endSec}s`);
-            } else {
-              console.log(`[ZIP-JOB] Clip too short (${clipDuration}s < 30s), downloading full video: ${url}`);
             }
           }
 
@@ -2922,8 +2950,6 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
 
           try {
             await new Promise((resolve, reject) => {
-              // Use correct command for OS
-              // const command = getPythonCommand();
               const p = spawnYtDlp(["-m", "yt_dlp", ...args], { stdio: 'ignore' });
               p.on('close', (code) => {
                 if (code === 0) resolve();
@@ -2935,11 +2961,10 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             console.error(`[ZIP-JOB] ${jobId} Failed item ${url}:`, err.message);
           }
 
-          // Update Progress (thread-safe increment)
           job.completed++;
           job.progress = Math.round((job.completed / job.total) * 100);
-        }));
-      }
+        }, { type: 'zip_download_item', jobId, url });
+      }));
 
       // 2. Create Zip
       console.log(`[ZIP-JOB] ${jobId} Zipping files...`);
@@ -3802,7 +3827,11 @@ app.post("/download", async (req, res) => {
         try {
           const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
           console.log('🌐 [Download] User requested Direct HD. Launching Playwright browser extraction for Facebook...');
-          const { videoUrl, title, freshCookiePath, userAgent } = await extractFacebookVideoUrl(normalizedUrl, cookieFile, req.headers['user-agent']);
+          const extractionResult = await downloadLimiter.run(
+            () => extractFacebookVideoUrl(normalizedUrl, cookieFile, req.headers['user-agent']),
+            { type: 'playwright_extraction', url: normalizedUrl }
+          );
+          const { videoUrl, title, freshCookiePath, userAgent } = extractionResult;
           console.log(`✅ [Download] Browser extracted: ${title}`);
 
           // Use extracted direct video URL instead of page URL (if available)
@@ -4498,7 +4527,10 @@ app.post("/download", async (req, res) => {
       }
     };
 
-    performDownload();
+    // Wrap the entire download process (including proxy rotation) in the global limiter
+    downloadLimiter.run(() => performDownload(), { type: 'standard_download', url }).catch(err => {
+      logger.error("Limiter task failed", { error: err.message, url });
+    });
 
   } catch (error) {
     logger.error("Server error in download endpoint", {
