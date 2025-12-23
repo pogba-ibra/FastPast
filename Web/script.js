@@ -2844,7 +2844,7 @@ window.toggleItemOptions = async function (index, url, btn) {
 
       // Show result
       loader.style.display = "none";
-      realOptions.style.display = "block";
+      realOptions.style.display = "flex"; // Changed from block to match flex override in CSS
 
     } catch (e) {
       console.error("Error loading options:", e);
