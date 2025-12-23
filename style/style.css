@@ -19241,9 +19241,13 @@ body[data-page="pricing"] .plan-dragon {
 
 /* Options Area */
 .playlist-item-options {
-  padding: 0 20px 20px 60px;
-  /* Indent options */
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 12px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   animation: fadeIn 0.3s ease;
+  border-top: 1px solid #e2e8f0;
 }
 
 .loader-container {
@@ -19262,7 +19266,7 @@ body[data-page="pricing"] .plan-dragon {
   border-radius: 8px;
 }
 
-.formats-row {
+.format-row {
   display: flex;
   gap: 20px;
   margin-bottom: 15px;
@@ -19394,7 +19398,7 @@ body[data-page="pricing"] .plan-dragon {
     padding: 0 15px 15px;
   }
 
-  .formats-row {
+  .format-row {
     gap: 10px;
   }
 }
@@ -19444,11 +19448,13 @@ body[data-page="pricing"] .plan-dragon {
   margin-bottom: 20px;
 }
 
-.quality-row label {
+.quality-row label,
+.format-row label {
   font-weight: 600;
-  margin-right: 10px;
+  margin-bottom: 8px;
   font-size: 0.9rem;
-  color: #555;
+  color: #4a5568;
+  display: block;
 }
 
 .pl-quality-select {
@@ -19733,12 +19739,7 @@ body[data-page="pricing"] .plan-dragon {
 }
 
 /* Playlist Item Options Panel */
-.playlist-item-options {
-  border-top: 1px solid #e2e8f0;
-  margin-top: 16px;
-  padding-top: 16px;
-  animation: slideDown 0.3s ease;
-}
+/* Consolidated with earlier definition */
 
 @keyframes slideDown {
   from {
@@ -19785,13 +19786,13 @@ body[data-page="pricing"] .plan-dragon {
 }
 
 /* Format Pills Row */
-.formats-row {
+.format-row {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.formats-row label {
+.format-row label {
   font-size: 14px;
   font-weight: 600;
   color: #4a5568;
@@ -19987,13 +19988,12 @@ body[data-page="pricing"] .plan-dragon {
 .dark-mode .pl-quality-select {
   background: #374151;
   border-color: #4a5568;
-  color: #000000 !important;
+  color: #f7fafc !important;
 }
 
-/* Dark mode styles for format and quality labels */
 .dark-mode .format-row label,
 .dark-mode .quality-row label {
-  color: #000000 !important;
+  color: #f7fafc !important;
 }
 
 /* Remove scrollbars within faq-categories */
@@ -20256,7 +20256,7 @@ body[data-page="pricing"] .plan-dragon {
   display: none;
 }
 
-.formats-row {
+.format-row {
   margin-bottom: 16px;
 }
 
@@ -20287,31 +20287,23 @@ body[data-page="pricing"] .plan-dragon {
   color: white;
 }
 
-.quality-row {
+.quality-row,
+.format-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.quality-row label {
-  font-weight: 600;
-  color: #4a5568;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .pl-quality-select,
 .pl-format-select {
-  flex: 1;
-  padding: 8px 12px;
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 14px;
-}
-
-.pl-quality-select:focus,
-.pl-format-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background-color: white;
 }
 
 /* Dark mode */
@@ -20531,6 +20523,7 @@ button {
   min-height: 44px;
   min-width: 44px;
 }
+
 /* Header Text Improvements */
 .header-text {
   text-align: center;
@@ -20560,9 +20553,12 @@ button {
 .dark-mode .header-text h3,
 .dark-mode .header-text p {
   color: #000000 !important;
-  -webkit-text-fill-color: #ffffff !important; /* Override gradient */
-  background: none; /* Remove gradient for solid black */
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3); /* Add subtle light shadow for readability on dark */
+  -webkit-text-fill-color: #ffffff !important;
+  /* Override gradient */
+  background: none;
+  /* Remove gradient for solid black */
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.3);
+  /* Add subtle light shadow for readability on dark */
 }
 
 /* Improved Playlist Stats UI */
@@ -20712,7 +20708,7 @@ button {
   padding: 30px;
   margin: 40px auto;
   max-width: 1200px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0,0,0,0.03);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.05), 0 5px 15px rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.6);
   transition: all 0.3s ease;
 }
