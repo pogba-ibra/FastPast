@@ -20669,3 +20669,22 @@ body.dark-mode .playlist-actions-footer {
   }
 }
 @media screen and (max-width: 768px) { #download-selected-btn { width: 100% !important; padding: 14px 16px !important; font-size: 15px !important; margin: 0 !important; } .playlist-actions-footer { padding: 16px !important; } }
+
+/* Definitive Mobile Text Fixes */
+@media screen and (max-width: 768px) {
+  #download-selected-btn {
+    width: 100% !important;
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    white-space: normal !important;
+    height: auto !important;
+    min-height: 48px !important;
+    line-height: 1.3 !important;
+  }
+  .pl-title { font-size: 14px !important; white-space: normal !important; }
+  .pl-meta { font-size: 12px !important; flex-wrap: wrap !important; }
+  .stat-value { font-size: 1.2rem !important; }
+  .stat-label { font-size: 0.8rem !important; }
+  .playlist-header h3 { font-size: 1.1rem !important; }
+  .playlist-header p { font-size: 0.85rem !important; }
+}
