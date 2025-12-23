@@ -19327,11 +19327,7 @@ body[data-page="pricing"] .plan-dragon {
   border-radius: 4px;
 }
 
-.playlist-actions-footer {
-  display: flex;
-  justify-content: center;
-  padding: 20px 0;
-}
+/* Consolidated redundant footer */
 
 @media (max-width: 768px) {
   .pl-item-main {
@@ -19473,11 +19469,7 @@ body[data-page="pricing"] .plan-dragon {
 }
 
 /* Footer fixes */
-.playlist-actions-footer {
-  background: #f8f9fa;
-  border-top: 1px solid #ecf0f1;
-  padding: 20px;
-}
+/* Consolidated redundant footer */
 
 /* Ensure stats are separate */
 .playlist-stats {
@@ -20528,54 +20520,7 @@ button {
   margin-bottom: 20px;
 }
 
-.playlist-actions-footer {
-  padding-top: 25px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  margin-top: 25px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-/* Dark Mode Styles for Header/Footer Borders */
-.dark-mode .playlist-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode .playlist-actions-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Enhanced Playlist Header & Footer - Card Style */
-.playlist-header {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 15px;
-  padding: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-.playlist-actions-footer {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 15px;
-  padding: 20px;
-  margin-top: 25px;
-  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-/* Dark Mode Enhancements for Sub-cards */
-.dark-mode .playlist-header,
-.dark-mode .playlist-actions-footer {
-  background: rgba(40, 40, 40, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
+/* Standardized in definitive section */
 
 #playlist-view .playlist-item-options {
   width: 100% !important;
@@ -20623,6 +20568,32 @@ button {
   display: block !important;
 }
 
+/* Definitive Playlist Container Styles */
+.playlist-header {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: 15px !important;
+  padding: 24px !important;
+  margin-bottom: 25px !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+.playlist-actions-footer {
+  background: rgba(255, 255, 255, 0.5) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border-radius: 15px !important;
+  padding: 24px !important;
+  margin-top: 25px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
 #playlist-view .pl-format-select,
 #playlist-view .pl-quality-select {
   width: 100% !important;
@@ -20658,6 +20629,14 @@ body.dark-mode #playlist-view .pl-format-select option,
 body.dark-mode #playlist-view .pl-quality-select option {
   background-color: #2d3748 !important;
   color: #f7fafc !important;
+}
+
+/* Dark Mode Enhancements for Header/Footer */
+body.dark-mode .playlist-header,
+body.dark-mode .playlist-actions-footer {
+  background: rgba(40, 40, 40, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Mobile specific forcing */
