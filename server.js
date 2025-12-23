@@ -867,6 +867,7 @@ class TaskLimiter {
 }
 
 const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 8);
+const playlistLimiter = new TaskLimiter(20); // Dedicated high-concurrency limiter for playlists
 
 let app = express();
 let server;
@@ -2922,7 +2923,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
         const endTime = typeof item === 'object' ? item.endTime : null;
         const format = typeof item === 'object' ? (item.format || 'mp4') : 'mp4';
 
-        return downloadLimiter.run(async () => {
+        return playlistLimiter.run(async () => {
           const args = [
             "--no-check-certificate",
             "--no-playlist",
