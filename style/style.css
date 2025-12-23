@@ -19310,27 +19310,7 @@ body[data-page="pricing"] .plan-dragon {
   /* dynamic width and left */
 }
 
-.pl-slider-handle {
-  position: absolute;
-  top: 50%;
-  width: 20px;
-  height: 20px;
-  background: #fff;
-  border: 2px solid #4a90e2;
-  border-radius: 50%;
-  cursor: grab;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  transition: transform 0.1s;
-}
-
-.pl-slider-handle:hover {
-  transform: translate(-50%, -50%) scale(1.1);
-}
-
-.pl-slider-handle:active {
-  cursor: grabbing;
-}
+/* Consolidated with 20001 block */
 
 /* Slider handles will mirror main ones in script */
 .pl-time-inputs {
@@ -20000,8 +19980,8 @@ body[data-page="pricing"] .plan-dragon {
 
 .pl-slider-handle {
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: white;
   border: 2px solid #667eea;
   border-radius: 50%;
@@ -20011,6 +19991,8 @@ body[data-page="pricing"] .plan-dragon {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.1s ease, box-shadow 0.1s ease;
   z-index: 10;
+  touch-action: none;
+  /* Essential for mobile dragging */
 }
 
 .pl-slider-handle:hover {

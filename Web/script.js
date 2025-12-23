@@ -2933,7 +2933,39 @@ function initializePlaylistClipSlider(index, duration, container) {
     isDragging = true;
     activeHandle = handle;
     sliderRect = sliderTrack.getBoundingClientRect();
-    e.preventDefault();
+    // Allow default for non-dragging events if needed, but for handles we want to block
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function handleMove(e) {
+    if (!isDragging || !sliderRect) return;
+
+    // Get X coordinate from mouse or touch
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const x = clientX - sliderRect.left;
+    const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
+    const seconds = Math.round((percent / 100) * duration);
+
+    const minGap = 30; // Minimum 30 seconds for clips
+
+    if (activeHandle === "start") {
+      const currentEnd = parseTime(endTimeInput.value);
+      startTimeInput.value = formatTime(Math.min(seconds, currentEnd - minGap));
+    } else if (activeHandle === "end") {
+      const currentStart = parseTime(startTimeInput.value);
+      endTimeInput.value = formatTime(Math.max(seconds, currentStart + minGap));
+    }
+
+    updateSlider();
+
+    // Prevent scrolling when dragging on touch devices
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function stopDrag() {
+    isDragging = false;
+    activeHandle = null;
+    sliderRect = null;
   }
 
   function updateSlider() {
@@ -2963,31 +2995,16 @@ function initializePlaylistClipSlider(index, duration, container) {
   startHandle.addEventListener("mousedown", (e) => startDrag(e, "start"));
   endHandle.addEventListener("mousedown", (e) => startDrag(e, "end"));
 
-  document.addEventListener("mousemove", (e) => {
-    if (!isDragging || !sliderRect) return;
+  // Touch support
+  startHandle.addEventListener("touchstart", (e) => startDrag(e, "start"), { passive: false });
+  endHandle.addEventListener("touchstart", (e) => startDrag(e, "end"), { passive: false });
 
-    const x = e.clientX - sliderRect.left;
-    const percent = Math.max(0, Math.min(100, (x / sliderRect.width) * 100));
-    const seconds = Math.round((percent / 100) * duration);
+  document.addEventListener("mousemove", handleMove);
+  document.addEventListener("touchmove", handleMove, { passive: false });
 
-    const minGap = 30; // Minimum 30 seconds for clips
-
-    if (activeHandle === "start") {
-      const currentEnd = parseTime(endTimeInput.value);
-      startTimeInput.value = formatTime(Math.min(seconds, currentEnd - minGap));
-    } else if (activeHandle === "end") {
-      const currentStart = parseTime(startTimeInput.value);
-      endTimeInput.value = formatTime(Math.max(seconds, currentStart + minGap));
-    }
-
-    updateSlider();
-  });
-
-  document.addEventListener("mouseup", () => {
-    isDragging = false;
-    activeHandle = null;
-    sliderRect = null;
-  });
+  document.addEventListener("mouseup", stopDrag);
+  document.addEventListener("touchend", stopDrag);
+  document.addEventListener("touchcancel", stopDrag);
 
   // Text input listeners
   startTimeInput.addEventListener("input", () => {
