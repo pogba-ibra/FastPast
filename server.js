@@ -2048,24 +2048,39 @@ app.get("/proxy-image", async (req, res) => {
   // Helper to determine best headers for specific domains
   const getHeadersForUrl = (targetUrl) => {
     const headers = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
       "Accept-Encoding": "gzip, deflate, br",
       "Accept-Language": "en-US,en;q=0.9",
+      "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Platform": '"Windows"',
+      "Sec-Fetch-Dest": "image",
+      "Sec-Fetch-Mode": "no-cors",
+      "Sec-Fetch-Site": "cross-site",
     };
 
     if (targetUrl.includes("instagram.com") || targetUrl.includes("cdninstagram")) {
       headers["Referer"] = "https://www.instagram.com/";
+      headers["Origin"] = "https://www.instagram.com";
     } else if (targetUrl.includes("facebook.com") || targetUrl.includes("fbcdn")) {
       headers["Referer"] = "https://www.facebook.com/";
+      headers["Origin"] = "https://www.facebook.com";
     } else if (targetUrl.includes("tiktok.com") || targetUrl.includes("byteoversea")) {
       headers["Referer"] = "https://www.tiktok.com/";
+      headers["Origin"] = "https://www.tiktok.com";
     } else if (targetUrl.includes("reddit.com") || targetUrl.includes("redditmedia")) {
       headers["Referer"] = "https://www.reddit.com/";
+      headers["Origin"] = "https://www.reddit.com";
     } else if (targetUrl.includes("threads.net")) {
       headers["Referer"] = "https://www.threads.net/";
+      headers["Origin"] = "https://www.threads.net";
     } else if (targetUrl.includes("dailymotion.com") || targetUrl.includes("dmcdn.net")) {
       headers["Referer"] = "https://www.dailymotion.com/";
+      headers["Origin"] = "https://www.dailymotion.com";
+      headers["Sec-Fetch-Dest"] = "image";
+      headers["Sec-Fetch-Mode"] = "no-cors";
+      headers["Sec-Fetch-Site"] = "cross-site";
     } else {
       // Default to origin or no referer 
       // headers["Referer"] = new URL(targetUrl).origin; // Sometimes improved privacy is better
