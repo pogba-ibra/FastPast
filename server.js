@@ -10,7 +10,8 @@ const { extractFacebookVideoUrl } = require('./facebook-extractor'); // Facebook
 // const ffmpeg = "ffmpeg"; // Unused: yt-dlp uses system PATH automatically
 const winston = require("winston");
 const DailyRotateFile = require("winston-daily-rotate-file");
-const Queue = require('better-queue');
+const { Queue: BullQueue, Worker: BullWorker } = require('bullmq');
+const Redis = require('ioredis');
 const { Server } = require("socket.io");
 const https = require('https');
 const http = require('http');
@@ -166,85 +167,6 @@ async function verifyStreamCompleteness(filePath) {
   });
 }
 
-/**
- * Helper to download and merge direct video/audio streams using ffmpeg (Bypasses yt-dlp parsing)
- */
-async function downloadAndMergeDirectStreams(videoUrl, audioUrl, outputFilePath, userAgent) {
-  const tempDir = path.join(os.tmpdir(), "fastpast_streams");
-  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-
-  const tempVideo = path.join(tempDir, `v_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
-  const tempAudio = (audioUrl && audioUrl !== "undefined") ? path.join(tempDir, `a_${Date.now()}_${Math.random().toString(36).substring(7)}.m4a`) : null;
-
-  try {
-    console.log(`📥 Downloading direct video stream: ${videoUrl.substring(0, 50)}...`);
-    const vResponse = await axios({
-      url: videoUrl,
-      method: "GET",
-      responseType: "stream",
-      headers: { "User-Agent": userAgent || DESKTOP_UA },
-      timeout: 60000,
-    });
-    const vWriter = fs.createWriteStream(tempVideo);
-    vResponse.data.pipe(vWriter);
-    await new Promise((resolve, reject) => {
-      vWriter.on("finish", resolve);
-      vWriter.on("error", reject);
-    });
-
-    if (tempAudio && audioUrl && audioUrl !== "undefined") {
-      console.log(`📥 Downloading direct audio stream: ${audioUrl.substring(0, 50)}...`);
-      const aResponse = await axios({
-        url: audioUrl,
-        method: "GET",
-        responseType: "stream",
-        headers: { "User-Agent": userAgent || DESKTOP_UA },
-        timeout: 60000,
-      });
-      const aWriter = fs.createWriteStream(tempAudio);
-      aResponse.data.pipe(aWriter);
-      await new Promise((resolve, reject) => {
-        aWriter.on("finish", resolve);
-        aWriter.on("error", reject);
-      });
-
-      console.log(`🔀 Merging streams with ffmpeg into: ${outputFilePath}`);
-      return new Promise((resolve, reject) => {
-        const ffmpegPath = process.platform === 'win32' ? 'ffmpeg' : '/usr/bin/ffmpeg';
-        const ff = spawn(ffmpegPath, [
-          "-y",
-          "-i", tempVideo,
-          "-i", tempAudio,
-          "-c", "copy",
-          outputFilePath
-        ]);
-        ff.on("close", (code) => {
-          // Cleanup temps
-          if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
-          if (fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
-          if (code === 0) resolve(true);
-          else reject(new Error(`ffmpeg exited with code ${code}`));
-        });
-        ff.on("error", (err) => {
-          if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
-          if (fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
-          reject(err);
-        });
-      });
-    } else {
-      console.log(`🚚 No audio stream provided, moving direct video to output...`);
-      // If outputFilePath exists, fs.renameSync might fail on some systems if it's across partitions
-      // but here we are usually in same drive or tmp.
-      fs.copyFileSync(tempVideo, outputFilePath);
-      fs.unlinkSync(tempVideo);
-      return true;
-    }
-  } catch (err) {
-    if (fs.existsSync(tempVideo)) fs.unlink(tempVideo, () => { });
-    if (tempAudio && fs.existsSync(tempAudio)) fs.unlink(tempAudio, () => { });
-    throw err;
-  }
-}
 
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
@@ -668,20 +590,6 @@ function parsePTDuration(ptDuration) {
   }
 }
 
-function encodeRFC5987Value(value) {
-  return encodeURIComponent(value)
-    .replace(/['()]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`)
-    .replace(/\*/g, "%2A");
-}
-
-function getContentDisposition(filename) {
-  // Fallback for very old browsers (ASCII only)
-  const fallback = filename.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "'");
-  // UTF-8 encoded filename for modern browsers (RFC 5987)
-  // Ensure NO extra spaces and exact format: filename*=UTF-8''{encoded}
-  const encoded = encodeRFC5987Value(filename);
-  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
-}
 
 function getFormatScore(format) {
   let score = 0;
@@ -807,76 +715,9 @@ function normalizeVkUrl(url) {
  * Global Task Limiter (Semaphore) to manage concurrent resource-intensive tasks.
  * Prevents OOM by limiting parallel Playwright, yt-dlp, and FFmpeg processes.
  */
-class TaskLimiter {
-  constructor(concurrency = 4) {
-    this.concurrency = concurrency;
-    this.active = 0;
-    this.queue = [];
-  }
-
-  async run(taskFn, meta = {}, timeoutMs = 20 * 60 * 1000) {
-    return new Promise((resolve, reject) => {
-      const wrappedTask = async () => {
-        this.active++;
-        logger.info("Task Limiter: Task started", {
-          active: this.active,
-          queued: this.queue.length,
-          ...meta
-        });
-
-        let timer;
-        const timeoutPromise = new Promise((_, rej) => {
-          timer = setTimeout(() => rej(new Error(`Task timeout after ${timeoutMs}ms`)), timeoutMs);
-        });
-
-        try {
-          const result = await Promise.race([taskFn(), timeoutPromise]);
-          clearTimeout(timer);
-          resolve(result);
-        } catch (err) {
-          clearTimeout(timer);
-          reject(err);
-        } finally {
-          this.active--;
-          logger.info("Task Limiter: Task finished", {
-            active: this.active,
-            queued: this.queue.length
-          });
-          this.next();
-        }
-      };
-
-      if (this.active < this.concurrency) {
-        wrappedTask();
-      } else {
-        logger.info("Task Limiter: Task queued", {
-          active: this.active,
-          queued: this.queue.length + 1,
-          ...meta
-        });
-        this.queue.push(wrappedTask);
-      }
-    });
-  }
-
-  next() {
-    if (this.queue.length > 0 && this.active < this.concurrency) {
-      const nextTask = this.queue.shift();
-      nextTask();
-    }
-  }
-
-  getStats() {
-    return {
-      active: this.active,
-      queued: this.queue.length,
-      limit: this.concurrency
-    };
-  }
-}
-
-const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 16);
-const playlistLimiter = new TaskLimiter(40); // Increased for 16GB RAM / 8 CPU hardware
+// TaskLimiter class and instances removed in favor of BullMQ
+// const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 16);
+// const playlistLimiter = new TaskLimiter(40);
 
 let app = express();
 let server;
@@ -937,49 +778,28 @@ if (!fs.existsSync(downloadDir)) {
   fs.mkdirSync(downloadDir, { recursive: true });
 }
 
-// Queue Processing Logic
-const downloadQueue = new Queue(function (task, cb) {
-  const { url, jobId } = task;
-  downloadLimiter.run(() => {
-    return new Promise((resolve, reject) => {
-      // Proxy callback to release limiter slot
-      const limiterCb = (err, result) => {
-        if (err) reject(err);
-        else resolve(result);
-        cb(err, result);
-      };
+// Redis Connection Setup
+const redisConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null
+});
 
-      const { format, qualityLabel, startTime: start, endTime: end } = task;
-      const startTime = Date.now();
+// BullMQ Queue System
+const videoQueue = new BullQueue('video-downloads', { connection: redisConnection });
+const activeStreams = new Map();
 
-      logger.info(`Starting batch download task`, { jobId, url, start, end });
-      console.log(`[BatchWorker] Processing ${jobId} - Clip: ${start} to ${end}`); // Direct console output
-      io.emit('job_start', { jobId, url });
+// Worker for processing video downloads
+const videoWorker = new BullWorker('video-downloads', async (job) => {
+  const { url, format, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator } = job.data;
 
-      // Default args - writing to user's downloads folder
-      const outputTemplate = path.join(downloadDir, `%(title)s.%(ext)s`);
+  logger.info(`Starting video download job`, { jobId, url, start, end });
+  console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
+  io.emit('job_start', { jobId, url });
 
-      // Handle Direct HD Capture
-      if (qualityLabel && qualityLabel.startsWith('direct_capture|')) {
-        console.log(`💎 [Batch] Processing Direct HD Capture for ${jobId}`);
-        const parts = qualityLabel.split('|');
-        const vUrl = parts[1];
-        const aUrl = parts[2];
+  const isStreaming = activeStreams.has(jobId);
+  const outputTemplate = isStreaming ? "-" : (outputPath || path.join(downloadDir, `%(title)s.%(ext)s`));
 
-        (async () => {
-          try {
-            await downloadAndMergeDirectStreams(vUrl, aUrl, path.join(downloadDir, `DirectCapture_${jobId}.mp4`), task.userAgent || DESKTOP_UA);
-            io.emit('job_complete', { jobId, url });
-            logger.info(`Batch direct download completed`, { jobId, duration: Date.now() - startTime });
-            return limiterCb(null, { status: 'completed' });
-          } catch (err) {
-            console.error(`❌ [Batch] Direct capture failed:`, err.message);
-            io.emit('job_error', { jobId, error: err.message, url });
-            return limiterCb(err);
-          }
-        })();
-        return;
-      }
+  return new Promise((resolve, reject) => {
+    try {
 
       let args = [
         "-o", outputTemplate,
@@ -987,10 +807,11 @@ const downloadQueue = new Queue(function (task, cb) {
         "--no-restrict-filenames",
         "--ffmpeg-location", "/usr/local/bin/ffmpeg",
         "--progress",
-        "--newline",
+        "--newline"
       ];
 
-      configureAntiBlockingArgs(args, url);
+      configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath);
+
       if (url.includes("vimeo.com")) {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
       }
@@ -1000,7 +821,6 @@ const downloadQueue = new Queue(function (task, cb) {
         const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
         if (isMeta && finalFormat !== "best") {
           finalFormat = getMetaFormatSelector(qualityLabel || "720p");
-          console.log(`🛠️ [Batch] Using flexible Meta selector: ${finalFormat}`);
         }
         args.push("-f", finalFormat);
       } else {
@@ -1011,12 +831,11 @@ const downloadQueue = new Queue(function (task, cb) {
 
       const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
       let tempMetaFile = null;
-      if (isMeta) {
-        tempMetaFile = path.join(downloadDir, `batch_verify_${jobId}_${Date.now()}.mp4`);
+      if (isMeta && !isStreaming) {
+        tempMetaFile = path.join(downloadDir, `job_verify_${jobId}_${Date.now()}.mp4`);
         const oIndex = args.indexOf("-o");
         if (oIndex !== -1) args[oIndex + 1] = tempMetaFile;
         else args.push("-o", tempMetaFile);
-        console.log(`🛠️ [Batch] Meta full processing enabled. Temp file: ${tempMetaFile}`);
       }
 
       if (start && end) {
@@ -1024,54 +843,91 @@ const downloadQueue = new Queue(function (task, cb) {
         args.push("--force-keyframes-at-cuts");
       }
 
+      if (downloadAccelerator) {
+        args.push("--concurrent-fragments", "5");
+      }
+
       args.push(url);
 
-      console.log("Spawn yt-dlp args:", args.join(" "));
+      console.log("[Worker] Spawn yt-dlp args:", args.join(" "));
       const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
       let stderr = "";
       ytDlp.stdout.on("data", (data) => {
-        const line = data.toString();
-        const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-        if (match) {
-          const percent = parseFloat(match[1]);
-          io.emit('job_progress', { jobId, percent, url });
+        // If streaming, pipe video data to res
+        if (isStreaming && activeStreams.has(jobId)) {
+          activeStreams.get(jobId).write(data);
+        } else if (!isStreaming) {
+          // Only parse progress from stdout if NOT streaming video data
+          const line = data.toString();
+          const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+          if (match) {
+            const percent = parseFloat(match[1]);
+            io.emit('job_progress', { jobId, percent, url });
+            job.updateProgress(percent);
+          }
         }
       });
 
       ytDlp.stderr.on("data", (data) => {
-        stderr += data.toString();
+        const line = data.toString();
+        stderr += line;
+
+        // If streaming, we parse progress from stderr
+        if (isStreaming) {
+          const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+          if (match) {
+            const percent = parseFloat(match[1]);
+            io.emit('job_progress', { jobId, percent, url });
+            job.updateProgress(percent);
+          }
+        }
       });
 
       ytDlp.on("close", async (code) => {
+        if (activeStreams.has(jobId)) {
+          activeStreams.get(jobId).end();
+          activeStreams.delete(jobId);
+        }
+
         if (code === 0) {
           if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) {
             const isComplete = await verifyStreamCompleteness(tempMetaFile);
             if (!isComplete) {
-              fs.unlink(tempMetaFile, () => { });
+              if (fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
               io.emit('job_error', { jobId, error: "Verification failed", url });
-              return limiterCb(new Error("Verification failed"));
+              return reject(new Error("Verification failed"));
             }
-            const finalPath = path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
+            const finalPath = isZipItem ? outputPath.replace('%(title)s.%(ext)s', `Verified_Meta_${jobId}.mp4`) : path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
             fs.renameSync(tempMetaFile, finalPath);
           }
           io.emit('job_complete', { jobId, url });
-          limiterCb(null, { status: 'completed' });
+          resolve({ status: 'completed' });
         } else {
           if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
           io.emit('job_error', { jobId, error: "Process exited with code " + code, url });
-          logger.error(`Batch download process failed`, { jobId, code, stderr });
-          limiterCb(new Error(`Process exited with code ${code}`));
+          logger.error(`Download job failed`, { jobId, code, stderr });
+          reject(new Error(`Process exited with code ${code}`));
         }
       });
 
       ytDlp.on("error", (err) => {
         io.emit('job_error', { jobId, error: err.message, url });
-        limiterCb(err);
+        reject(err);
       });
-    });
-  }, { type: 'batch_download', jobId, url });
-}, { concurrent: 10 });
+
+    } catch (err) {
+      reject(err);
+    }
+  });
+}, {
+  connection: redisConnection,
+  concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4
+});
+
+videoWorker.on('failed', (job, err) => {
+  logger.error(`Job ${job.id} failed: ${err.message}`);
+});
 
 
 
@@ -2387,174 +2243,6 @@ app.get('/debug-env', (req, res) => {
   });
 });
 
-function streamProcessToResponse(res, childProcess, options) {
-  const { filename, contentType, timeoutMs = 300000, onSuccess, onFailure, onRetry } = options;
-  let stderr = "";
-  let headersSent = false;
-  let responseClosed = false;
-
-  // Handle client disconnect or pipe errors
-  const errorHandler = (err) => {
-    // EPIPE or ECONNRESET expected when client disconnects
-    if (err.code === "EPIPE" || err.code === "ECONNRESET") {
-      // Do not throw, just cleanup
-    } else {
-      console.error("Response stream error:", err);
-    }
-    responseClosed = true;
-    cleanup();
-    if (!childProcess.killed) {
-      childProcess.kill("SIGKILL");
-    }
-  };
-
-  res.on("error", errorHandler);
-  if (res.socket) {
-    res.socket.on("error", errorHandler);
-  }
-
-  const sendHeaders = () => {
-    if (headersSent) {
-      return;
-    }
-    headersSent = true;
-    res.setHeader("Content-Disposition", getContentDisposition(filename));
-    res.setHeader("Content-Type", contentType);
-  };
-  const timeout = setTimeout(() => {
-    responseClosed = true;
-    childProcess.kill("SIGKILL");
-    if (!headersSent) {
-      res.status(500).json({
-        error:
-          "Download timed out. The video might be too large or there may be a connection issue.",
-      });
-    } else {
-      res.destroy(new Error("Download timed out"));
-    }
-    if (onFailure) {
-      onFailure("timeout", stderr);
-    }
-  }, timeoutMs);
-  const cleanup = () => {
-    clearTimeout(timeout);
-  };
-  const handleBackpressure = (chunk) => {
-    if (responseClosed) {
-      return;
-    }
-    if (!headersSent) {
-      sendHeaders();
-    }
-    let canContinue = false;
-    try {
-      canContinue = res.write(chunk);
-    } catch (writeErr) {
-      errorHandler(writeErr);
-      return;
-    }
-    if (!canContinue) {
-      childProcess.stdout.pause();
-      res.once("drain", () => {
-        if (!responseClosed) {
-          childProcess.stdout.resume();
-        }
-      });
-    }
-  };
-  const failResponse = (message) => {
-    if (responseClosed) {
-      return;
-    }
-
-    // Check if we should retry
-    if (onRetry && onRetry(message, stderr)) {
-      responseClosed = true;
-      cleanup();
-      return;
-    }
-    responseClosed = true;
-    if (!headersSent) {
-      // Analyze error for user-friendly message
-      const stderrTrimmed = stderr ? stderr.trim() : "";
-      let status = 500;
-      let userError = "Failed to download video.";
-
-      if (stderrTrimmed.includes("Sign in") ||
-        stderrTrimmed.includes("confirm your age") ||
-        stderrTrimmed.includes("Private video") ||
-        stderrTrimmed.includes("only works when logged-in")) {
-        status = 403;
-        userError = "This video requires login. Please close Chrome completely to allow the downloader to access your cookies.";
-      } else if (stderrTrimmed.includes("Could not copy Chrome cookie database")) {
-        status = 503;
-        userError = "Chrome is locking your cookies. Please close Chrome and try again.";
-      }
-
-      res.status(status).json({
-        error: userError,
-        details: message || stderr || "Download process failed.",
-        stderr: stderrTrimmed.substring(0, 500)
-      });
-    } else {
-      res.destroy(new Error(message || "Download failed"));
-    }
-    if (onFailure) {
-      onFailure(message || "process_failed", stderr);
-    }
-  };
-  childProcess.stderr.on("data", (data) => {
-    const chunk = data.toString();
-    stderr += chunk;
-    // Real-time console logging for critical yt-dlp stages (Merger/FFmpeg)
-    // This ensures these lines appear in Fly.io dashboard logs immediately.
-    if (chunk.includes('[Merger]') || chunk.includes('[ffmpeg]') || chunk.includes('Merging formats into')) {
-      console.log(`🎬 yt-dlp Merger: ${chunk.trim()}`);
-    }
-  });
-  childProcess.stdout.on("data", (chunk) => {
-    const data = chunk.toString();
-    if (data.includes('[Merger]') || data.includes('[ffmpeg]') || data.includes('Merging formats into')) {
-      console.log(`🎬 yt-dlp Output: ${data.trim()}`);
-    }
-    handleBackpressure(chunk);
-  });
-  childProcess.on("close", (code) => {
-    cleanup();
-    if (responseClosed) {
-      return;
-    }
-    if (code === 0) {
-      responseClosed = true;
-      if (!headersSent) {
-        sendHeaders();
-      }
-      res.end();
-      if (onSuccess) {
-        onSuccess();
-      }
-    } else {
-      failResponse(`Process exited with code ${code}`);
-    }
-  });
-  childProcess.on("error", (error) => {
-    cleanup();
-    failResponse(error.message);
-  });
-  res.on("close", () => {
-    if (responseClosed) {
-      return;
-    }
-    responseClosed = true;
-    cleanup();
-    if (!childProcess.killed) {
-      childProcess.kill("SIGKILL");
-    }
-    if (onFailure) {
-      onFailure("client_closed", stderr);
-    }
-  });
-}
 
 /* eslint-disable no-unused-vars */
 async function getVimeoVideoData(url) {
@@ -2906,7 +2594,7 @@ app.post("/batch-download", async (req, res) => {
   }
 
   try {
-    const tasks = targets.map(item => {
+    const tasks = await Promise.all(targets.map(async item => {
       const jobId = uuidv4();
       // Item can be a string URL or an object { url, startTime, endTime }
       const url = typeof item === 'string' ? item : item.url;
@@ -2930,7 +2618,7 @@ app.post("/batch-download", async (req, res) => {
         }
       }
 
-      downloadQueue.push({
+      await videoQueue.add('batch-download', {
         jobId,
         url,
         format: format || "best",
@@ -2939,7 +2627,7 @@ app.post("/batch-download", async (req, res) => {
         endTime
       });
       return { jobId, url };
-    });
+    }));
 
     res.json({ message: "Batch started", tasks });
   } catch (error) {
@@ -2995,68 +2683,35 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
 
       console.log(`[ZIP-JOB] ${jobId} Processing ${urls.length} items`);
 
-      // 1. Download Videos in Parallel (respecting global concurrency)
+      // 1. Download Videos in Parallel (respecting BullMQ concurrency)
       await Promise.all(urls.map(async (item) => {
         const url = typeof item === 'string' ? item : item.url;
         const startTime = typeof item === 'object' ? item.startTime : null;
         const endTime = typeof item === 'object' ? item.endTime : null;
         const format = typeof item === 'object' ? (item.format || 'mp4') : 'mp4';
 
-        return playlistLimiter.run(async () => {
-          const args = [
-            "--no-check-certificate",
-            "--no-playlist",
-          ];
+        // We add this as a job to BullMQ, but since this is a ZIP job, 
+        // we need to wait for each item to finish to update the ZIP progress.
+        // This is a bit tricky with BullMQ if we want to wait.
+        // For now, let's just add them to the queue and have the worker report progress back.
 
-          configureAntiBlockingArgs(args, url);
+        const individualJobId = uuidv4();
+        const bullJob = await videoQueue.add('playlist-item', {
+          jobId: individualJobId,
+          url,
+          format,
+          startTime,
+          endTime,
+          isZipItem: true,
+          zipJobId: jobId,
+          outputPath: path.join(fastpastDir, format === 'mp3' ? "%(title)s.mp3" : "%(title)s.%(ext)s")
+        });
 
-          if (format === 'mp3') {
-            args.push("-x", "--audio-format", "mp3", "--audio-quality", "192K");
-            args.push("-o", path.join(fastpastDir, "%(title)s.mp3"));
-          } else {
-            args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
-            args.push("--merge-output-format", "mp4");
-            args.push("-o", path.join(fastpastDir, "%(title)s.%(ext)s"));
-          }
+        // Wait for the individual job to finish so we can track ZIP progress
+        await bullJob.waitUntilFinished(new Redis(process.env.REDIS_URL || 'redis://localhost:6379'));
 
-          if (url.includes("vimeo.com")) {
-            args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-          }
-
-          if (startTime && endTime) {
-            const parseTimeToSec = (t) => {
-              const parts = t.split(':').map(Number);
-              if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-              if (parts.length === 2) return parts[0] * 60 + parts[1];
-              return 0;
-            };
-            const startSec = parseTimeToSec(startTime);
-            const endSec = parseTimeToSec(endTime);
-            const clipDuration = endSec - startSec;
-
-            if (clipDuration >= 30) {
-              args.push("--download-sections", `*${startSec}-${endSec}`);
-            }
-          }
-
-          args.push(url);
-
-          try {
-            await new Promise((resolve, reject) => {
-              const p = spawnYtDlp(["-m", "yt_dlp", ...args], { stdio: 'ignore' });
-              p.on('close', (code) => {
-                if (code === 0) resolve();
-                else reject(new Error(`Exit code ${code}`));
-              });
-              p.on('error', reject);
-            });
-          } catch (err) {
-            console.error(`[ZIP-JOB] ${jobId} Failed item ${url}:`, err.message);
-          }
-
-          job.completed++;
-          job.progress = Math.round((job.completed / job.total) * 100);
-        }, { type: 'zip_download_item', jobId, url });
+        job.completed++;
+        job.progress = Math.round((job.completed / job.total) * 100);
       }));
 
       // 2. Create Zip
@@ -3172,9 +2827,15 @@ app.get("/download-zip-result/:id", (req, res) => {
 });
 
 
-app.get("/queue-status", (req, res) => {
-  const stats = downloadQueue.getStats();
-  res.json(stats);
+app.get("/queue-status", async (req, res) => {
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    videoQueue.getWaitingCount(),
+    videoQueue.getActiveCount(),
+    videoQueue.getCompletedCount(),
+    videoQueue.getFailedCount(),
+    videoQueue.getDelayedCount(),
+  ]);
+  res.json({ waiting, active, completed, failed, delayed });
 });
 
 // Endpoint to debug network connectivity and yt-dlp execution on the server
@@ -3910,836 +3571,112 @@ app.post("/get-qualities", async (req, res) => {
 });
 
 app.post("/download", async (req, res) => {
-  const downloadStartTime = Date.now();
   logger.info("Download request received", {
     ip: req.ip,
     userAgent: req.get("User-Agent"),
     body: req.body,
-    headers: req.headers,
   });
 
-  const { videoUrl, format, quality } = req.body;
-
-  // Support both JSON and form data
+  let { videoUrl, format, quality } = req.body;
   let url = videoUrl || req.body.videoUrl;
 
+  if (!url) {
+    return res.status(400).json({ error: "Video URL is required." });
+  }
+
   // Resolve shortened URLs (Facebook/Instagram)
-  if (url) {
+  try {
     const resolved = await resolveFacebookUrl(url);
-    const normalizedUrl = resolved.normalizedUrl;
-    // Keep 'url' as the string for subsequent yt-dlp calls if browser extraction isn't used
-    url = normalizedUrl;
+    url = resolved.normalizedUrl;
 
-    // Use headless browser for Facebook video extraction if yt-dlp is likely to fail or if Direct HD requested
-    // User Request Dec 2025: Use optional chaining to prevent NPE
-    if (normalizedUrl?.includes?.('facebook.com') || normalizedUrl?.includes?.('fb.watch')) {
+    // Handle Direct HD Capture for Facebook if needed
+    if (url?.includes?.('facebook.com') || url?.includes?.('fb.watch')) {
       const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
-
       if (isDirectHD) {
-        try {
-          const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-          console.log('🌐 [Download] User requested Direct HD. Launching Playwright browser extraction for Facebook...');
-          const extractionResult = await downloadLimiter.run(
-            () => extractFacebookVideoUrl(normalizedUrl, cookieFile, req.headers['user-agent']),
-            { type: 'playwright_extraction', url: normalizedUrl }
-          );
-          const { videoUrl, title, freshCookiePath, userAgent } = extractionResult;
-          console.log(`✅ [Download] Browser extracted: ${title}`);
-
-          // Use extracted direct video URL instead of page URL (if available)
-          if (videoUrl) {
-            url = videoUrl;
-          }
-
-          // Store title, fresh cookies, and UA for later use
-          req.body._browserExtractedTitle = title;
-          req.body._freshCookiePath = freshCookiePath;
-          req.body._userAgent = userAgent;
-        } catch (error) {
-          console.log('⚠️ Browser extraction failed, falling back to yt-dlp:', error.message);
-          // Continue with normalized URL - yt-dlp will try
+        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+        const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+        if (extractionResult.videoUrl) {
+          url = extractionResult.videoUrl;
+          req.body._browserExtractedTitle = extractionResult.title;
+          req.body._freshCookiePath = extractionResult.freshCookiePath;
+          req.body._userAgent = extractionResult.userAgent;
         }
       }
     }
+  } catch (err) {
+    logger.warn('URL resolution failed, using original', { error: err.message });
   }
+
   const fmt = format || req.body.format;
   const qual = quality || req.body.quality;
-
-  // RAPIDAPI Support: If 'fmt' is a long URL, it means we got it from the API.
-  // Bypass yt-dlp and stream directly.
-  if (fmt && (fmt.startsWith("http") || fmt.length > 100)) {
-    logger.info("Direct download detected (API Fallback mode)", { url });
-    try {
-      const response = await fetch(fmt);
-      if (!response.ok) throw new Error(`External URL failed: ${response.status}`);
-
-      res.setHeader('Content-Disposition', `attachment; filename="video.mp4"`);
-      res.setHeader('Content-Type', 'video/mp4');
-
-      // Pipe the external stream to the response
-      const { Readable } = require('stream');
-      // Node 18+ fetch returns a web stream, need to handle it or use helper
-      const reader = response.body.getReader();
-      const nodeStream = new Readable({
-        async read() {
-          const { done, value } = await reader.read();
-          if (done) {
-            this.push(null);
-          } else {
-            this.push(Buffer.from(value));
-          }
-        }
-      });
-      nodeStream.pipe(res);
-      return;
-    } catch (e) {
-      return res.status(500).json({ error: "Failed to download from external API", details: e.message });
-    }
-  }
-  const formatSelector =
-    req.body.formatSelector ||
-    req.body.formatId;
+  const formatSelector = req.body.formatSelector || req.body.formatId;
   const qualityLabel = req.body.qualityLabel || qual;
 
-  logger.info("Download parameters parsed", {
-    url,
-    format: fmt,
-    quality: qualityLabel || qual,
-    formatSelector: formatSelector || null,
-  });
-
   if (!url || !fmt || (!qual && !formatSelector)) {
-    return res
-      .status(400)
-      .json({ error: "Video URL, format, and quality are required." });
+    return res.status(400).json({ error: "Video URL, format, and quality are required." });
   }
 
-  const downloadAccelerator = req.body.downloadAccelerator === "true";
   const startTime = req.body.startTime;
   const endTime = req.body.endTime;
 
-  // Helper function to parse time string (HH:MM:SS or MM:SS) to seconds
-  function parseTimeToSeconds(timeStr) {
-    if (!timeStr) return 0;
-    const parts = timeStr.split(':').map(Number);
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2]; // HH:MM:SS
-    if (parts.length === 2) return parts[0] * 60 + parts[1]; // MM:SS
-    return 0;
-  }
-
-  // Check trim duration limits for free users (MP4 and MP3)
-  if (startTime && endTime && (fmt === 'mp4' || fmt === 'mp3')) {
-    const startSeconds = parseTimeToSeconds(startTime);
-    const endSeconds = parseTimeToSeconds(endTime);
-    const trimDuration = endSeconds - startSeconds;
-
-    // Check if user is authenticated and has premium access
-    let isPremiumUser = false;
-    try {
-      const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token || req.query.token;
-      if (token) {
-        if (USE_MONGODB) {
-          const Session = require('./models/Session');
-          const session = await Session.findOne({
-            sessionToken: token,
-            expiresAt: { $gt: new Date() }
-          }).populate('userId');
-
-          if (session && session.userId) {
-            const user = session.userId;
-            // Check if user has premium access (any paid plan or lifetime)
-            const premiumTypes = ['monthly', 'semi-yearly', 'yearly', 'lifetime', 'creator', 'studio'];
-            if (premiumTypes.includes(user.membershipType)) {
-              // Verify subscription is still valid for time-based plans
-              if (user.membershipType === 'lifetime' ||
-                (user.subscriptionEndDate && new Date() <= user.subscriptionEndDate)) {
-                isPremiumUser = true;
-              }
-            }
-          }
-        } else {
-          // JSON Fallback
-          const session = SESSIONS_DATA.find(s =>
-            s.sessionToken === token &&
-            new Date(s.expiresAt) > new Date()
-          );
-
-          if (session && session.userId) {
-            // Find user by ID
-            const user = USERS_DATA.find(u => u.id === session.userId || u._id === session.userId);
-
-            if (user) {
-              const premiumTypes = ['monthly', 'semi-yearly', 'yearly', 'lifetime', 'creator', 'studio'];
-              if (premiumTypes.includes(user.membershipType)) {
-                // Handle potential string dates in JSON
-                const subEndDate = user.subscriptionEndDate ? new Date(user.subscriptionEndDate) : null;
-
-                // Verify subscription
-                if (user.membershipType === 'lifetime' ||
-                  (subEndDate && new Date() <= subEndDate)) {
-                  isPremiumUser = true;
-                }
-              }
-            }
-          }
-        }
-      }
-    } catch (authError) {
-      logger.warn('Auth check failed in download endpoint', { error: authError.message });
-      // Continue as free user
-    }
-
-    // Enforce format-specific MINIMUM limits for free users
-    if (!isPremiumUser) {
-      let minDuration, errorMessage;
-
-      if (fmt === 'mp4') {
-        minDuration = 180; // 3 minutes MINIMUM
-        errorMessage = 'Free plan requires at least 3 minutes for video clips. Upgrade to premium for shorter clips.';
-      } else if (fmt === 'mp3') {
-        minDuration = 30; // 30 seconds MINIMUM
-        errorMessage = 'Free plan requires at least 30 seconds for audio clips. Upgrade to premium for shorter clips.';
-      }
-
-      if (trimDuration < minDuration) {
-        logger.info('Free user trim duration too short', {
-          trimDuration,
-          startTime,
-          endTime,
-          format: fmt,
-          minRequired: minDuration
-        });
-        return res.status(403).json({
-          error: errorMessage,
-          trimDuration,
-          minDuration
-        });
-      }
-    }
-  }
-
   try {
-    // Ensure URL has protocol
-    if (!/^https?:\/\//i.test(url)) {
-      url = "https://" + url;
-    }
-
-    url = normalizeVkUrl(url);
-
-    // Strip query parameters from Vimeo URLs to avoid login redirects
-    if (url.includes("vimeo.com")) {
-      url = url.split("?")[0];
-    }
-
-    // Input Validation: Prevent Argument Injection
-    if (url.startsWith("-")) {
-      return res.status(400).json({ error: "Invalid URL format." });
-    }
-
-    // Get video title from yt-dlp
-    let videoTitle = "Unknown Title";
-    try {
-      let titleArgs = [
-        "-m",
-        "yt_dlp",
-        // Option 1 (Robust): Use --print to get exact fields separated by a delimiter
-        // This avoids JSON parsing issues when yt-dlp outputs warnings/garbage.
-        "--print",
-        "%(title,description,id)s|||%(duration)s", // Fallback chain: title → description → id (for Facebook Reels)
-        "--no-download",
-        "--no-playlist",
-        "--no-check-certificate",
-        "--no-restrict-filenames", // CRITICAL: Stop yt-dlp from sanitizing output to ASCII
-      ];
-
-      // Add verbose logging for Facebook to diagnose issues
-      if (url.includes("facebook.com") || url.includes("fb.watch")) {
-        titleArgs.push("-v"); // Verbose mode to capture detailed stderr
-        console.log("📋 Facebook title fetch - URL after resolution:", url);
-      }
-
-      if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        // titleArgs.push("--force-ipv4"); // Handled by configureAntiBlockingArgs
-      }
-
-      configureAntiBlockingArgs(titleArgs, url, req.headers['user-agent']); // Apply globally
-
-      // Add Vimeo-specific handling
-      if (url.includes("vimeo.com")) {
-        titleArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-        // titleArgs.push("--cookies-from-browser", "chrome"); // Disabled
-      }
-
-      titleArgs.push(url);
-
-      // Log the complete command for Facebook debugging
-      if (url.includes("facebook.com") || url.includes("fb.watch")) {
-        console.log("🔍 Facebook title fetch command:", titleArgs.join(" "));
-      }
-
-      const fetchTitle = async (args, isRetry = false) => {
-        return new Promise((resolve, reject) => {
-          // const command = getPythonCommand();
-          const titleProcess = spawnYtDlp(args, {
-            stdio: ["pipe", "pipe", "pipe"],
-          });
-          let titleStdout = "";
-          let titleStderr = "";
-
-          titleProcess.stdout.on("data", (data) => {
-            titleStdout += data.toString();
-          });
-          titleProcess.stderr.on("data", (data) => {
-            const chunk = data.toString();
-            titleStderr += chunk;
-            console.error("Title stderr:", chunk);
-          });
-
-          titleProcess.on("close", (code) => {
-            if (code !== 0) {
-              const stderrTrimmed = titleStderr.trim();
-              if (!isRetry && (stderrTrimmed.includes("Could not copy Chrome cookie database") || stderrTrimmed.includes("Failed to decrypt"))) {
-                console.warn("Title fetch: cookies locked, retrying without cookies...");
-                const cleanArgs = args.filter(a => a !== "--cookies-from-browser" && a !== "chrome");
-                resolve(fetchTitle(cleanArgs, true)); // Recursively retry
-                return;
-              }
-              console.error("Title fetch failed, code:", code);
-            }
-            // Resolve with object containing both
-            resolve({ stdout: titleStdout, stderr: titleStderr });
-          });
-          titleProcess.on("error", reject);
-        });
-      };
-
-      const result = await fetchTitle(titleArgs);
-      const finalTitleStdout = result.stdout;
-      const finalTitleStderr = result.stderr;
-
-      // Robust Parsing for "%(title)s|||%(duration)s"
-      // Handle standard output and potential multi-line confusion
-      if (finalTitleStdout) {
-        const lines = finalTitleStdout.split('\n');
-        let parsed = false;
-        for (const line of lines) {
-          if (line.includes('|||')) {
-            const parts = line.split('|||');
-            videoTitle = parts[0].trim() || "Unknown Title";
-            // const durStr = parts[1] ? parts[1].trim() : "0"; // Duration not used
-
-            // Duration is parsed but not currently used in this flow
-            parsed = true;
-            break;
-          }
-        }
-
-        // Fallback if separator not found (maybe just title if format failed?)
-        if (!parsed) {
-          // If we got output but no separator, assume it might be just title if we were lucky, 
-          // but with our format string, it SHOULD have separator.
-          logger.warn("Title fetch: Separator ||| not found in stdout", {
-            stdout: finalTitleStdout.substring(0, 200),
-            stderr: finalTitleStderr ? finalTitleStderr.substring(0, 200) : "empty"
-          });
-          // Try to use whole line as title if it looks valid
-          if (lines[0] && lines[0].trim().length > 0) {
-            videoTitle = lines[0].trim();
-          }
-        }
-      } else {
-        logger.warn("Title fetch returned empty stdout", {
-          stdout: "empty",
-          stderr: finalTitleStderr ? finalTitleStderr.substring(0, 500) : "empty",
-          command: titleArgs.join(" ")
-        });
-      }
-    } catch (e) {
-      console.error("Title fetch error:", e);
-    }
-
-    // Fallback: Use browser-extracted title if yt-dlp failed or returned generic title
-    if (req.body._browserExtractedTitle && (videoTitle === "Unknown Title" || !videoTitle)) {
-      console.log(`ℹ️ using browser-extracted title: ${req.body._browserExtractedTitle}`);
-      videoTitle = req.body._browserExtractedTitle;
-    }
-
-
-    // Sanitize title for filename while preserving Unicode (Arabic, Cyrillic, etc.)
-    // Only strip strictly illegal filesystem characters: \ / : * ? " < > |
-    /* eslint-disable no-control-regex */
-    const safeTitle = videoTitle
-      .replace(/[\u0000-\u001f\u007f]/g, "") // Strip control characters only
-      /* eslint-enable no-control-regex */
-      .replace(/[\\/:*?"<>|]/g, "_")  // Replace illegal FS chars with underscore
-      .replace(/\s+/g, " ")           // Collapse multiple spaces
-      .trim()
-      .substring(0, 150);             // Allow slightly longer titles
-    const finalTitle = safeTitle || "Video";
-    const downloadFilename = `FastPast - ${finalTitle}.${fmt}`; // Use standard hyphen '-' instead of en-dash '–'
-    const contentType = fmt === "mp3" ? "audio/mpeg" : "video/mp4";
-
-    let ytDlpArgs = [
-      "-v", // Enable verbose logging for debugging
-      "--no-check-certificate",
-      "--no-playlist",
-      "--no-restrict-filenames", // CRITICAL: Preserve Unicode characters in internal temp files
-      "--ffmpeg-location", "/usr/local/bin/ffmpeg",
-      "--ignore-no-formats-error",
-      "--check-formats"
-    ];
-
-
-    // Apply unified anti-blocking args (User-Agent, Cookies, Impersonate) handles deduplication
-    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent'], req.body._freshCookiePath);
-
-    if (url.includes("instagram.com")) {
-      // Instagram specific - try generic UA from helper first, or keep GraphQL if absolutely needed
-      // Actually, Nightly usually handles Insta best with just a mobile UA.
-      // We'll trust configureAntiBlockingArgs to set the Android UA.
-      // ytDlpArgs.push("--extractor-args", "instagram:api=graphql"); // Optional, maybe remove if Nightly is good
-    }
-
-    if (url.includes("threads.net") || url.includes("threads.com")) {
-      try {
-        const threadsData = await getThreadsVideoData(url, req.headers['user-agent']);
-        if (threadsData && threadsData.videoUrl) {
-          const curlArgs = [
-            "-L",
-            "-o",
-            "-",
-            "-H",
-            `User-Agent: ${req.headers['user-agent'] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"}`,
-            "-H",
-            "Accept: */*",
-            "-H",
-            "Accept-Encoding: gzip, deflate",
-            "-C",
-            "-",
-            threadsData.videoUrl,
-          ];
-          const curlProcess = spawn("curl", curlArgs, {
-            stdio: ["ignore", "pipe", "pipe"],
-          });
-          streamProcessToResponse(res, curlProcess, {
-            filename: downloadFilename,
-            contentType: "video/mp4",
-            onSuccess: () => {
-              logger.info("Threads video downloaded successfully via curl", {
-                url,
-                duration: Date.now() - downloadStartTime,
-              });
-            },
-            onFailure: (reason, stderrText) => {
-              logger.error("Threads download failed", {
-                url,
-                reason,
-                stderr: (stderrText || "").substring(0, 1000),
-              });
-            },
-          });
-          return;
-        }
-        throw new Error("Could not extract video data from Threads");
-      } catch (e) {
-        logger.warn("Threads video download failed", {
-          error: e.message,
-          url,
-        });
-        return res.status(500).json({
-          error: "Failed to download Threads video",
-          details: e.message,
-        });
-      }
-    }
-
-    // Add impersonation globally for all platforms to avoid blocking
-    // Add impersonation globally for all platforms (except VK where it causes 400 Bad Request)
-    if (!url.includes("vk.com") && !url.includes("vk.ru")) {
-      // yt-dlp standard doesn't support --impersonate, relying on default user-agent
-    }
-
-    if (url.includes("vimeo.com")) {
-      ytDlpArgs.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-      // ytDlpArgs.push("--cookies-from-browser", "chrome"); // Disabled: Headless server cannot use browser cookies
-    }
-
-    // Add VK cookies
-    // if (url.includes("vk.com") || url.includes("vk.ru")) {
-    //   ytDlpArgs.push("--cookies-from-browser", "chrome"); // Disabled
-    // }
-
-    let formatArgs = [];
-    if (fmt === "mp4") {
-      if (formatSelector) {
-        // Robust DASH support for Facebook/Instagram/Threads:
-        // Use property-based selection instead of hardcoded IDs to ensure audio compatibility
-        let finalFormat = formatSelector;
-        const isMetaPlatform = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-
-        if (isMetaPlatform && formatSelector !== "best") {
-          finalFormat = getMetaFormatSelector(qualityLabel);
-          console.log(`🛠️ Using flexible Meta selector: ${finalFormat}`);
-        }
-
-        formatArgs = ["-f", finalFormat, "--merge-output-format", "mp4"];
-      } else {
-        // Use robust format selection that ensures both video and audio are downloaded
-        // bv+ba/b = best video + best audio merged, fallback to single best file
-
-        // Special handling for Facebook/Instagram which often have separate streams
-        if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-          const fbFormat = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"; // User Request Dec 2025: Robust generic selector
-
-          formatArgs = [
-            "-f",
-            fbFormat,
-            "--merge-output-format",
-            "mp4",
-          ];
-        } else {
-          formatArgs = [
-            "-f",
-            "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b",
-            "--merge-output-format",
-            "mp4",
-          ];
-        }
-      }
-    } else if (fmt === "mp3") {
-      const bitrate = qual.replace("kbps", "K");
-      formatArgs = [
-        "-x",
-        "--audio-format",
-        "mp3",
-        "--audio-quality",
-        bitrate,
-      ];
-    } else {
-      return res.status(400).json({ error: "Unsupported format requested." });
-    }
-
-    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
-    if (startTime && endTime && fmt === "mp4" && isYouTube) {
-      const startSec = parseTime(startTime);
-      const endSec = parseTime(endTime);
-
-      if (endSec - startSec < 30) {
-        return res.status(400).json({ error: "Minimum clip duration is 30 seconds." });
-      }
-
-      // Use yt-dlp native download sections
-      ytDlpArgs.push("--download-sections", `*${startSec}-${endSec}`);
-    }
-
-    if (downloadAccelerator) {
-      ytDlpArgs.push("--concurrent-fragments", "5");
-    }
-
-    // Unified Anti-Blocking Logic (2025 Standard)
-    // Handles Deduplication of Impersonate, User-Agent, and Cookies automatically
-    configureAntiBlockingArgs(ytDlpArgs, url, req.headers['user-agent'], req.body._freshCookiePath);
-
-    // Platform-specific robustness (Non-security flags)
-    if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      ytDlpArgs.push("--fixup", "warn");
-      // Add a buffer limit to prevent massive memory usage during merge/download
-      ytDlpArgs.push("--buffer-size", "16K");
-    }
-
-    const finalYtDlpArgs = [...ytDlpArgs, ...formatArgs, "-o", "-", url];
-
-    console.log("yt-dlp args:", finalYtDlpArgs);
-
-    // Wrapper to handle download and proxy rotation
-    const proxies = require('./proxies');
-    let proxyIndex = -1; // -1 = Direct, 0+ = Proxies
-
-    const performDownload = async () => {
-      // Note: ignoredArgs was used in old recursive loop, now we use fresh build
-      if (res.headersSent) return;
-
-      // User Request: Handle Direct HD Capture (Bypass yt-dlp)
-      if (formatSelector && formatSelector.startsWith('direct_capture|')) {
-        console.log(`💎 [Direct] Processing Direct HD Capture bypass`);
-        const parts = formatSelector.split('|');
-        const vUrl = parts[1];
-        const aUrl = parts[2];
-
-        try {
-          const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
-          if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-          const tempFilePath = path.join(tempDir, `fb_direct_${Date.now()}.mp4`);
-
-          await downloadAndMergeDirectStreams(vUrl, aUrl, tempFilePath, req.headers['user-agent'] || DESKTOP_UA);
-
-          const isComplete = await verifyStreamCompleteness(tempFilePath);
-          if (!isComplete) throw new Error("Direct capture streams are incomplete or missing audio/video");
-
-          console.log(`✅ [Direct] Manual merge verified and successful, streaming to client...`);
-          res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
-          res.setHeader("Content-Type", contentType);
-
-          const readStream = fs.createReadStream(tempFilePath);
-          readStream.pipe(res);
-
-          readStream.on('end', () => {
-            fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
-          });
-          return;
-        } catch (err) {
-          console.error(`❌ [Direct] Manual merge failed:`, err.message);
-          if (!res.headersSent) res.status(500).json({ error: "Failed to download via direct capture", details: err.message });
-          return;
-        }
-      }
-
-      // Determine current strategy
-      // Only rotate proxies for Facebook as requested
-      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
-
-      // Algorithm:
-      // 1. Try Direct (proxyIndex = -1) -- typically uses --impersonate
-      // 2. If fail & isMeta, Try Proxy[0], Proxy[1]...
-
-      const currentProxy = (proxyIndex >= 0 && proxyIndex < proxies.length) ? proxies[proxyIndex] : null;
-
-      if (proxyIndex >= proxies.length) {
-        logger.error("All proxies exhausted. Download failed.");
-        if (!res.headersSent) res.status(500).json({ error: "Failed to download video after trying all available proxies." });
-        return;
-      }
-
-      const currentArgs = [...finalYtDlpArgs];
-      let strategyName = "Direct (Impersonate)";
-
-      if (currentProxy) {
-        strategyName = `Proxy ${proxyIndex + 1}/${proxies.length}`;
-        currentArgs.push("--proxy", currentProxy);
-      }
-
-      console.log(`🚀 Attempting Download Strategy: ${strategyName}`);
-
-      if (isMeta) {
-        // Meta Server-Side Processing: Download to disk -> Verify -> Stream
-        const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-
-        const tempFilePath = path.join(tempDir, `meta_${Date.now()}_${Math.random().toString(36).substring(7)}.mp4`);
-        const metaArgs = [...currentArgs];
-        // Remove output to stdout and replace with temp file path
-        const oIndex = metaArgs.indexOf("-o");
-        if (oIndex !== -1) metaArgs[oIndex + 1] = tempFilePath;
-        else metaArgs.push("-o", tempFilePath);
-
-        logger.info("Executing Meta Disk-Based Download", { strategyName, tempFilePath, platform: isMeta ? "Meta" : "Other" });
-
-        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...metaArgs], {
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        // Cleanup on disconnect: kill process and delete temp file
-        res.on('close', () => {
-          if (ytDlpProcess && ytDlpProcess.exitCode === null) {
-            logger.info("Client disconnected during Meta download. Killing process.", { pid: ytDlpProcess.pid });
-            ytDlpProcess.kill('SIGKILL');
-            if (tempFilePath && fs.existsSync(tempFilePath)) {
-              fs.unlink(tempFilePath, () => { });
-            }
-          }
-        });
-
-        let stderr = "";
-        ytDlpProcess.stderr.on("data", (data) => {
-          stderr += data.toString();
-        });
-
-        ytDlpProcess.on("close", async (code) => {
-          if (code === 0 && fs.existsSync(tempFilePath)) {
-            const isComplete = await verifyStreamCompleteness(tempFilePath);
-
-            if (isComplete) {
-              logger.info("✅ Verification successful. Streaming to client.", { tempFilePath });
-              res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
-              res.setHeader("Content-Type", contentType);
-
-              // Set download token cookie if provided (helps frontend detect when download actually starts)
-              if (req.body.dlToken) {
-                res.cookie(req.body.dlToken, "1", { path: "/" });
-              }
-
-              const readStream = fs.createReadStream(tempFilePath);
-              readStream.pipe(res);
-
-              readStream.on('end', () => {
-                logger.info("Streaming completed. Cleaning up.", { tempFilePath });
-                fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
-              });
-
-              readStream.on('error', (err) => {
-                logger.error("ReadStream error:", { error: err.message, tempFilePath });
-                if (!res.headersSent) res.status(500).json({ error: "Failed to stream file." });
-                fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
-              });
-            } else {
-              logger.warn("⚠️ Meta verification failed (missing audio/video). Falling back to 'best' format or rotating proxy.", { tempFilePath });
-              if (fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, (err) => { if (err) console.error("Cleanup error:", err); });
-
-              // Fallback optimization: if verification failed, try a pre-merged 'best' format next time
-              if (formatArgs[1] !== "best" && formatArgs[1] !== "best[ext=mp4]/best") {
-                console.log("🛠️ Switching format to 'best' for fallback retry");
-                formatArgs = ["-f", "best[ext=mp4]/best", "--merge-output-format", "mp4"];
-                // Re-build finalYtDlpArgs to include the new format
-                // We can't easily re-build the whole chain here, but performDownload will pick up proxy changes.
-                // For format change, we'd need to re-run the whole outer function or just adjust currentArgs.
-              }
-
-              proxyIndex++;
-              performDownload();
-            }
-          } else {
-            logger.error("❌ Disk download failed", { exitCode: code, stderr: stderr.substring(0, 500) });
-            if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-
-            // Rotate on failure
-            proxyIndex++;
-            performDownload();
-          }
-        });
-
-        ytDlpProcess.on("error", (err) => {
-          logger.error("Spawn error in Disk Download:", err.message);
-          proxyIndex++;
-          performDownload();
-        });
-
-      } else {
-        // Buffer-to-File Strategy for ALL platforms (prevents EOF/pause issues)
-        const { v4: uuidv4 } = require('uuid');
-        const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-
-        const tempFilePath = path.join(tempDir, `download_${uuidv4()}.${fmt}`);
-        const fileArgs = [...currentArgs];
-
-        // Replace output to stdout with temp file path
-        const oIndex = fileArgs.indexOf("-o");
-        if (oIndex !== -1) fileArgs[oIndex + 1] = tempFilePath;
-        else fileArgs.push("-o", tempFilePath);
-
-        logger.info("Executing Buffer-to-File Download", {
-          strategyName,
-          tempFilePath,
-          url
-        });
-
-        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...fileArgs], {
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        // Cleanup on disconnect: kill process and delete temp file
-        res.on('close', () => {
-          if (ytDlpProcess && ytDlpProcess.exitCode === null) {
-            logger.info("Client disconnected during Buffered download. Killing process.", { pid: ytDlpProcess.pid });
-            ytDlpProcess.kill('SIGKILL');
-            if (tempFilePath && fs.existsSync(tempFilePath)) {
-              fs.unlink(tempFilePath, () => { });
-            }
-          }
-        });
-
-        let stderr = "";
-        ytDlpProcess.stderr.on("data", (data) => {
-          stderr += data.toString();
-        });
-
-        ytDlpProcess.on("close", async (code) => {
-          if (code === 0 && fs.existsSync(tempFilePath)) {
-            logger.info("✅ Download to file successful. Streaming to client.", { tempFilePath });
-
-            // Set response headers
-            res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
-            res.setHeader("Content-Type", contentType);
-
-            // Set download token cookie if provided (helps frontend detect when download actually starts)
-            if (req.body.dlToken) {
-              res.cookie(req.body.dlToken, "1", { path: "/" });
-            }
-
-            // Stream file to user
-            const readStream = fs.createReadStream(tempFilePath);
-            readStream.pipe(res);
-
-            readStream.on('end', () => {
-              logger.info("Streaming completed. Cleaning up.", { tempFilePath });
-              fs.unlink(tempFilePath, (err) => {
-                if (err) logger.error("Cleanup error:", err);
-              });
-            });
-
-            readStream.on('error', (err) => {
-              logger.error("ReadStream error:", { error: err.message, tempFilePath });
-              if (!res.headersSent) {
-                res.status(500).json({ error: "Failed to stream file." });
-              }
-              fs.unlink(tempFilePath, (err) => {
-                if (err) logger.error("Cleanup error:", err);
-              });
-            });
-          } else {
-            logger.error("❌ Download to file failed", {
-              exitCode: code,
-              stderr: stderr.substring(0, 500),
-              tempFilePath
-            });
-
-            // Clean up failed download
-            if (fs.existsSync(tempFilePath)) {
-              fs.unlinkSync(tempFilePath);
-            }
-
-            // Send error response if headers not sent
-            if (!res.headersSent) {
-              res.status(500).json({
-                error: "Download failed",
-                details: stderr.substring(0, 200)
-              });
-            }
-          }
-        });
-
-        ytDlpProcess.on("error", (err) => {
-          logger.error("Spawn error in Buffer-to-File Download:", err.message);
-          if (!res.headersSent) {
-            res.status(500).json({ error: "Failed to start download process" });
-          }
-        });
-      }
-    };
-
-    // Wrap the entire download process (including proxy rotation) in the global limiter
-    downloadLimiter.run(() => performDownload(), { type: 'standard_download', url }).catch(err => {
-      logger.error("Limiter task failed", { error: err.message, url });
+    const jobId = uuidv4();
+    await videoQueue.add('standard-download', {
+      jobId,
+      url,
+      format: fmt,
+      qualityLabel: qualityLabel || qual,
+      startTime,
+      endTime,
+      userAgent: req.headers['user-agent'],
+      _freshCookiePath: req.body._freshCookiePath,
+      downloadAccelerator: req.body.downloadAccelerator === "true"
+    });
+
+    res.json({
+      status: 'queued',
+      jobId,
+      message: "Download queued. You will be notified via WebSocket when it starts.",
+      pollUrl: `/zip-job-status/${jobId}` // Reusing existing status endpoint pattern if possible or client uses IO
     });
 
   } catch (error) {
-    logger.error("Server error in download endpoint", {
-      error: error.message,
-      stack: error.stack,
-      url,
-      format: fmt,
-      quality: qualityLabel || qual,
-    });
+    logger.error("Server error in download endpoint", { error: error.message, url });
     res.status(500).json({ error: "An unexpected error occurred." });
   }
 });
 
-app.get("/health", (req, res) => {
-  res.status(200).send("OK");
+app.get("/stream/:jobId", async (req, res) => {
+  const { jobId } = req.params;
+  const job = await videoQueue.getJob(jobId);
+
+  if (!job) {
+    return res.status(404).json({ error: "Job not found" });
+  }
+
+  // Set headers for streaming
+  res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
+  res.setHeader("Content-Type", "video/mp4");
+
+  // Register this response as the consumer for the job's stream
+  activeStreams.set(jobId, res);
+
+  // If the client disconnects, we might want to stop the job if it's only for this client
+  res.on('close', () => {
+    activeStreams.delete(jobId);
+    // Optional: job.remove() or similar if we want to cancel the download
+  });
 });
 
-app.get("/queue-status", (req, res) => {
-  res.json(downloadLimiter.getStatus());
+app.get("/queue-status", async (req, res) => {
+  const [waiting, active, completed, failed, delayed] = await Promise.all([
+    videoQueue.getWaitingCount(),
+    videoQueue.getActiveCount(),
+    videoQueue.getCompletedCount(),
+    videoQueue.getFailedCount(),
+    videoQueue.getDelayedCount(),
+  ]);
+  res.json({ waiting, active, completed, failed, delayed });
 });
 
 app.get("/debug-env", (req, res) => {
