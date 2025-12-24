@@ -1094,9 +1094,12 @@ app.use((req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
     "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
     "img-src 'self' data: https: https://www.google.com; " +
-    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://*.dailymotion.com https://vk.com; " +
+    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://*.dailymotion.com https://vk.com https://*.vk.com https://*.vkvideo.ru https://*.vk-portal.net https://*.vkuser.net; " +
     "connect-src 'self' ws: wss: https: https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google;"
   );
+
+  // Add Permissions-Policy to allow modern player features like screen-wake-lock
+  res.setHeader('Permissions-Policy', 'screen-wake-lock=(self "https://*.vk.com" "https://*.vkvideo.ru")');
 
   // HTTP Strict Transport Security (HSTS)
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
