@@ -3229,7 +3229,7 @@ app.get("/video-info", async (req, res) => {
       stderrData += data;
     });
 
-    ytDlp.on("close", (code) => {
+    ytDlp.on("close", async (code) => {
       if (code !== 0) {
         logger.error("yt-dlp failed to fetch info", { stderr: stderrData });
         return res.status(500).json({ error: "Failed to fetch video info" });
