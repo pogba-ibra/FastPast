@@ -958,7 +958,6 @@ app.use((req, res, next) => {
 
   // Add Permissions-Policy and legacy Feature-Policy for broad media support
   res.setHeader('Permissions-Policy', 'autoplay=*, clipboard-write=*, encrypted-media=*, picture-in-picture=*, web-share=*, fullscreen=*, screen-wake-lock=*');
-  res.setHeader('Feature-Policy', "autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; web-share *; fullscreen *; screen-wake-lock *");
 
   // Add Referrer-Policy for VK and other embeds to validate origin
   res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
