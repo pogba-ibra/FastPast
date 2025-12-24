@@ -43,6 +43,21 @@ const getPythonCommand = () => {
 
 // Helper: Resolve shortened URLs (Facebook/Instagram Share Links)
 async function resolveFacebookUrl(url) {
+  // Normalize Instagram URLs first (strip tracking garbage)
+  if (url.includes('instagram.com')) {
+    try {
+      const urlObj = new URL(url);
+      // Remove all search params (igsh, utm_source, etc)
+      urlObj.search = '';
+      // Support reels, posts, stories
+      url = urlObj.toString();
+      // Standardize to www.instagram.com
+      url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?instagram\.com/, 'https://www.instagram.com');
+    } catch (e) {
+      console.warn("URL normalization failed", { url, error: e.message });
+    }
+  }
+
   if (url.includes('facebook.com/share') || url.includes('fb.watch') || url.includes('instagram.com/share')) {
     try {
       console.log('Recursive URL Resolution: Resolving shortened URL:', url);
@@ -58,8 +73,6 @@ async function resolveFacebookUrl(url) {
           console.log('Resolved (HEAD) to:', resUrl);
 
           const originalUrl = resUrl.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-          // User Request: Stop manually rewriting to mbasic.facebook.com as it's deprecated.
-          // yt-dlp now handles www.facebook.com better natively.
           return { normalizedUrl: originalUrl, originalUrl };
         }
       } catch {
@@ -82,26 +95,21 @@ async function resolveFacebookUrl(url) {
         return { normalizedUrl: resolvedUrl, originalUrl: resolvedUrl };
       }
 
-      // If resolution fails, fallback to converting original to www
-      if (url.includes('facebook.com')) {
-        const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-        return { normalizedUrl: normalized, originalUrl: normalized };
-      }
+      // Fallback
       return { normalizedUrl: url, originalUrl: url };
     } catch (error) {
       console.log('Failed to resolve URL:', error.message);
-      if (url.includes('facebook.com')) {
-        const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-        return { normalizedUrl: normalized, originalUrl: normalized };
-      }
       return { normalizedUrl: url, originalUrl: url };
     }
   }
-  // Standardize non-share links to www.facebook.com
+  
+  // Final standardization for standard links
   if (url.includes('facebook.com')) {
-    const normalized = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-    return { normalizedUrl: normalized, originalUrl: normalized };
+    url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
+  } else if (url.includes('instagram.com')) {
+    url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?instagram\.com/, 'https://www.instagram.com');
   }
+  
   return { normalizedUrl: url, originalUrl: url };
 }
 /**
@@ -209,7 +217,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
 
     if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
-      pushUnique("--add-header", "Referer:https://www.facebook.com/");
+      pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
@@ -3535,11 +3543,11 @@ app.post("/get-qualities", async (req, res) => {
               console.log("✅ [Qualities Fallback V2] Recovered with lightweight metadata.");
 
               const mockVideoInfo = JSON.stringify({
-                title: metaData.title || "Meta Video",
+                title: metaData.title || (videoUrl.includes('instagram.com') ? "Instagram Video" : "Facebook Video"),
                 thumbnail: metaData.thumbnail,
                 duration: 0,
                 formats: [
-                  { format_id: "direct_hd", ext: "mp4", resolution: "unknown", vcodec: "h264", acodec: "aac", filesize: 0, url: videoUrl }
+                  { format_id: "best", ext: "mp4", resolution: "unknown", vcodec: "h264", acodec: "aac", filesize: 0, url: videoUrl }
                 ]
               });
 
