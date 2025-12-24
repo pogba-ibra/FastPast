@@ -798,7 +798,8 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   // If job is marked for streaming, wait for the client to connect
   if (mode === 'stream') {
     let attempts = 0;
-    while (!activeStreams.has(jobId) && attempts < 10) { // Wait up to 5 seconds
+    // Wait up to 30 seconds for the client to connect
+    while (!activeStreams.has(jobId) && attempts < 60) {
       await new Promise(resolve => setTimeout(resolve, 500));
       attempts++;
     }
