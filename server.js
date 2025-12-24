@@ -3655,6 +3655,10 @@ app.post("/download", async (req, res) => {
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
       downloadAccelerator: req.body.downloadAccelerator === "true"
+    }, {
+      jobId: jobId,
+      removeOnComplete: { age: 3600, count: 100 }, // Keep 100 jobs or 1 hour
+      removeOnFail: { age: 24 * 3600 } // Keep failed jobs for 24 hours
     });
 
     res.json({
