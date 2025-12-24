@@ -135,6 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
     iframe.allowFullscreen = true;
     iframe.loading = "lazy";
     iframe.allow = "autoplay; encrypted-media; picture-in-picture; screen-wake-lock";
+    iframe.referrerPolicy = "no-referrer-when-downgrade";
     iframe.style.display = "none";
     iframe.classList.add("cached-iframe");
 
