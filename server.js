@@ -1099,8 +1099,8 @@ app.use((req, res, next) => {
   );
 
   // Add Permissions-Policy to allow modern player features like screen-wake-lock
-  // NOTE: Permissions-Policy wildcards are sometimes ignored, but '*' is the most compatible for broad feature support.
-  res.setHeader('Permissions-Policy', 'autoplay=*, encrypted-media=*, picture-in-picture=*, screen-wake-lock=*, fullscreen=*');
+  // Using '*' for critical media features ensures compatibility with various third-party embeds (YouTube, VK, etc.)
+  res.setHeader('Permissions-Policy', 'autoplay=*, clipboard-write=*, encrypted-media=*, picture-in-picture=*, web-share=*, fullscreen=*, screen-wake-lock=*');
 
   // Add Referrer-Policy for VK and other embeds to validate origin
   res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
