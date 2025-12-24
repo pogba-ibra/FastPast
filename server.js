@@ -1091,6 +1091,8 @@ app.use((req, res, next) => {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: https://vk.com https://vk.ru https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://vk-portal.net https://vkuser.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dailymotion.com https://*.dmcdn.net; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
+    "worker-src 'self' blob: https:; " +
+    "child-src 'self' blob: https: https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://player.vimeo.com https://www.dailymotion.com https://vk.com https://vk.ru https://vkvideo.ru https://stats.vk-portal.net; " +
     "style-src 'self' 'unsafe-inline' https: https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
     "font-src 'self' https: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
     "img-src 'self' data: blob: https: https://www.google.com https://vk.com https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dmcdn.net; " +
@@ -1100,10 +1102,10 @@ app.use((req, res, next) => {
 
   // Add Permissions-Policy and legacy Feature-Policy for broad media support
   res.setHeader('Permissions-Policy', 'autoplay=*, clipboard-write=*, encrypted-media=*, picture-in-picture=*, web-share=*, fullscreen=*, screen-wake-lock=*');
-  res.setHeader('Feature-Policy', 'autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; web-share *; fullscreen *; screen-wake-lock *');
+  res.setHeader('Feature-Policy', "autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; web-share *; fullscreen *; screen-wake-lock *");
 
   // Add Referrer-Policy for VK and other embeds to validate origin
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
 
   // HTTP Strict Transport Security (HSTS)
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
