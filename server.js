@@ -3329,6 +3329,12 @@ app.get("/video-info", async (req, res) => {
             } catch {
               logger.warn("Dailymotion API enhancement failed, sticking with reliable public URL");
             }
+            // 4. Server-Side Proxy Wrapper: Resolve hotlink blocking by streaming via local domain
+            if (thumbUrl) {
+              const rawThumb = thumbUrl;
+              thumbUrl = `/proxy-image?url=${encodeURIComponent(thumbUrl)}`;
+              logger.info("Dailymotion thumbnail proxied", { original: rawThumb, proxied: thumbUrl });
+            }
           }
         } catch (dmError) {
           logger.warn("Dailymotion processing failed", { error: dmError.message });

@@ -1712,19 +1712,18 @@ document.addEventListener("DOMContentLoaded", () => {
         "threads.net",
         "reddit.com", "redditmedia.com",
         "pinterest.com", "pinimg.com",
-        "odysee.com",
-        "dailymotion.com", "dmcdn.net"
+        "odysee.com"
       ];
 
       const shouldUseDirect = directDomains.some(d =>
         videoUrl.includes(d) || (mp4Data.thumbnail && mp4Data.thumbnail.includes(d))
       );
 
-      if (shouldUseDirect) {
+      if (mp4Data.thumbnail && mp4Data.thumbnail.startsWith('/')) {
+        // Use already-proxied or internal URL directly
+        videoThumbnail.src = mp4Data.thumbnail;
+      } else if (shouldUseDirect) {
         // Direct load for whitelisted domains (bypassing local proxy which gets blocked)
-        if (mp4Data.thumbnail && (mp4Data.thumbnail.includes("dmcdn.net") || mp4Data.thumbnail.includes("dailymotion.com"))) {
-          videoThumbnail.referrerPolicy = "no-referrer";
-        }
         videoThumbnail.src = mp4Data.thumbnail;
         // Reset fallback flags
         delete videoThumbnail.dataset.triedRaw;
