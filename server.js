@@ -2935,7 +2935,7 @@ app.post("/download-playlist-zip", requireAuth, requireStudio, async (req, res) 
             args.push("-x", "--audio-format", "mp3", "--audio-quality", "192K");
             args.push("-o", path.join(fastpastDir, "%(title)s.mp3"));
           } else {
-            args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
+            args.push("-f", "bestvideo+bestaudio/best");
             args.push("--merge-output-format", "mp4");
             args.push("-o", path.join(fastpastDir, "%(title)s.%(ext)s"));
           }
