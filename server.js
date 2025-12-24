@@ -867,8 +867,8 @@ class TaskLimiter {
   }
 }
 
-const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 8);
-const playlistLimiter = new TaskLimiter(20); // Dedicated high-concurrency limiter for playlists
+const downloadLimiter = new TaskLimiter(parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 16);
+const playlistLimiter = new TaskLimiter(40); // Increased for 16GB RAM / 8 CPU hardware
 
 let app = express();
 let server;
