@@ -102,14 +102,14 @@ async function resolveFacebookUrl(url) {
       return { normalizedUrl: url, originalUrl: url };
     }
   }
-  
+
   // Final standardization for standard links
   if (url.includes('facebook.com')) {
     url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
   } else if (url.includes('instagram.com')) {
     url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?instagram\.com/, 'https://www.instagram.com');
   }
-  
+
   return { normalizedUrl: url, originalUrl: url };
 }
 /**
@@ -117,9 +117,16 @@ async function resolveFacebookUrl(url) {
  */
 async function fetchMetaBrowserLess(url, userAgent) {
   try {
-    const response = await axios.get(url, {
+    let targetUrl = url;
+    // Instagram specific: Try embed URL first as it's often more resilient
+    if (url.includes('instagram.com') && (url.includes('/p/') || url.includes('/reel/'))) {
+      const match = url.match(/\/(?:p|reel)\/([^/]+)/);
+      if (match) targetUrl = `https://www.instagram.com/reel/${match[1]}/embed/`;
+    }
+
+    const response = await axios.get(targetUrl, {
       headers: {
-        'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36',
+        'User-Agent': userAgent || DESKTOP_UA,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
@@ -127,11 +134,16 @@ async function fetchMetaBrowserLess(url, userAgent) {
     });
 
     const html = response.data;
-    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || html.match(/<title>([^<]+)<\/title>/i);
-    const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/i) || html.match(/"thumbnailUrl":"([^"]+)"/i);
+    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || 
+                       html.match(/<title>([^<]+)<\/title>/i) ||
+                       html.match(/"title":"([^"]+)"/i);
+                       
+    const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/i) || 
+                       html.match(/"thumbnail_url":"([^"]+)"/i) ||
+                       html.match(/"display_url":"([^"]+)"/i);
 
     return {
-      title: titleMatch ? titleMatch[1].replace(/&amp;/g, '&') : 'Meta Video',
+      title: titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/\\u([0-9a-fA-F]{4})/g, (m, p) => String.fromCharCode(parseInt(p, 16))) : 'Meta Video',
       thumbnail: thumbMatch ? thumbMatch[1].replace(/\\/g, '') : null
     };
   } catch (error) {
@@ -268,12 +280,19 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
     if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
-
-      // 7. Rate Limiting for YouTube (Avoid IP blocks)
-      if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        pushUnique("--min-sleep-interval", "5");
-        pushUnique("--max-sleep-interval", "10");
+    } else {
+      // Fallback to standard cookies.txt if platform-specific one is missing
+      const fallbackPath = path.join(__dirname, 'cookies.txt');
+      if (fs.existsSync(fallbackPath) && targetCookieFile !== 'cookies.txt') {
+        console.log(`🍪 ${targetCookieFile} missing, falling back to cookies.txt`);
+        pushUnique("--cookies", fallbackPath);
       }
+    }
+
+    // 7. Rate Limiting for YouTube (Avoid IP blocks)
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      pushUnique("--min-sleep-interval", "5");
+      pushUnique("--max-sleep-interval", "10");
     }
   }
 }
@@ -3536,22 +3555,35 @@ app.post("/get-qualities", async (req, res) => {
           const isMeta = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com");
 
           if (code === 1 && isMeta) {
-            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform. Attempting lightweight scrap...");
+            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform. Attempting headless extraction...");
 
             try {
-              const metaData = await fetchMetaBrowserLess(videoUrl, req.headers['user-agent']);
-              console.log("✅ [Qualities Fallback V2] Recovered with lightweight metadata.");
+              const cookieFile = videoUrl.includes('instagram.com') ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
+              const extraction = await extractFacebookVideoUrl(videoUrl, path.resolve(__dirname, cookieFile), req.headers['user-agent']).catch(() => null);
+              
+              if (extraction && (extraction.videoUrl || extraction.candidateStreams?.length > 0)) {
+                console.log("✅ [Qualities Fallback V2] Recovered with headless extraction sniffer.");
+                const mockVideoInfo = JSON.stringify({
+                  title: extraction.title || (videoUrl.includes('instagram.com') ? "Instagram Video" : "Facebook Video"),
+                  thumbnail: extraction.thumbnail,
+                  formats: [
+                    { format_id: "direct_hd", ext: "mp4", resolution: "unknown", url: extraction.videoUrl || extraction.candidateStreams[0].url }
+                  ]
+                });
+                return processVideoInfo(mockVideoInfo, stderr);
+              }
 
-              const mockVideoInfo = JSON.stringify({
+              console.log("🛡️ [Qualities Fallback V2] Headless failed, trying lightweight scrap...");
+              const metaData = await fetchMetaBrowserLess(videoUrl, req.headers['user-agent']);
+              const mockFallbackInfo = JSON.stringify({
                 title: metaData.title || (videoUrl.includes('instagram.com') ? "Instagram Video" : "Facebook Video"),
                 thumbnail: metaData.thumbnail,
-                duration: 0,
                 formats: [
-                  { format_id: "best", ext: "mp4", resolution: "unknown", vcodec: "h264", acodec: "aac", filesize: 0, url: videoUrl }
+                  { format_id: "best", ext: "mp4", resolution: "unknown", url: videoUrl }
                 ]
               });
 
-              return processVideoInfo(mockVideoInfo, stderr);
+              return processVideoInfo(mockFallbackInfo, stderr);
             } catch (scrapErr) {
               console.warn("❌ [Qualities Fallback V2] Fallback failed:", scrapErr.message);
             }

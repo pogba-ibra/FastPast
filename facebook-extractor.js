@@ -107,7 +107,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             const contentType = response.headers()['content-type'] || '';
 
             // 1. Sniff for Video/Audio streams
-            if (url.includes('fbcdn.net') && (url.includes('bytestart=') || url.includes('.mp4') || url.includes('.m4a') || url.includes('.mpd'))) {
+            if ((url.includes('fbcdn.net') || url.includes('cdninstagram.com')) && (url.includes('bytestart=') || url.includes('.mp4') || url.includes('.m4a') || url.includes('.mpd') || url.includes('_n.mp4') || url.includes('_n.m4a'))) {
                 const isVideo = contentType.includes('video') || url.includes('video') || (url.includes('bytestart=') && !url.includes('audio'));
                 const isAudio = contentType.includes('audio') || url.includes('audio') || (url.includes('bytestart=') && url.includes('audio'));
 
@@ -121,7 +121,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             }
 
             // 2. Sniff for Thumbnail Images
-            if (url.includes('fbcdn.net') && contentType.includes('image') && (url.includes('/v/t') || url.includes('/p/'))) {
+            if ((url.includes('fbcdn.net') || url.includes('cdninstagram.com')) && contentType.includes('image') && (url.includes('/v/t') || url.includes('/p/') || url.includes('_n.jpg'))) {
                 // Heuristic: Prefer larger images or those containing specific keywords
                 if (!snortedThumb || url.includes('cover') || url.includes('poster') || url.includes('_n.jpg')) {
                     snortedThumb = url;
@@ -141,6 +141,15 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
             const reelMatch = fullUrl.match(/\/(?:reel|reels|video\.php\?v=)(\d+)/);
             if (reelMatch && reelMatch[1]) {
                 fullUrl = `https://www.facebook.com/watch/?v=${reelMatch[1]}`;
+            }
+        } else if (fullUrl.includes('instagram.com')) {
+            // Instagram: Try embed URL if it looks like a post/reel
+            if (fullUrl.includes('/p/') || fullUrl.includes('/reels/') || fullUrl.includes('/reel/')) {
+                const igMatch = fullUrl.match(/\/(?:p|reels|reel)\/([^/]+)/);
+                if (igMatch && igMatch[1]) {
+                    // Start with embed URL as it's often more resilient to login walls
+                    fullUrl = `https://www.instagram.com/reel/${igMatch[1]}/embed/`;
+                }
             }
         }
 
@@ -380,8 +389,9 @@ function parseFacebookCookies(cookiesContent) {
 
         if (parts.length >= 7) {
             const domain = parts[0];
-            // Filter for Facebook domains only to reduce overhead
-            if (domain.includes('facebook.com') || domain.includes('fb.com') || domain.includes('.facebook.com')) {
+            // Filter for Facebook and Instagram domains
+            if (domain.includes('facebook.com') || domain.includes('fb.com') || domain.includes('.facebook.com') ||
+                domain.includes('instagram.com') || domain.includes('.instagram.com')) {
                 cookies.push({
                     name: parts[5],
                     value: parts[6],
