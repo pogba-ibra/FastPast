@@ -3326,7 +3326,7 @@ app.get("/video-info", async (req, res) => {
                   thumbUrl = bestThumb;
                 }
               }
-            } catch (e) {
+            } catch {
               logger.warn("Dailymotion API enhancement failed, sticking with reliable public URL");
             }
           }
