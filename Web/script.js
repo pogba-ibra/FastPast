@@ -1557,6 +1557,15 @@ document.addEventListener("DOMContentLoaded", () => {
       videoThumbnail.onerror = function () {
         const rawUrl = this.getAttribute("data-src");
 
+        // Special handling for Dailymotion: If direct load failed, try wsrv.nl proxy immediately
+        if (rawUrl && (rawUrl.includes("dmcdn.net") || rawUrl.includes("dailymotion.com")) && !this.dataset.triedWsrv) {
+          console.log("Dailymotion direct load failed, switching to wsrv.nl proxy...");
+          this.dataset.triedWsrv = "true";
+          this.referrerPolicy = "no-referrer";
+          this.src = `https://wsrv.nl/?url=${encodeURIComponent(rawUrl)}`;
+          return;
+        }
+
         // Smart Fallback: If proxy failed (likely 404/500), try loading the raw URL directly!
         // This helps if the server is blocked but the user's browser isn't.
         if (rawUrl && this.src !== rawUrl && !this.dataset.triedRaw) {
@@ -1703,7 +1712,8 @@ document.addEventListener("DOMContentLoaded", () => {
         "threads.net",
         "reddit.com", "redditmedia.com",
         "pinterest.com", "pinimg.com",
-        "odysee.com"
+        "odysee.com",
+        "dailymotion.com", "dmcdn.net"
       ];
 
       const shouldUseDirect = directDomains.some(d =>
@@ -1712,6 +1722,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (shouldUseDirect) {
         // Direct load for whitelisted domains (bypassing local proxy which gets blocked)
+        if (mp4Data.thumbnail && (mp4Data.thumbnail.includes("dmcdn.net") || mp4Data.thumbnail.includes("dailymotion.com"))) {
+          videoThumbnail.referrerPolicy = "no-referrer";
+        }
         videoThumbnail.src = mp4Data.thumbnail;
         // Reset fallback flags
         delete videoThumbnail.dataset.triedRaw;

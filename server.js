@@ -2077,10 +2077,6 @@ app.get("/proxy-image", async (req, res) => {
       headers["Origin"] = "https://www.threads.net";
     } else if (targetUrl.includes("dailymotion.com") || targetUrl.includes("dmcdn.net")) {
       headers["Referer"] = "https://www.dailymotion.com/";
-      headers["Origin"] = "https://www.dailymotion.com";
-      headers["Sec-Fetch-Dest"] = "image";
-      headers["Sec-Fetch-Mode"] = "no-cors";
-      headers["Sec-Fetch-Site"] = "cross-site";
     } else {
       // Default to origin or no referer 
       // headers["Referer"] = new URL(targetUrl).origin; // Sometimes improved privacy is better
