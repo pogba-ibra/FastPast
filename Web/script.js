@@ -1767,6 +1767,7 @@ document.addEventListener("DOMContentLoaded", () => {
           : "false",
         startTime: startInput?.value || "",
         endTime: endInput?.value || "",
+        title: videoTitle.textContent || "video",
         token: localStorage.getItem("sessionToken") || "",
       };
 

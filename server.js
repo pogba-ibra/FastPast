@@ -3658,6 +3658,7 @@ app.post("/download", async (req, res) => {
       qualityLabel: qualityLabel || qual,
       startTime,
       endTime,
+      title: req.body.title || 'video',
       mode: 'stream',
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
@@ -3690,7 +3691,8 @@ app.get("/stream/:jobId", async (req, res) => {
   }
 
   // Set headers for streaming
-  res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
+  const filename = (job.data.title || 'video').replace(/[^a-zA-Z0-9._-]/g, '_') + '.mp4';
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
   res.setHeader("Content-Type", "video/mp4");
 
   // Register this response as the consumer for the job's stream
