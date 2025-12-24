@@ -3311,19 +3311,31 @@ app.get("/video-info", async (req, res) => {
 
           if (videoId) {
             logger.info("Fetching thumbnail from Dailymotion API", { videoId });
+
+            // Tier 1: Try Public API for specific high-res fields
             const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url,thumbnail_360_url`;
-            const dmResponse = await axios.get(dmApiUrl);
-            if (dmResponse.status === 200) {
-              const dmData = dmResponse.data;
-              const bestThumb = dmData.thumbnail_1080_url || dmData.thumbnail_720_url || dmData.thumbnail_480_url || dmData.thumbnail_360_url;
-              if (bestThumb) {
-                logger.info("Dailymotion API thumbnail found", { bestThumb });
-                thumbUrl = bestThumb;
+            try {
+              const dmResponse = await axios.get(dmApiUrl);
+              if (dmResponse.status === 200) {
+                const dmData = dmResponse.data;
+                const bestThumb = dmData.thumbnail_1080_url || dmData.thumbnail_720_url || dmData.thumbnail_480_url || dmData.thumbnail_360_url;
+                if (bestThumb) {
+                  logger.info("Dailymotion API thumbnail found", { bestThumb });
+                  thumbUrl = bestThumb;
+                }
               }
+            } catch (apiErr) {
+              logger.warn("Dailymotion API call failed, trying simple URL fallback", { videoId, error: apiErr.message });
+            }
+
+            // Tier 2: Simple URL Pattern Fallback (Works for most videos even without API)
+            if (!thumbUrl || thumbUrl.includes("blocked")) {
+              logger.info("Using Dailymotion simple URL fallback", { videoId });
+              thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
             }
           }
         } catch (dmError) {
-          logger.warn("Dailymotion API fetch failed, falling back to yt-dlp thumbnail", { error: dmError.message });
+          logger.warn("Dailymotion info processing failed", { error: dmError.message });
         }
       }
 
