@@ -402,10 +402,10 @@ function getMetaFormatSelector(qualityLabel) {
   const heightMatch = qualityLabel && typeof qualityLabel === 'string' ? qualityLabel.match(/(\d+)/) : null;
   const height = heightMatch ? heightMatch[1] : '720';
 
-  // Template to force extensions (mp4+m4a) to avoid transcoding on Fly.io
-  // User Request Dec 2025: Use generic but high-quality string for compatibility
-  const selector = `bestvideo[height<=${height}][ext=mp4]+bestaudio[ext=m4a]/best[height<=${height}][ext=mp4]/best`;
-  return selector;
+  // Meta platforms (FB/IG) often provide separate video/audio streams.
+  // We prioritize MP4 containers to ensure fast browser playback and easy merging.
+  // Template: Best MP4 video up to requested height + best M4A audio.
+  return `bv*[height<=${height}][ext=mp4]+ba[ext=m4a]/b[height<=${height}][ext=mp4]/bv*+ba/b`;
 }
 
 // Storage mode flag
@@ -789,7 +789,7 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  const { url, format, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
@@ -831,15 +831,32 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
       }
 
-      if (format) {
+      if (formatId) {
+        // Use the specific formatId. If it doesn't already have merge instructions (+),
+        // we add +bestaudio to ensure sound is included.
+        let finalFmt = formatId;
+        if (!finalFmt.includes('+') && !finalFmt.includes('/')) {
+          finalFmt = `${finalFmt}+bestaudio/best`;
+        }
+        args.push("-f", finalFmt);
+      } else if (format) {
         let finalFormat = format;
         const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-        if (isMeta && finalFormat !== "best") {
+        if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
           finalFormat = getMetaFormatSelector(qualityLabel || "720p");
         }
-        args.push("-f", finalFormat);
+
+        // Smarter default for standard formats when no specific ID is used
+        if (finalFormat === 'mp4') {
+          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+        } else if (finalFormat === 'mp3') {
+          args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+        } else {
+          args.push("-f", finalFormat);
+        }
       } else {
-        args.push("-f", "bv[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b");
+        // Fallback: prefer MP4 for web compatibility
+        args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
       }
 
       args.push("--merge-output-format", "mp4");
@@ -3655,6 +3672,7 @@ app.post("/download", async (req, res) => {
       jobId,
       url,
       format: fmt,
+      formatId: formatSelector, // Pass specific format ID (e.g., "137")
       qualityLabel: qualityLabel || qual,
       startTime,
       endTime,
