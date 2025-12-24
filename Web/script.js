@@ -1768,6 +1768,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startTime: startInput?.value || "",
         endTime: endInput?.value || "",
         title: videoTitle.textContent || "video",
+        dlToken: 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         token: localStorage.getItem("sessionToken") || "",
       };
 
@@ -1803,28 +1804,58 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.jobId) {
             // Job queued successfully, redirect to stream endpoint
             // This triggers the browser's download manager
-            if (successMessage) {
-              successMessage.style.display = "flex";
-              successMessage.classList.add("show");
-              successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Download started! Check your downloads.';
-            }
+            // Job queued successfully, redirect to stream endpoint
+            // This triggers the browser's download manager
 
+            // Show wait message first
             if (waitMessage) {
-              waitMessage.classList.remove("show");
-              waitMessage.style.display = "none";
+              waitMessage.style.display = "block";
+              void waitMessage.offsetWidth;
+              waitMessage.classList.add("show");
             }
 
             // Redirect to stream
             window.location.href = `/stream/${data.jobId}`;
 
-            // Reset UI state after a delay
-            setTimeout(() => {
-              downloadBtn.disabled = false;
-              downloadOtherBtn.classList.remove("disabled");
-              downloadOtherBtn.removeAttribute("disabled");
-              downloadOtherBtn.disabled = false;
-              downloadProgressText.style.display = "none";
-            }, 3000);
+            // Restore Cookie Detection for True Success
+            if (successMessage && fields.dlToken) {
+              const dlToken = fields.dlToken;
+              const checkDownloadStart = setInterval(() => {
+                if (document.cookie.indexOf(dlToken + '=') !== -1) {
+                  clearInterval(checkDownloadStart);
+
+                  // Success! Download detected
+                  successMessage.style.display = "flex";
+                  successMessage.classList.add("show");
+                  successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Download started! Check your downloads.';
+
+                  if (waitMessage) {
+                    waitMessage.classList.remove("show");
+                    waitMessage.style.display = "none";
+                  }
+
+                  // Cleanup cookie
+                  document.cookie = dlToken + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+                  // Reset UI
+                  setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    downloadOtherBtn.classList.remove("disabled");
+                    downloadOtherBtn.removeAttribute("disabled");
+                    downloadOtherBtn.disabled = false;
+                    downloadProgressText.style.display = "none";
+                  }, 3000);
+                }
+              }, 500);
+
+              // 60s timeout
+              setTimeout(() => {
+                clearInterval(checkDownloadStart);
+                // If timed out but no error, maybe it just worked silently? 
+                // Or we could let the user retry. 
+                downloadBtn.disabled = false;
+              }, 60000);
+            }
           }
         })
         .catch((err) => {

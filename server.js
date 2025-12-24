@@ -3660,6 +3660,7 @@ app.post("/download", async (req, res) => {
       endTime,
       title: req.body.title || 'video',
       mode: 'stream',
+      dlToken: req.body.dlToken, // Pass token to job
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
       downloadAccelerator: req.body.downloadAccelerator === "true"
@@ -3691,9 +3692,28 @@ app.get("/stream/:jobId", async (req, res) => {
   }
 
   // Set headers for streaming
-  const filename = (job.data.title || 'video').replace(/[^a-zA-Z0-9._-]/g, '_') + '.mp4';
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  let filename = (job.data.title || 'video');
+  // Simple check to ensure we have an extension
+  if (!filename.endsWith('.mp4')) filename += '.mp4';
+
+  // Sanitize for header: remove newlines, quotes. 
+  // For broadest compatibility:
+  // 1. safeFilename: ASCII only (replace non-ascii with _)
+  // 2. encodedFilename: Full Unicode (RFC 5987)
+
+  // Create ASCII-safe version
+  const safeFilename = filename.replace(/[^\x20-\x7E]/g, "_").replace(/["\n\r]/g, "");
+
+  // Create RFC 5987 encoded version
+  const encodedFilename = encodeURIComponent(filename).replace(/['()]/g, escape).replace(/\*/g, '%2A');
+
+  res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`);
   res.setHeader("Content-Type", "video/mp4");
+
+  // Set download token cookie if present (triggers frontend success)
+  if (job.data.dlToken) {
+    res.setHeader('Set-Cookie', `${job.data.dlToken}=true; Path=/; Max-Age=3000; SameSite=Lax`);
+  }
 
   // Register this response as the consumer for the job's stream
   activeStreams.set(jobId, res);
