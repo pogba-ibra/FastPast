@@ -4504,39 +4504,89 @@ app.post("/download", async (req, res) => {
         });
 
       } else {
-        // Standard Piping for other platforms
-        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...currentArgs], {
+        // Buffer-to-File Strategy for ALL platforms (prevents EOF/pause issues)
+        const { v4: uuidv4 } = require('uuid');
+        const tempDir = path.join(os.tmpdir(), 'fastpast_downloads');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const tempFilePath = path.join(tempDir, `download_${uuidv4()}.${fmt}`);
+        const fileArgs = [...currentArgs];
+
+        // Replace output to stdout with temp file path
+        const oIndex = fileArgs.indexOf("-o");
+        if (oIndex !== -1) fileArgs[oIndex + 1] = tempFilePath;
+        else fileArgs.push("-o", tempFilePath);
+
+        logger.info("Executing Buffer-to-File Download", {
+          strategyName,
+          tempFilePath,
+          url
+        });
+
+        const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...fileArgs], {
           stdio: ["ignore", "pipe", "pipe"],
         });
 
-        streamProcessToResponse(res, ytDlpProcess, {
-          filename: downloadFilename,
-          contentType: contentType,
-          onRetry: () => {
-            return false;
-          },
-          onSuccess: () => {
-            logger.info("Download completed successfully", {
-              strategy: strategyName,
-              url,
-              videoDuration: duration
-            });
-          },
-          onFailure: (reason, stderrText) => {
-            logger.error(`Download strategy ${strategyName} failed`, {
-              url,
-              reason,
-              stderr: (stderrText || "").substring(0, 2000),
-              strategy: strategyName
+        let stderr = "";
+        ytDlpProcess.stderr.on("data", (data) => {
+          stderr += data.toString();
+        });
+
+        ytDlpProcess.on("close", async (code) => {
+          if (code === 0 && fs.existsSync(tempFilePath)) {
+            logger.info("✅ Download to file successful. Streaming to client.", { tempFilePath });
+
+            // Set response headers
+            res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
+            res.setHeader("Content-Type", contentType);
+
+            // Stream file to user
+            const readStream = fs.createReadStream(tempFilePath);
+            readStream.pipe(res);
+
+            readStream.on('end', () => {
+              logger.info("Streaming completed. Cleaning up.", { tempFilePath });
+              fs.unlink(tempFilePath, (err) => {
+                if (err) logger.error("Cleanup error:", err);
+              });
             });
 
-            if (!res.headersSent) {
-              if (isMeta) {
-                proxyIndex++;
-                performDownload();
+            readStream.on('error', (err) => {
+              logger.error("ReadStream error:", { error: err.message, tempFilePath });
+              if (!res.headersSent) {
+                res.status(500).json({ error: "Failed to stream file." });
               }
+              fs.unlink(tempFilePath, (err) => {
+                if (err) logger.error("Cleanup error:", err);
+              });
+            });
+          } else {
+            logger.error("❌ Download to file failed", {
+              exitCode: code,
+              stderr: stderr.substring(0, 500),
+              tempFilePath
+            });
+
+            // Clean up failed download
+            if (fs.existsSync(tempFilePath)) {
+              fs.unlinkSync(tempFilePath);
             }
-          },
+
+            // Send error response if headers not sent
+            if (!res.headersSent) {
+              res.status(500).json({
+                error: "Download failed",
+                details: stderr.substring(0, 200)
+              });
+            }
+          }
+        });
+
+        ytDlpProcess.on("error", (err) => {
+          logger.error("Spawn error in Buffer-to-File Download:", err.message);
+          if (!res.headersSent) {
+            res.status(500).json({ error: "Failed to start download process" });
+          }
         });
       }
     };
