@@ -1877,43 +1877,66 @@ document.addEventListener("DOMContentLoaded", () => {
         waitMessage.classList.add("show");
       }
 
-      // Generate a unique token to track this specific download
-      const dlToken = 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-      fields.dlToken = dlToken;
-
-      submitDownloadRequest(fields);
-
-      // Detect when download actually starts using a cookie-based token
-      // The server will set a cookie with this token when it starts the response stream
-      if (successMessage) {
-        const checkDownloadStart = setInterval(() => {
-          // Check if the cookie exists
-          if (document.cookie.indexOf(dlToken + '=') !== -1) {
-            clearInterval(checkDownloadStart);
-
-            // Success! The download has actually begun in the user's browser
-            successMessage.style.display = "flex";
-            successMessage.classList.add("show");
+      // Use Fetch API to submit job to BullMQ
+      fetch('/download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fields)
+      })
+        .then(async (response) => {
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data.error || "Download failed");
+            }
+            return data;
+          } else {
+            throw new Error("Invalid server response");
+          }
+        })
+        .then((data) => {
+          if (data.jobId) {
+            // Job queued successfully, redirect to stream endpoint
+            // This triggers the browser's download manager
+            if (successMessage) {
+              successMessage.style.display = "flex";
+              successMessage.classList.add("show");
+              successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Download started! Check your downloads.';
+            }
 
             if (waitMessage) {
               waitMessage.classList.remove("show");
-              setTimeout(() => {
-                if (!waitMessage.classList.contains("show")) {
-                  waitMessage.style.display = "none";
-                }
-              }, 500);
+              waitMessage.style.display = "none";
             }
 
-            // Clean up the cookie
-            document.cookie = dlToken + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-          }
-        }, 300); // Poll every 300ms for responsiveness
+            // Redirect to stream
+            window.location.href = `/stream/${data.jobId}`;
 
-        // Fallback timeout after 60 seconds (downloads can take time to buffer)
-        setTimeout(() => {
-          clearInterval(checkDownloadStart);
-        }, 60000);
-      }
+            // Reset UI state after a delay
+            setTimeout(() => {
+              downloadBtn.disabled = false;
+              downloadOtherBtn.classList.remove("disabled");
+              downloadOtherBtn.removeAttribute("disabled");
+              downloadOtherBtn.disabled = false;
+              downloadProgressText.style.display = "none";
+            }, 3000);
+          }
+        })
+        .catch((err) => {
+          console.error("Download Error:", err);
+          alert(err.message);
+          downloadBtn.disabled = false;
+          downloadOtherBtn.classList.remove("disabled");
+          downloadOtherBtn.removeAttribute("disabled");
+          downloadOtherBtn.disabled = false;
+          if (waitMessage) {
+            waitMessage.classList.remove("show");
+            waitMessage.style.display = "none";
+          }
+        });
     }
   }
 

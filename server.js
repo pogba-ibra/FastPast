@@ -789,11 +789,25 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  const { url, format, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator } = job.data;
+  const { url, format, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
 
-  logger.info(`Starting video download job`, { jobId, url, start, end });
+  logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
+
+  // If job is marked for streaming, wait for the client to connect
+  if (mode === 'stream') {
+    let attempts = 0;
+    while (!activeStreams.has(jobId) && attempts < 10) { // Wait up to 5 seconds
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+    if (!activeStreams.has(jobId)) {
+      logger.warn(`Stream client never connected for job ${jobId}, falling back to disk`);
+    } else {
+      logger.info(`Stream client connected for job ${jobId}`);
+    }
+  }
 
   const isStreaming = activeStreams.has(jobId);
   const outputTemplate = isStreaming ? "-" : (outputPath || path.join(downloadDir, `%(title)s.%(ext)s`));
@@ -3636,6 +3650,7 @@ app.post("/download", async (req, res) => {
       qualityLabel: qualityLabel || qual,
       startTime,
       endTime,
+      mode: 'stream',
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
       downloadAccelerator: req.body.downloadAccelerator === "true"
