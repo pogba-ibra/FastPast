@@ -1866,13 +1866,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
       submitDownloadRequest(fields);
 
-      // Show success message after delay (10s for Facebook, 4s for others)
+      // Detect when download actually starts (when iframe receives response)
+      // The form submits to an iframe, and when the server responds with Content-Disposition,
+      // the browser starts the download. We detect this via iframe load event.
       if (successMessage) {
-        const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
-        const delay = isFacebook ? 15000 : 5000;
-        setTimeout(() => {
+        const downloadIframe = downloadState.iframe;
+
+        // Remove any existing listeners to prevent duplicates
+        const handleDownloadStart = () => {
+          // Download has started in user's folder
           successMessage.style.display = "flex";
           successMessage.classList.add("show");
+
           if (waitMessage) {
             waitMessage.classList.remove("show");
             setTimeout(() => {
@@ -1881,7 +1886,20 @@ document.addEventListener("DOMContentLoaded", () => {
               }
             }, 500); // Match CSS transition duration
           }
-        }, delay);
+
+          // Clean up listener
+          downloadIframe.removeEventListener('load', handleDownloadStart);
+        };
+
+        // Listen for iframe load which indicates server response received
+        downloadIframe.addEventListener('load', handleDownloadStart);
+
+        // Fallback timeout in case iframe event doesn't fire (15s max wait)
+        setTimeout(() => {
+          if (!successMessage.classList.contains("show")) {
+            handleDownloadStart();
+          }
+        }, 15000);
       }
     }
   }
