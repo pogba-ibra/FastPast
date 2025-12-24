@@ -285,9 +285,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     }
   };
 
-  // User Request: Enable aria2c for fast multi-threaded downloads
+  // User Request: Enable aria2c for fast multi-threaded downloads (Tuned for stability)
   pushUnique("--downloader", "aria2c");
-  pushUnique("--downloader-args", "aria2c:-x 16 -s 16 -k 1M");
+  pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
 
   const isRestricted = [
     "youtube.com", "youtu.be",
@@ -3312,9 +3312,9 @@ app.get("/video-info", async (req, res) => {
           if (videoId) {
             logger.info("Fetching thumbnail from Dailymotion API", { videoId });
             const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url,thumbnail_360_url`;
-            const dmResponse = await fetch(dmApiUrl);
-            if (dmResponse.ok) {
-              const dmData = await dmResponse.json();
+            const dmResponse = await axios.get(dmApiUrl);
+            if (dmResponse.status === 200) {
+              const dmData = dmResponse.data;
               const bestThumb = dmData.thumbnail_1080_url || dmData.thumbnail_720_url || dmData.thumbnail_480_url || dmData.thumbnail_360_url;
               if (bestThumb) {
                 logger.info("Dailymotion API thumbnail found", { bestThumb });
@@ -4481,6 +4481,17 @@ app.post("/download", async (req, res) => {
           stdio: ["ignore", "pipe", "pipe"],
         });
 
+        // Cleanup on disconnect: kill process and delete temp file
+        res.on('close', () => {
+          if (ytDlpProcess && ytDlpProcess.exitCode === null) {
+            logger.info("Client disconnected during Meta download. Killing process.", { pid: ytDlpProcess.pid });
+            ytDlpProcess.kill('SIGKILL');
+            if (tempFilePath && fs.existsSync(tempFilePath)) {
+              fs.unlink(tempFilePath, () => { });
+            }
+          }
+        });
+
         let stderr = "";
         ytDlpProcess.stderr.on("data", (data) => {
           stderr += data.toString();
@@ -4567,6 +4578,17 @@ app.post("/download", async (req, res) => {
 
         const ytDlpProcess = spawnYtDlp(["-m", "yt_dlp", ...fileArgs], {
           stdio: ["ignore", "pipe", "pipe"],
+        });
+
+        // Cleanup on disconnect: kill process and delete temp file
+        res.on('close', () => {
+          if (ytDlpProcess && ytDlpProcess.exitCode === null) {
+            logger.info("Client disconnected during Buffered download. Killing process.", { pid: ytDlpProcess.pid });
+            ytDlpProcess.kill('SIGKILL');
+            if (tempFilePath && fs.existsSync(tempFilePath)) {
+              fs.unlink(tempFilePath, () => { });
+            }
+          }
         });
 
         let stderr = "";
@@ -4695,3 +4717,24 @@ server.listen(port, '0.0.0.0', () => {
 
   console.log(`🚀 Server is listening on 0.0.0.0:${port} (Accessible externally)`);
 });
+
+// Global stability: Cleanup on shutdown
+function cleanupAndExit(signal) {
+  console.log(`\n🛑 Received ${signal}. Cleaning up...`);
+  const tempDir = path.join(os.tmpdir(), "fastpast_downloads");
+  if (fs.existsSync(tempDir)) {
+    try {
+      const files = fs.readdirSync(tempDir);
+      for (const file of files) {
+        fs.unlinkSync(path.join(tempDir, file));
+      }
+      console.log("✅ Temporary download files cleared.");
+    } catch (err) {
+      console.error("Error cleaning up temp directory:", err.message);
+    }
+  }
+  process.exit(0);
+}
+
+process.on('SIGTERM', () => cleanupAndExit('SIGTERM'));
+process.on('SIGINT', () => cleanupAndExit('SIGINT'));
