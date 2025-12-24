@@ -1088,22 +1088,22 @@ app.use((req, res, next) => {
   // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://*.adtrafficquality.google https://cdnjs.cloudflare.com https://vk.com https://vk.ru https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://vk-portal.net https://vkuser.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dailymotion.com https://*.dmcdn.net; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https: https://vk.com https://vk.ru https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://vk-portal.net https://vkuser.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dailymotion.com https://*.dmcdn.net; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
-    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
-    "img-src 'self' data: https: https://www.google.com https://vk.com https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dmcdn.net; " +
-    "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://*.dailymotion.com https://vk.com https://vk.ru https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://vk.me https://*.vk.me https://*.vkvideo.ru https://*.vk-portal.net https://*.vkuser.net; " +
-    "connect-src 'self' ws: wss: https: https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://vk.com https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dailymotion.com https://*.dmcdn.net;"
+    "style-src 'self' 'unsafe-inline' https: https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
+    "font-src 'self' https: https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+    "img-src 'self' data: blob: https: https://www.google.com https://vk.com https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dmcdn.net; " +
+    "frame-src 'self' https: https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://*.dailymotion.com https://vk.com https://vk.ru https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://vk.me https://*.vk.me https://*.vkvideo.ru https://*.vk-portal.net https://*.vkuser.net; " +
+    "connect-src 'self' ws: wss: blob: https: https://vk.com https://vk.me https://vkvideo.ru https://stats.vk-portal.net https://*.vk.com https://*.vk.me https://*.vk-portal.net https://*.vkuser.net https://*.vkvideo.ru https://*.dailymotion.com https://*.dmcdn.net;"
   );
 
-  // Add Permissions-Policy to allow modern player features like screen-wake-lock
-  // Using '*' for critical media features ensures compatibility with various third-party embeds (YouTube, VK, etc.)
+  // Add Permissions-Policy and legacy Feature-Policy for broad media support
   res.setHeader('Permissions-Policy', 'autoplay=*, clipboard-write=*, encrypted-media=*, picture-in-picture=*, web-share=*, fullscreen=*, screen-wake-lock=*');
+  res.setHeader('Feature-Policy', 'autoplay *; clipboard-write *; encrypted-media *; picture-in-picture *; web-share *; fullscreen *; screen-wake-lock *');
 
   // Add Referrer-Policy for VK and other embeds to validate origin
-  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   // HTTP Strict Transport Security (HSTS)
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
