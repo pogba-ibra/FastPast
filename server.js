@@ -2039,28 +2039,28 @@ app.get("/oembed", async (req, res) => {
   }
 });
 
-// Dailymotion Permanent Fix: Dedicated Proxy by ID
+// Dailymotion Permanent Fix: Dedicated Proxy by ID (User Specification Dec 2025)
 app.get("/dailymotion-thumbnail", async (req, res) => {
-  const videoId = req.query.id;
-  if (!videoId) return res.status(400).send("No ID");
+  const id = req.query.id; // Pass video ID from frontend
+  if (!id) return res.status(400).send("No ID");
 
-  // Tier 1: Form the User-Suggested "100% Reliable" URL foundation
-  let thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
+  // Tier 1: Try API for high quality (720p preferred)
+  let thumbUrl = `https://api.dailymotion.com/video/${id}?fields=thumbnail_720_url,thumbnail_480_url`;
 
   try {
-    // Tier 2 Optional: Try upgrading to 1080p/720p via Public API on-the-fly
-    try {
-      const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url`;
-      const dmResponse = await axios.get(dmApiUrl, { timeout: 2000 });
-      if (dmResponse.status === 200 && dmResponse.data) {
-        const bestThumb = dmResponse.data.thumbnail_1080_url || dmResponse.data.thumbnail_720_url || dmResponse.data.thumbnail_480_url;
-        if (bestThumb) thumbUrl = bestThumb;
-      }
-    } catch {
-      // Logic fallback: if API fails, we stick with the reliable pattern
+    const apiRes = await fetch(thumbUrl);
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      thumbUrl = data.thumbnail_720_url || data.thumbnail_480_url || `https://www.dailymotion.com/thumbnail/video/${id}`;
+    } else {
+      thumbUrl = `https://www.dailymotion.com/thumbnail/video/${id}`;
     }
+  } catch {
+    thumbUrl = `https://www.dailymotion.com/thumbnail/video/${id}`; // Reliable Fallback
+  }
 
-    // Tier 3: Proxy the resulting URL with robust headers
+  try {
+    // Tier 2: Proxy the thumbnail with necessary bypass headers
     const response = await fetch(thumbUrl, {
       headers: {
         "Referer": "https://www.dailymotion.com/",
@@ -2070,16 +2070,20 @@ app.get("/dailymotion-thumbnail", async (req, res) => {
 
     if (!response.ok) throw new Error("Fetch failed");
 
-    const contentType = response.headers.get("content-type") || "image/jpeg";
-    const buffer = await response.arrayBuffer();
+    res.set("Content-Type", "image/jpeg");
+    res.set("Cache-Control", "public, max-age=86400"); // Cache 1 day
 
-    res.set("Content-Type", contentType);
-    res.set("Cache-Control", "public, max-age=86400");
-    res.send(Buffer.from(buffer));
-
+    // Stream directly to user (Efficient)
+    if (response.body && response.body.pipe) {
+      response.body.pipe(res);
+    } else {
+      // Handle native fetch in newer Node versions which don't have .pipe on body
+      const buffer = await response.arrayBuffer();
+      res.send(Buffer.from(buffer));
+    }
   } catch (err) {
     logger.error("Dailymotion Proxy error:", err.message);
-    res.status(404).send("Thumbnail error");
+    res.status(500).send("Thumbnail error");
   }
 });
 
