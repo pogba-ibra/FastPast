@@ -17,11 +17,9 @@ RUN apt-get update && apt-get install -y \
 # Ensure pip is up to date and install required networking libraries
 RUN pip3 install --upgrade pip --break-system-packages
 
-# Force absolute latest yt-dlp nightly from master branch
-# 1. Uninstall any potential system or pip installations that might shadow the nightly
-# 2. Force reinstall from master archive
+# Install latest yt-dlp nightly (pre-release) to get most recent fixes
 RUN pip3 uninstall -y yt-dlp || true
-RUN pip3 install --no-cache-dir --upgrade --force-reinstall "yt-dlp[default,curl-cffi]@https://github.com/yt-dlp/yt-dlp/archive/master.tar.gz" pyopenssl requests brotli certifi --break-system-packages
+RUN pip3 install --no-cache-dir -U --pre yt-dlp pyopenssl requests brotli certifi --break-system-packages
 
 # Install yt-dlp Nightly Build (Standalone Binary) as a secondary fallback
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
