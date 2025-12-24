@@ -92,7 +92,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const downloadOtherBtn = document.getElementById("download-other-btn");
   const successMessage = document.getElementById("success-message");
   const downloadProgressText = document.getElementById("download-progress-text");
-  const defaultProgressMarkup = downloadProgressText ? downloadProgressText.innerHTML : "";
   // ========== Playlist Navigation Functions ==========
 
   // Fetch playlist videos from server
@@ -665,7 +664,7 @@ document.addEventListener("DOMContentLoaded", () => {
       successMessage.classList.remove("show");
     }
 
-    resetDownloadProgress();
+    if (downloadProgressText) downloadProgressText.style.display = "none";
     downloadBtn.disabled = false;
     downloadOtherBtn.disabled = false;
     downloadOtherBtn.classList.remove("disabled");
@@ -712,103 +711,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearBtn.addEventListener("click", clearInput);
   }
 
-  const downloadState = {
-    iframe: null,
-    form: null,
-    pending: null,
-  };
-
-
-  // Playlist state management
-  function resetDownloadProgress() {
-    if (!downloadProgressText) {
-      return;
-    }
-    downloadProgressText.style.display = "none";
-    downloadProgressText.innerHTML = defaultProgressMarkup;
-  }
-
-  function handleDownloadFrameLoad() {
-    if (!downloadState.pending) {
-      return;
-    }
-    let errorMessage = "";
-    try {
-      const doc = downloadState.iframe?.contentDocument;
-      const bodyText = doc?.body?.textContent?.trim();
-      if (bodyText) {
-        try {
-          const data = JSON.parse(bodyText);
-          if (data.error) {
-            errorMessage = data.error || data.details;
-          }
-        } catch (err) { // eslint-disable-line no-unused-vars
-          errorMessage = bodyText;
-        }
-      }
-    } catch (err) {
-      console.error("Download frame parse error:", err);
-    }
-    finishDownloadState(errorMessage);
-  }
-
-  function ensureDownloadTransport() {
-    if (!downloadState.iframe) {
-      const iframe = document.createElement("iframe");
-      iframe.name = "fastpast-download-frame";
-      iframe.style.display = "none";
-      document.body.appendChild(iframe);
-      iframe.addEventListener("load", handleDownloadFrameLoad);
-      downloadState.iframe = iframe;
-    }
-    if (!downloadState.form) {
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = "/download";
-      form.target = "fastpast-download-frame";
-      form.style.display = "none";
-      document.body.appendChild(form);
-      downloadState.form = form;
-    }
-  }
-
-  function finishDownloadState(errorMessage) {
-    downloadState.pending = null;
-    downloadBtn.disabled = false;
-    downloadOtherBtn.disabled = false;
-    downloadOtherBtn.classList.remove("disabled");
-    downloadOtherBtn.removeAttribute("disabled");
-    resetDownloadProgress();
-    if (errorMessage) {
-      if (successMessage) {
-        successMessage.style.display = "none";
-        successMessage.classList.remove("show");
-      }
-      alert(errorMessage);
-    }
-  }
-
-  function submitDownloadRequest(fields) {
-    ensureDownloadTransport();
-    const form = downloadState.form;
-    while (form.firstChild) {
-      form.removeChild(form.firstChild);
-    }
-    Object.entries(fields).forEach(([name, value]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = value ?? "";
-      form.appendChild(input);
-    });
-    downloadState.pending = { startedAt: Date.now() };
-    try {
-      form.submit();
-    } catch (err) {
-      console.error("Download submit error:", err);
-      finishDownloadState("Failed to start download. Please try again.");
-    }
-  }
 
   function showDownloadPreparing(message) {
     if (!downloadProgressText) {
@@ -1838,7 +1740,6 @@ document.addEventListener("DOMContentLoaded", () => {
         (item) => item.value === quality
       );
 
-      ensureDownloadTransport();
       downloadBtn.disabled = true;
       downloadOtherBtn.disabled = true;
       downloadOtherBtn.classList.add("disabled");
