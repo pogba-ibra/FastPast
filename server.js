@@ -4454,6 +4454,11 @@ app.post("/download", async (req, res) => {
               res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
               res.setHeader("Content-Type", contentType);
 
+              // Set download token cookie if provided (helps frontend detect when download actually starts)
+              if (req.body.dlToken) {
+                res.cookie(req.body.dlToken, "1", { path: "/" });
+              }
+
               const readStream = fs.createReadStream(tempFilePath);
               readStream.pipe(res);
 
@@ -4535,6 +4540,11 @@ app.post("/download", async (req, res) => {
             // Set response headers
             res.setHeader("Content-Disposition", getContentDisposition(downloadFilename));
             res.setHeader("Content-Type", contentType);
+
+            // Set download token cookie if provided (helps frontend detect when download actually starts)
+            if (req.body.dlToken) {
+              res.cookie(req.body.dlToken, "1", { path: "/" });
+            }
 
             // Stream file to user
             const readStream = fs.createReadStream(tempFilePath);

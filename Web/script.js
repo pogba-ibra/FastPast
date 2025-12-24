@@ -1864,22 +1864,21 @@ document.addEventListener("DOMContentLoaded", () => {
         waitMessage.classList.add("show");
       }
 
+      // Generate a unique token to track this specific download
+      const dlToken = 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+      fields.dlToken = dlToken;
+
       submitDownloadRequest(fields);
 
-      // Show success message after reasonable delay when download should have started
-      // We check every 500ms to see if download has begun
+      // Detect when download actually starts using a cookie-based token
+      // The server will set a cookie with this token when it starts the response stream
       if (successMessage) {
-        let checkCount = 0;
-        const maxChecks = 30; // 15 seconds maximum
-
         const checkDownloadStart = setInterval(() => {
-          checkCount++;
-
-          // Show success after 5 seconds (conservative estimate for server processing)
-          if (checkCount >= 10) {
+          // Check if the cookie exists
+          if (document.cookie.indexOf(dlToken + '=') !== -1) {
             clearInterval(checkDownloadStart);
 
-            // Show success message
+            // Success! The download has actually begun in the user's browser
             successMessage.style.display = "flex";
             successMessage.classList.add("show");
 
@@ -1891,13 +1890,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
               }, 500);
             }
-          }
 
-          // Safety timeout
-          if (checkCount >= maxChecks) {
-            clearInterval(checkDownloadStart);
+            // Clean up the cookie
+            document.cookie = dlToken + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           }
-        }, 500);
+        }, 300); // Poll every 300ms for responsiveness
+
+        // Fallback timeout after 60 seconds (downloads can take time to buffer)
+        setTimeout(() => {
+          clearInterval(checkDownloadStart);
+        }, 60000);
       }
     }
   }
