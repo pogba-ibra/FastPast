@@ -1088,7 +1088,7 @@ app.use((req, res, next) => {
   // Still protects against many attacks via object-src, base-uri, and domain allowlisting
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://*.adtrafficquality.google https://cdnjs.cloudflare.com; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://*.adtrafficquality.google https://cdnjs.cloudflare.com https://vk.com https://*.vk.com https://*.vk-portal.net https://*.vkuser.net; " +
     "object-src 'none'; " +
     "base-uri 'none'; " +
     "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; " +
@@ -1100,6 +1100,9 @@ app.use((req, res, next) => {
 
   // Add Permissions-Policy to allow modern player features like screen-wake-lock
   res.setHeader('Permissions-Policy', 'screen-wake-lock=(self "https://*.vk.com" "https://*.vkvideo.ru")');
+
+  // Add Referrer-Policy for VK and other embeds to validate origin
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
 
   // HTTP Strict Transport Security (HSTS)
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
