@@ -3299,10 +3299,10 @@ app.get("/video-info", async (req, res) => {
         thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
       }
 
-      // Dailymotion API Fix: If it's Dailymotion, use their public API to get reliable high-res thumbnails
+      // Dailymotion 2025 Fix: Use the 100% reliable public endpoint as foundation
       if (url.includes("dailymotion.com") || url.includes("dai.ly")) {
         try {
-          // Extract video ID from URL
+          // 1. Extract Video ID
           let videoId = info.id;
           if (!videoId) {
             const dmMatch = url.match(/(?:\/video\/|dai\.ly\/)([a-zA-Z0-9]+)/);
@@ -3310,32 +3310,28 @@ app.get("/video-info", async (req, res) => {
           }
 
           if (videoId) {
-            logger.info("Fetching thumbnail from Dailymotion API", { videoId });
+            // 2. Set the "100% Reliable" Public Endpoint as the default
+            // This works without API keys or cookies and is the user-suggested "Working Fix"
+            thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
+            logger.info("Using Dailymotion public reliable endpoint", { videoId, thumbUrl });
 
-            // Tier 1: Try Public API for specific high-res fields
-            const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url,thumbnail_360_url`;
+            // 3. Optional Enhancement: Attempt to get 1080p/720p via Public API
             try {
-              const dmResponse = await axios.get(dmApiUrl);
-              if (dmResponse.status === 200) {
-                const dmData = dmResponse.data;
-                const bestThumb = dmData.thumbnail_1080_url || dmData.thumbnail_720_url || dmData.thumbnail_480_url || dmData.thumbnail_360_url;
+              const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url`;
+              const dmResponse = await axios.get(dmApiUrl, { timeout: 3000 });
+              if (dmResponse.status === 200 && dmResponse.data) {
+                const bestThumb = dmResponse.data.thumbnail_1080_url || dmResponse.data.thumbnail_720_url || dmResponse.data.thumbnail_480_url;
                 if (bestThumb) {
-                  logger.info("Dailymotion API thumbnail found", { bestThumb });
+                  logger.info("Dailymotion API enhancement found (High Res)", { bestThumb });
                   thumbUrl = bestThumb;
                 }
               }
-            } catch (apiErr) {
-              logger.warn("Dailymotion API call failed, trying simple URL fallback", { videoId, error: apiErr.message });
-            }
-
-            // Tier 2: Simple URL Pattern Fallback (Works for most videos even without API)
-            if (!thumbUrl || thumbUrl.includes("blocked")) {
-              logger.info("Using Dailymotion simple URL fallback", { videoId });
-              thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
+            } catch (e) {
+              logger.warn("Dailymotion API enhancement failed, sticking with reliable public URL");
             }
           }
         } catch (dmError) {
-          logger.warn("Dailymotion info processing failed", { error: dmError.message });
+          logger.warn("Dailymotion processing failed", { error: dmError.message });
         }
       }
 
