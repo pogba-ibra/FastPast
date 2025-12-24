@@ -18,6 +18,7 @@ const http = require('http');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const os = require('os');
+const { PassThrough } = require('stream');
 const mongoose = require('mongoose');
 const User = require('./models/User');
 const Session = require('./models/Session');
@@ -785,37 +786,70 @@ const redisConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:63
 
 // BullMQ Queue System
 const videoQueue = new BullQueue('video-downloads', { connection: redisConnection });
+// Map to track active downloads for streaming
+// Structure: jobId -> { pipe: PassThrough, res: Response | null, headersSent: boolean, title: string }
 const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
   const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
+  let title = job.data.title || 'video';
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
 
-  // If job is marked for streaming, wait for the client to connect
+  // 1. Create a PassThrough if streaming is requested
+  let streamPipe = null;
   if (mode === 'stream') {
-    let attempts = 0;
-    // Wait up to 30 seconds for the client to connect
-    while (!activeStreams.has(jobId) && attempts < 60) {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      attempts++;
-    }
-    if (!activeStreams.has(jobId)) {
-      logger.warn(`Stream client never connected for job ${jobId}, falling back to disk`);
-    } else {
-      logger.info(`Stream client connected for job ${jobId}`);
+    streamPipe = new PassThrough();
+    // Pre-initialize map entry so /stream endpoint can find it immediately
+    const entry = activeStreams.get(jobId) || { pipe: streamPipe, res: null, headersSent: false, title, dlToken: job.data.dlToken };
+    entry.pipe = streamPipe;
+    entry.title = title;
+    entry.dlToken = job.data.dlToken;
+    activeStreams.set(jobId, entry);
+  }
+
+  // 2. Resolve Better Title (if currently generic)
+  if (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram') {
+    try {
+      const infoArgs = ["--dump-json", "--no-playlist", "--flat-playlist"];
+      configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath);
+      infoArgs.push(url);
+
+      const child = spawnYtDlp(["-m", "yt_dlp", ...infoArgs]);
+      let stdout = "";
+      child.stdout.on('data', d => stdout += d);
+      await new Promise(r => child.on('close', r));
+
+      const info = tryParseJson(stdout);
+      if (info && info.title) {
+        title = info.title;
+        // Update map entry if exists
+        if (activeStreams.has(jobId)) activeStreams.get(jobId).title = title;
+      }
+    } catch (err) {
+      logger.warn("Worker title resolution failed", { jobId, error: err.message });
     }
   }
 
-  const isStreaming = activeStreams.has(jobId);
-  const outputTemplate = isStreaming ? "-" : (outputPath || path.join(downloadDir, `%(title)s.%(ext)s`));
+  // 3. Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
+  // Merging requires seeking, which Pipes (-) don't support.
+  const isDash = formatId && formatId.includes('+');
+  const isStreaming = !!streamPipe;
+  const useDiskFallback = isStreaming && isDash;
+
+  // 4. Build Arguments
+  let tempFilePath = null;
+  if (useDiskFallback) {
+    tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
+  }
+
+  const outputTemplate = useDiskFallback ? tempFilePath : (isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`)));
 
   return new Promise((resolve, reject) => {
     try {
-
       let args = [
         "-o", outputTemplate,
         "--no-check-certificate",
@@ -861,15 +895,6 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       args.push("--merge-output-format", "mp4");
 
-      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net") || url.includes("threads.com");
-      let tempMetaFile = null;
-      if (isMeta && !isStreaming) {
-        tempMetaFile = path.join(downloadDir, `job_verify_${jobId}_${Date.now()}.mp4`);
-        const oIndex = args.indexOf("-o");
-        if (oIndex !== -1) args[oIndex + 1] = tempMetaFile;
-        else args.push("-o", tempMetaFile);
-      }
-
       if (start && end) {
         args.push("--download-sections", `*${start}-${end}`);
         args.push("--force-keyframes-at-cuts");
@@ -885,12 +910,14 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
       let stderr = "";
+
+      // If direct streaming, pipe stdout to the PassThrough
+      if (isStreaming && !useDiskFallback) {
+        ytDlp.stdout.pipe(streamPipe);
+      }
+
       ytDlp.stdout.on("data", (data) => {
-        // If streaming, pipe video data to res
-        if (isStreaming && activeStreams.has(jobId)) {
-          activeStreams.get(jobId).write(data);
-        } else if (!isStreaming) {
-          // Only parse progress from stdout if NOT streaming video data
+        if (!isStreaming || useDiskFallback) {
           const line = data.toString();
           const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
           if (match) {
@@ -905,64 +932,56 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         const line = data.toString();
         stderr += line;
 
-        // If streaming, we parse progress from stderr
-        if (isStreaming) {
-          const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-          if (match) {
-            const percent = parseFloat(match[1]);
-            io.emit('job_progress', { jobId, percent, url });
-            job.updateProgress(percent);
-          }
+        // Always parse progress from stderr when download is active (DASH/Streaming)
+        const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+        if (match) {
+          const percent = parseFloat(match[1]);
+          io.emit('job_progress', { jobId, percent, url });
+          job.updateProgress(percent);
         }
       });
 
       ytDlp.on("close", async (code) => {
-        if (activeStreams.has(jobId)) {
-          activeStreams.get(jobId).end();
-          activeStreams.delete(jobId);
-        }
-
         if (code === 0) {
-          if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) {
-            const isComplete = await verifyStreamCompleteness(tempMetaFile);
-            if (!isComplete) {
-              if (fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
-              io.emit('job_error', { jobId, error: "Verification failed", url });
-              const errMsg = "Verification failed: Incomplete stream";
-              io.emit('job_error', { jobId, error: errMsg, url });
-              return reject(new Error(errMsg));
-            }
-            const finalPath = isZipItem ? outputPath.replace('%(title)s.%(ext)s', `Verified_Meta_${jobId}.mp4`) : path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
-            fs.renameSync(tempMetaFile, finalPath);
+          // If we used disk fallback for streaming, pipe the finished file to the stream now
+          if (useDiskFallback && fs.existsSync(tempFilePath)) {
+            const readStream = fs.createReadStream(tempFilePath);
+            readStream.pipe(streamPipe);
+            readStream.on('end', () => {
+              fs.unlink(tempFilePath, () => { });
+              setTimeout(() => activeStreams.delete(jobId), 1000);
+            });
+          } else if (streamPipe && !useDiskFallback) {
+            // Already piped during process, just end it
+            streamPipe.end();
+            setTimeout(() => activeStreams.delete(jobId), 1000);
           }
+
           io.emit('job_complete', { jobId, url });
           resolve({ status: 'completed' });
         } else {
-          if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
+          if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
+          if (streamPipe) streamPipe.end();
 
-          // clean up stderr for display
-          const cleanStderr = stderr.slice(-500); // Last 500 chars
+          const cleanStderr = stderr.slice(-500);
           const userFriendlyError = `Download process failed (Code ${code}). Details: ${cleanStderr}`;
-
           io.emit('job_error', { jobId, error: userFriendlyError, url });
-          logger.error(`Download job failed`, { jobId, code, stderr });
           reject(new Error(userFriendlyError));
         }
       });
 
       ytDlp.on("error", (err) => {
+        if (streamPipe) streamPipe.end();
         io.emit('job_error', { jobId, error: err.message, url });
         reject(err);
       });
 
     } catch (err) {
+      if (streamPipe) streamPipe.end();
       reject(err);
     }
   });
-}, {
-  connection: redisConnection,
-  concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4
-});
+}, { connection: redisConnection, concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4 });
 
 videoWorker.on('failed', (job, err) => {
   logger.error(`Job ${job.id} failed: ${err.message}`);
@@ -3703,43 +3722,63 @@ app.post("/download", async (req, res) => {
 
 app.get("/stream/:jobId", async (req, res) => {
   const { jobId } = req.params;
-  const job = await videoQueue.getJob(jobId);
 
-  if (!job) {
-    return res.status(404).json({ error: "Job not found" });
+  // 1. Find or Create entry
+  let entry = activeStreams.get(jobId);
+  if (!entry) {
+    // Client arrived before worker initialization, create a placeholder
+    entry = { pipe: null, res: null, headersSent: false, title: 'video' };
+    activeStreams.set(jobId, entry);
   }
 
-  // Set headers for streaming
-  let filename = (job.data.title || 'video');
-  // Simple check to ensure we have an extension
-  if (!filename.endsWith('.mp4')) filename += '.mp4';
+  // 2. Attach Response
+  entry.res = res;
 
-  // Sanitize for header: remove newlines, quotes. 
-  // For broadest compatibility:
-  // 1. safeFilename: ASCII only (replace non-ascii with _)
-  // 2. encodedFilename: Full Unicode (RFC 5987)
+  // 3. Helper to send headers if not sent
+  const sendStreamHeaders = () => {
+    if (entry.headersSent) return;
+    const filename = (entry.title || 'video').replace(/[^\x20-\x7E]/g, "_").replace(/["\n\r]/g, "");
+    const encoded = encodeURIComponent(entry.title || 'video').replace(/['()]/g, escape).replace(/\*/g, '%2A');
 
-  // Create ASCII-safe version
-  const safeFilename = filename.replace(/[^\x20-\x7E]/g, "_").replace(/["\n\r]/g, "");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}.mp4"; filename*=UTF-8''${encoded}.mp4`);
+    res.setHeader("Content-Type", "video/mp4");
 
-  // Create RFC 5987 encoded version
-  const encodedFilename = encodeURIComponent(filename).replace(/['()]/g, escape).replace(/\*/g, '%2A');
+    // Set download token cookie if present in job (triggers frontend success)
+    if (entry.dlToken) {
+      res.setHeader('Set-Cookie', `${entry.dlToken}=true; Path=/; Max-Age=3600; SameSite=Lax`);
+    }
 
-  res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"; filename*=UTF-8''${encodedFilename}`);
-  res.setHeader("Content-Type", "video/mp4");
+    // Set download token cookie if present in job (we might need to check job data)
+    // For now, assume script.js handles cookie via dlToken if it sees the stream start
+    entry.headersSent = true;
+  };
 
-  // Set download token cookie if present (triggers frontend success)
-  if (job.data.dlToken) {
-    res.setHeader('Set-Cookie', `${job.data.dlToken}=true; Path=/; Max-Age=3000; SameSite=Lax`);
+  // 4. If pipe already exists, connect it
+  if (entry.pipe) {
+    sendStreamHeaders();
+    entry.pipe.pipe(res);
+  } else {
+    // Wait for worker to create the pipe
+    let checkCount = 0;
+    const interval = setInterval(() => {
+      checkCount++;
+      const currentEntry = activeStreams.get(jobId);
+      if (currentEntry && currentEntry.pipe) {
+        clearInterval(interval);
+        sendStreamHeaders();
+        currentEntry.pipe.pipe(res);
+      } else if (checkCount > 60) {
+        // 30 seconds timeout
+        clearInterval(interval);
+        if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out" });
+      }
+    }, 500);
   }
 
-  // Register this response as the consumer for the job's stream
-  activeStreams.set(jobId, res);
-
-  // If the client disconnects, we might want to stop the job if it's only for this client
   res.on('close', () => {
-    activeStreams.delete(jobId);
-    // Optional: job.remove() or similar if we want to cancel the download
+    const e = activeStreams.get(jobId);
+    if (e) e.res = null;
+    // We keep the pipe/map entry until the worker deletes it on close
   });
 });
 
