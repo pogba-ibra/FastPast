@@ -13,7 +13,7 @@
     <meta name="description"
         content="FastPast - Rapidly download and clip videos from YouTube, TikTok, and more. No account required, free and secure.">
     <meta http-equiv="Content-Security-Policy"
-        content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://*.adtrafficquality.google https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: https://www.google.com; frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://www.dailymotion.com https://vk.com; connect-src 'self' https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google;">
+        content="script-src 'self' 'unsafe-inline' 'unsafe-eval' https://pagead2.googlesyndication.com https://adservice.google.com https://*.adtrafficquality.google https://cdnjs.cloudflare.com; object-src 'none'; base-uri 'none'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: https://www.google.com; frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google https://www.youtube.com https://www.tiktok.com https://www.instagram.com https://platform.twitter.com https://player.vimeo.com https://*.dailymotion.com https://vk.com; connect-src 'self' https://pagead2.googlesyndication.com https://adservice.google.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://*.adtrafficquality.google;">
     <title>FastPast</title>
     <link rel="canonical" href="https://fastpast-app.fly.dev/" />
     <link rel="preload" as="image"
@@ -257,128 +257,129 @@
                         <button class="btn download-btn" id="download-btn" style="display: none;">
                             <span class="btn-content"><i class="fas fa-download"></i> Download</span>
                         </button>
-                        <div id="download-wait-message" class="wait-message" style="display: none;">Please Wait<span class="loading-dots"></span></div>
+                        <div id="download-wait-message" class="wait-message" style="display: none;">Please Wait<span
+                                class="loading-dots"></span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="download-other-container">
+                <button class="btn download-other-btn" id="download-other-btn" style="display: none;">
+                    <span class="btn-content"><i class="fas fa-redo"></i> Download Other Video</span>
+                    <div class="queue-status" id="queue-status" style="display: none;">
+                        <div class="queue-indicator pending" id="queue-pending">
+                            <i class="fas fa-clock"></i>
+                            <span>Pending</span>
+                        </div>
+                        <div class="queue-indicator downloading" id="queue-downloading" style="display: none;">
+                            <i class="fas fa-download"></i>
+                            <span>Downloading</span>
+                        </div>
+                        <div class="queue-indicator completed" id="queue-completed" style="display: none;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Completed</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            <div class="download-progress-text" id="download-progress-text" style="display: none;">
+                <p>Downloading... <span id="progress-percent">0%</span></p>
+            </div>
+            <div class="success-message" id="success-message" style="display: none;">
+                <i class="fas fa-check-circle"></i> Download started successfully! Check your downloads folder.
+            </div>
+
+            <!-- Playlist List View -->
+            <div id="playlist-view" style="display: none;">
+                <div class="playlist-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-video"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="pl-total-videos">0</span>
+                            <span class="stat-label">Videos Found</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="pl-total-duration">00:00:00</span>
+                            <span class="stat-label">Total Duration</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="pl-completed">0</span>
+                            <span class="stat-label">Downloads Complete</span>
                         </div>
                     </div>
                 </div>
-                <div class="download-other-container">
-                    <button class="btn download-other-btn" id="download-other-btn" style="display: none;">
-                        <span class="btn-content"><i class="fas fa-redo"></i> Download Other Video</span>
-                        <div class="queue-status" id="queue-status" style="display: none;">
-                            <div class="queue-indicator pending" id="queue-pending">
-                                <i class="fas fa-clock"></i>
-                                <span>Pending</span>
-                            </div>
-                            <div class="queue-indicator downloading" id="queue-downloading" style="display: none;">
-                                <i class="fas fa-download"></i>
-                                <span>Downloading</span>
-                            </div>
-                            <div class="queue-indicator completed" id="queue-completed" style="display: none;">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Completed</span>
-                            </div>
-                        </div>
-                    </button>
-                </div>
-                <div class="download-progress-text" id="download-progress-text" style="display: none;">
-                    <p>Downloading... <span id="progress-percent">0%</span></p>
-                </div>
-                <div class="success-message" id="success-message" style="display: none;">
-                    <i class="fas fa-check-circle"></i> Download started successfully! Check your downloads folder.
-                </div>
 
-                <!-- Playlist List View -->
-                <div id="playlist-view" style="display: none;">
-                    <div class="playlist-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-video"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-value" id="pl-total-videos">0</span>
-                                <span class="stat-label">Videos Found</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-value" id="pl-total-duration">00:00:00</span>
-                                <span class="stat-label">Total Duration</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-info">
-                                <span class="stat-value" id="pl-completed">0</span>
-                                <span class="stat-label">Downloads Complete</span>
-                            </div>
+                <div class="playlist-content-card">
+                    <div class="playlist-header">
+                        <div class="header-text">
+                            <h3><span id="pl-count-ready">0</span> Videos Ready for Download</h3>
+                            <p>Choose your preferred quality.</p>
                         </div>
                     </div>
 
-                    <div class="playlist-content-card">
-                        <div class="playlist-header">
-                            <div class="header-text">
-                                <h3><span id="pl-count-ready">0</span> Videos Ready for Download</h3>
-                                <p>Choose your preferred quality.</p>
-                            </div>
-                        </div>
-
-                        <div id="playlist-items" class="playlist-items-container">
-                            <!-- Items injected here by JS -->
-                        </div>
-
-                        <div class="playlist-actions-footer">
-                            <button id="download-selected-btn" class="btn download-btn" disabled>
-                                <span class="btn-content"><i class="fas fa-download"></i> Download Selected (0)</span>
-                            </button>
-                        </div>
+                    <div id="playlist-items" class="playlist-items-container">
+                        <!-- Items injected here by JS -->
                     </div>
 
-                    <div class="playlist-reset-container"
-                        style="margin-top: 20px; text-align: center; padding-bottom: 20px;">
-                        <button class="btn btn-outline" onclick="location.reload()">
-                            <i class="fas fa-redo"></i> Download Other Playlist
+                    <div class="playlist-actions-footer">
+                        <button id="download-selected-btn" class="btn download-btn" disabled>
+                            <span class="btn-content"><i class="fas fa-download"></i> Download Selected (0)</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Hidden Template for Playlist Item Options -->
-                <template id="playlist-item-options-template">
-                    <div class="loader-container" style="display: none;">
-                        <div class="spinner"></div>
-                        <span>Loading options...</span>
+                <div class="playlist-reset-container"
+                    style="margin-top: 20px; text-align: center; padding-bottom: 20px;">
+                    <button class="btn btn-outline" onclick="location.reload()">
+                        <i class="fas fa-redo"></i> Download Other Playlist
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hidden Template for Playlist Item Options -->
+            <template id="playlist-item-options-template">
+                <div class="loader-container" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Loading options...</span>
+                </div>
+                <div class="options-container" style="display: none;">
+                    <div class="format-row">
+                        <label>FORMAT</label>
+                        <select class="pl-format-select">
+                            <option value="">Select Format</option>
+                            <option value="mp4">MP4 (Video)</option>
+                            <option value="mp3">MP3 (Audio)</option>
+                        </select>
                     </div>
-                    <div class="options-container" style="display: none;">
-                        <div class="format-row">
-                            <label>FORMAT</label>
-                            <select class="pl-format-select">
-                                <option value="">Select Format</option>
-                                <option value="mp4">MP4 (Video)</option>
-                                <option value="mp3">MP3 (Audio)</option>
-                            </select>
-                        </div>
 
-                        <div class="quality-row">
-                            <label>QUALITY</label>
-                            <select class="pl-quality-select">
-                                <option value="">Select Quality</option>
-                            </select>
-                        </div>
+                    <div class="quality-row">
+                        <label>QUALITY</label>
+                        <select class="pl-quality-select">
+                            <option value="">Select Quality</option>
+                        </select>
+                    </div>
 
-                        <!-- Clip Tool -->
-                        <div class="pl-clip-option" style="display: none;">
-                            <div class="pl-clip-controls" style="display: none;">
-                                <div class="pl-slider-container">
-                                    <!-- Slider will be generated by JS -->
-                                    <div class="pl-slider-track"></div>
-                                </div>
-                                <div class="pl-time-inputs">
-                                    <input type="text" class="pl-start-time" placeholder="00:00">
-                                    <span>to</span>
-                                    <input type="text" class="pl-end-time" placeholder="00:00">
-                                </div>
+                    <!-- Clip Tool -->
+                    <div class="pl-clip-option" style="display: none;">
+                        <div class="pl-clip-controls" style="display: none;">
+                            <div class="pl-slider-container">
+                                <!-- Slider will be generated by JS -->
+                                <div class="pl-slider-track"></div>
+                            </div>
+                            <div class="pl-time-inputs">
+                                <input type="text" class="pl-start-time" placeholder="00:00">
+                                <span>to</span>
+                                <input type="text" class="pl-end-time" placeholder="00:00">
                             </div>
                         </div>
                     </div>
-                </template>
+                </div>
+            </template>
             </div>
         </section>
 
