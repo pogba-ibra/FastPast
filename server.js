@@ -132,42 +132,6 @@ async function fetchMetaBrowserLess(url, userAgent) {
   }
 }
 
-// Helper to verify if a video file has both video and audio streams using ffprobe
-async function verifyStreamCompleteness(filePath) {
-  return new Promise((resolve) => {
-    const ffprobePath = process.platform === 'win32' ? 'ffprobe' : '/usr/bin/ffprobe';
-    const ffprobe = spawn(ffprobePath, [
-      '-v', 'error',
-      '-show_entries', 'stream=codec_type',
-      '-of', 'csv=p=0',
-      filePath
-    ]);
-
-    let output = '';
-    ffprobe.stdout.on('data', (data) => {
-      output += data.toString();
-    });
-
-    ffprobe.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`ffprobe error on file: ${filePath}`);
-        return resolve(false);
-      }
-      const streams = output.trim().split(/\s+/).map(s => s.trim().toLowerCase());
-      const hasVideo = streams.includes('video');
-      const hasAudio = streams.includes('audio');
-
-      console.log(`🎬 Stream Verification for ${path.basename(filePath)}: Video=${hasVideo}, Audio=${hasAudio}`);
-      resolve(hasVideo && hasAudio);
-    });
-
-    ffprobe.on('error', (err) => {
-      console.error(`Failed to execute ffprobe: ${err.message}`);
-      resolve(false);
-    });
-  });
-}
-
 
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
