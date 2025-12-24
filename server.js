@@ -2039,6 +2039,50 @@ app.get("/oembed", async (req, res) => {
   }
 });
 
+// Dailymotion Permanent Fix: Dedicated Proxy by ID
+app.get("/dailymotion-thumbnail", async (req, res) => {
+  const videoId = req.query.id;
+  if (!videoId) return res.status(400).send("No ID");
+
+  // Tier 1: Form the User-Suggested "100% Reliable" URL foundation
+  let thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
+
+  try {
+    // Tier 2 Optional: Try upgrading to 1080p/720p via Public API on-the-fly
+    try {
+      const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url`;
+      const dmResponse = await axios.get(dmApiUrl, { timeout: 2000 });
+      if (dmResponse.status === 200 && dmResponse.data) {
+        const bestThumb = dmResponse.data.thumbnail_1080_url || dmResponse.data.thumbnail_720_url || dmResponse.data.thumbnail_480_url;
+        if (bestThumb) thumbUrl = bestThumb;
+      }
+    } catch {
+      // Logic fallback: if API fails, we stick with the reliable pattern
+    }
+
+    // Tier 3: Proxy the resulting URL with robust headers
+    const response = await fetch(thumbUrl, {
+      headers: {
+        "Referer": "https://www.dailymotion.com/",
+        "User-Agent": DESKTOP_UA
+      }
+    });
+
+    if (!response.ok) throw new Error("Fetch failed");
+
+    const contentType = response.headers.get("content-type") || "image/jpeg";
+    const buffer = await response.arrayBuffer();
+
+    res.set("Content-Type", contentType);
+    res.set("Cache-Control", "public, max-age=86400");
+    res.send(Buffer.from(buffer));
+
+  } catch (err) {
+    logger.error("Dailymotion Proxy error:", err.message);
+    res.status(404).send("Thumbnail error");
+  }
+});
+
 app.get("/proxy-image", async (req, res) => {
   const url = req.query.url;
   if (!url) {
@@ -3299,10 +3343,9 @@ app.get("/video-info", async (req, res) => {
         thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
       }
 
-      // Dailymotion 2025 Fix: Use the 100% reliable public endpoint as foundation
+      // Dailymotion Permanent Fix: Use the dedicated ID-based proxy endpoint
       if (url.includes("dailymotion.com") || url.includes("dai.ly")) {
         try {
-          // 1. Extract Video ID
           let videoId = info.id;
           if (!videoId) {
             const dmMatch = url.match(/(?:\/video\/|dai\.ly\/)([a-zA-Z0-9]+)/);
@@ -3310,34 +3353,12 @@ app.get("/video-info", async (req, res) => {
           }
 
           if (videoId) {
-            // 2. Set the "100% Reliable" Public Endpoint as the default
-            // This works without API keys or cookies and is the user-suggested "Working Fix"
-            thumbUrl = `https://www.dailymotion.com/thumbnail/video/${videoId}`;
-            logger.info("Using Dailymotion public reliable endpoint", { videoId, thumbUrl });
-
-            // 3. Optional Enhancement: Attempt to get 1080p/720p via Public API
-            try {
-              const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url`;
-              const dmResponse = await axios.get(dmApiUrl, { timeout: 3000 });
-              if (dmResponse.status === 200 && dmResponse.data) {
-                const bestThumb = dmResponse.data.thumbnail_1080_url || dmResponse.data.thumbnail_720_url || dmResponse.data.thumbnail_480_url;
-                if (bestThumb) {
-                  logger.info("Dailymotion API enhancement found (High Res)", { bestThumb });
-                  thumbUrl = bestThumb;
-                }
-              }
-            } catch {
-              logger.warn("Dailymotion API enhancement failed, sticking with reliable public URL");
-            }
-            // 4. Server-Side Proxy Wrapper: Resolve hotlink blocking by streaming via local domain
-            if (thumbUrl) {
-              const rawThumb = thumbUrl;
-              thumbUrl = `/proxy-image?url=${encodeURIComponent(thumbUrl)}`;
-              logger.info("Dailymotion thumbnail proxied", { original: rawThumb, proxied: thumbUrl });
-            }
+            // Return internal proxy URL using the ID as requested
+            thumbUrl = `/dailymotion-thumbnail?id=${videoId}`;
+            logger.info("Dailymotion Permanent Fix applied", { videoId, internalProxy: thumbUrl });
           }
         } catch (dmError) {
-          logger.warn("Dailymotion processing failed", { error: dmError.message });
+          logger.warn("Dailymotion processed with errors", { error: dmError.message });
         }
       }
 
