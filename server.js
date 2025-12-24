@@ -1021,9 +1021,18 @@ app.get('/ads.txt', (req, res) => {
   res.sendFile(path.join(__dirname, 'Web', 'ads.txt'));
 });
 
-app.use(express.static(path.join(__dirname, "Web"), { extensions: ['html'] }));
-app.use("/style", express.static(path.join(__dirname, "style")));
-app.use("/js", express.static(path.join(__dirname, "js")));
+app.use(express.static(path.join(__dirname, "Web"), {
+  extensions: ['html'],
+  maxAge: '1d'
+}));
+app.use("/style", express.static(path.join(__dirname, "style"), {
+  maxAge: '365d',
+  immutable: true
+}));
+app.use("/js", express.static(path.join(__dirname, "js"), {
+  maxAge: '365d',
+  immutable: true
+}));
 
 // YouTube API key rotation system (supports up to 10 keys)
 let apiKeyIndex = 0;
