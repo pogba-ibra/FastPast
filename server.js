@@ -4132,9 +4132,10 @@ app.post("/download", async (req, res) => {
             const durStr = parts[1] ? parts[1].trim() : "0";
 
             // duration field in yt-dlp is seconds (float or int) or "NA"
-            if (durStr && durStr !== 'NA') {
-              duration = parseFloat(durStr) || 0;
-            }
+            // Duration is parsed but not currently used in this flow
+            // if (durStr && durStr !== 'NA') {
+            //   duration = parseFloat(durStr) || 0;
+            // }
             parsed = true;
             break;
           }
