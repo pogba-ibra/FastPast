@@ -3919,7 +3919,6 @@ app.post("/download", async (req, res) => {
   const downloadAccelerator = req.body.downloadAccelerator === "true";
   const startTime = req.body.startTime;
   const endTime = req.body.endTime;
-  let duration = 0; // Initialize duration for capture during title fetch
 
   // Helper function to parse time string (HH:MM:SS or MM:SS) to seconds
   function parseTimeToSeconds(timeStr) {
@@ -4129,13 +4128,9 @@ app.post("/download", async (req, res) => {
           if (line.includes('|||')) {
             const parts = line.split('|||');
             videoTitle = parts[0].trim() || "Unknown Title";
-            const durStr = parts[1] ? parts[1].trim() : "0";
+            // const durStr = parts[1] ? parts[1].trim() : "0"; // Duration not used
 
-            // duration field in yt-dlp is seconds (float or int) or "NA"
             // Duration is parsed but not currently used in this flow
-            // if (durStr && durStr !== 'NA') {
-            //   duration = parseFloat(durStr) || 0;
-            // }
             parsed = true;
             break;
           }

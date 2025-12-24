@@ -20688,3 +20688,16 @@ body.dark-mode .playlist-actions-footer {
   .playlist-header h3 { font-size: 1.1rem !important; }
   .playlist-header p { font-size: 0.85rem !important; }
 }
+
+/* Animated loading dots for wait message */
+.loading-dots::after {
+  content: '.';
+  animation: loading-dots 1.5s steps(4, end) infinite;
+}
+
+@keyframes loading-dots {
+  0% { content: '.'; }
+  25% { content: '..'; }
+  50% { content: '...'; }
+  75% { content: '....'; }
+}

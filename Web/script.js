@@ -1866,11 +1866,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
       submitDownloadRequest(fields);
 
-      // Note: Success message is NOT shown automatically because we cannot reliably detect
-      // when the browser download actually starts (iframe events don't fire for Content-Disposition headers).
-      // The "Please wait..." message stays visible.
-      // User will know download started from browser's native download indicator.
-      // The wait message will be cleared on next download or when user clears the input.
+      // Show success message after reasonable delay when download should have started
+      // We check every 500ms to see if download has begun
+      if (successMessage) {
+        let checkCount = 0;
+        const maxChecks = 30; // 15 seconds maximum
+
+        const checkDownloadStart = setInterval(() => {
+          checkCount++;
+
+          // Show success after 5 seconds (conservative estimate for server processing)
+          if (checkCount >= 10) {
+            clearInterval(checkDownloadStart);
+
+            // Show success message
+            successMessage.style.display = "flex";
+            successMessage.classList.add("show");
+
+            if (waitMessage) {
+              waitMessage.classList.remove("show");
+              setTimeout(() => {
+                if (!waitMessage.classList.contains("show")) {
+                  waitMessage.style.display = "none";
+                }
+              }, 500);
+            }
+          }
+
+          // Safety timeout
+          if (checkCount >= maxChecks) {
+            clearInterval(checkDownloadStart);
+          }
+        }, 500);
+      }
     }
   }
 
