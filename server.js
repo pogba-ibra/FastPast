@@ -3688,6 +3688,21 @@ app.get("/queue-status", async (req, res) => {
   res.json({ waiting, active, completed, failed, delayed });
 });
 
+app.get("/health", async (req, res) => {
+  try {
+    const waiting = await videoQueue.getWaitingCount();
+    // Simple health check: if Redis is reachable and queue isn't insanely backed up (e.g. > 1000)
+    // You can tune this threshold.
+    if (waiting > 1000) {
+      return res.status(503).send("Queue overloaded");
+    }
+    res.status(200).send("OK");
+  } catch (error) {
+    logger.error("Health check failed", { error: error.message });
+    res.status(500).send("Unhealthy");
+  }
+});
+
 app.get("/debug-env", (req, res) => {
   const info = {
     platform: process.platform,

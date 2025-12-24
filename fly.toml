@@ -23,6 +23,12 @@ primary_region = 'cdg'
   concurrency = { type = "requests", soft_limit = 10, hard_limit = 20 }
   processes = ['app']
 
+  [[http_service.checks]]
+    interval = "10s"
+    timeout = "2s"
+    method = "GET"
+    path = "/health"
+
 [[vm]]
   size = 'shared-cpu-1x'
   memory = '4gb'
