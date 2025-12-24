@@ -3299,6 +3299,34 @@ app.get("/video-info", async (req, res) => {
         thumbUrl = info.thumbnails[info.thumbnails.length - 1].url;
       }
 
+      // Dailymotion API Fix: If it's Dailymotion, use their public API to get reliable high-res thumbnails
+      if (url.includes("dailymotion.com") || url.includes("dai.ly")) {
+        try {
+          // Extract video ID from URL
+          let videoId = info.id;
+          if (!videoId) {
+            const dmMatch = url.match(/(?:\/video\/|dai\.ly\/)([a-zA-Z0-9]+)/);
+            if (dmMatch) videoId = dmMatch[1];
+          }
+
+          if (videoId) {
+            logger.info("Fetching thumbnail from Dailymotion API", { videoId });
+            const dmApiUrl = `https://api.dailymotion.com/video/${videoId}?fields=thumbnail_1080_url,thumbnail_720_url,thumbnail_480_url,thumbnail_360_url`;
+            const dmResponse = await fetch(dmApiUrl);
+            if (dmResponse.ok) {
+              const dmData = await dmResponse.json();
+              const bestThumb = dmData.thumbnail_1080_url || dmData.thumbnail_720_url || dmData.thumbnail_480_url || dmData.thumbnail_360_url;
+              if (bestThumb) {
+                logger.info("Dailymotion API thumbnail found", { bestThumb });
+                thumbUrl = bestThumb;
+              }
+            }
+          }
+        } catch (dmError) {
+          logger.warn("Dailymotion API fetch failed, falling back to yt-dlp thumbnail", { error: dmError.message });
+        }
+      }
+
       logger.info("Raw thumbnail extracted", {
         url: url,
         rawThumbnail: thumbUrl || "null"
