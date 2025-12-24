@@ -911,7 +911,9 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
             if (!isComplete) {
               if (fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
               io.emit('job_error', { jobId, error: "Verification failed", url });
-              return reject(new Error("Verification failed"));
+              const errMsg = "Verification failed: Incomplete stream";
+              io.emit('job_error', { jobId, error: errMsg, url });
+              return reject(new Error(errMsg));
             }
             const finalPath = isZipItem ? outputPath.replace('%(title)s.%(ext)s', `Verified_Meta_${jobId}.mp4`) : path.join(downloadDir, `Verified_Meta_${jobId}.mp4`);
             fs.renameSync(tempMetaFile, finalPath);
@@ -920,9 +922,14 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
           resolve({ status: 'completed' });
         } else {
           if (isMeta && tempMetaFile && fs.existsSync(tempMetaFile)) fs.unlink(tempMetaFile, () => { });
-          io.emit('job_error', { jobId, error: "Process exited with code " + code, url });
+
+          // clean up stderr for display
+          const cleanStderr = stderr.slice(-500); // Last 500 chars
+          const userFriendlyError = `Download process failed (Code ${code}). Details: ${cleanStderr}`;
+
+          io.emit('job_error', { jobId, error: userFriendlyError, url });
           logger.error(`Download job failed`, { jobId, code, stderr });
-          reject(new Error(`Process exited with code ${code}`));
+          reject(new Error(userFriendlyError));
         }
       });
 
