@@ -270,7 +270,7 @@ function spawnYtDlp(args, options = {}) {
 }
 
 // Hardcoded Desktop User-Agent (Forced for all platforms to ensure HD/4K discovery)
-const DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36";
+const DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
 function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
@@ -302,9 +302,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
     // Exception: VK (not in isRestricted here, but handled elsewhere)
     if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-      // User Request Dec 2025: Update from chrome110 to latest 'chrome' to avoid outdated browser flagging.
-      // Alternatively use 'safari' if Meta throttling is strict.
-      pushUnique("--impersonate", "chrome");
+      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+      // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
+      // and use standard 'chrome' for others.
+      pushUnique("--impersonate", isMeta ? "safari" : "chrome");
     }
 
     // 2. User-Agent Matching
