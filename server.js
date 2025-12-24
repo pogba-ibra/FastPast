@@ -294,21 +294,29 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     "instagram.com",
     "tiktok.com",
     "facebook.com", "fb.watch",
-    "twitter.com", "x.com"
+    "twitter.com", "x.com",
+    "vk.com", "vk.ru", "vkvideo.ru"
   ].some(d => url.includes(d));
 
   if (isRestricted) {
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+    const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
     // 1. Client Impersonation (Dec 2025 Standard)
-    // Most platforms now benefit from Chrome impersonation (requires curl-cffi)
-    // Exception: VK (not in isRestricted here, but handled elsewhere)
-    if (!url.includes("youtube.com") && !url.includes("youtu.be")) {
-      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+    // Avoid impersonation for YouTube (native is better) and VK (causes 400 Bad Request)
+    if (!isYouTube && !isVK) {
       // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
-      // and use standard 'chrome' for others.
       pushUnique("--impersonate", isMeta ? "safari" : "chrome");
     }
 
-    // 2. User-Agent Matching
+    // 2. Connectivity: Force IPv4 for major platforms to avoid IPv6 timeouts/hangs (Fly.io specific stability)
+    const needsIpv4 = isYouTube || isMeta || isVK || url.includes("tiktok.com");
+    if (needsIpv4) {
+      pushUnique("--force-ipv4");
+    }
+
+    // 3. User-Agent Matching
     // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
     pushUnique("--user-agent", DESKTOP_UA);
 
