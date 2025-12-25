@@ -1773,6 +1773,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startTime: startInput?.value || "",
         endTime: endInput?.value || "",
         title: videoTitle.textContent || "video",
+        filesize: selectedQuality?.filesize || "",
         dlToken: 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         token: localStorage.getItem("sessionToken") || "",
       };

@@ -258,7 +258,7 @@ function spawnYtDlp(args, options = {}) {
 const DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 // Helper: Apply anti-blocking arguments (User-Agent, etc.) for restricted platforms
-function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
+function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDownload = false) {
   // Helper to push unique flags
   const pushUnique = (flag, value) => {
     const existingIndex = args.indexOf(flag);
@@ -270,9 +270,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     }
   };
 
-  // User Request: Enable aria2c for fast multi-threaded downloads (Tuned for stability)
-  pushUnique("--downloader", "aria2c");
-  pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
+  // aria2c is ONLY for actual downloads, it adds overhead to metadata fetches
+  if (isDownload) {
+    pushUnique("--downloader", "aria2c");
+    pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
+  }
 
   const isRestricted = [
     "youtube.com", "youtu.be",
@@ -864,72 +866,80 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
-  let title = job.data.title || 'video';
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle } = job.data;
+  let title = jobTitle || job.data.title || 'video';
+  let filesize = jobFilesize || null;
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
 
-  let filesize = null;
-
   // 1. Mandatory Metadata Resolution for Streaming/Accuracy
   // We resolve title and filesize BEFORE initializing the stream pipe to prevent IDM header race conditions
-  try {
-    const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist"];
-    configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath);
-    infoArgs.push(url);
+  // Optimization: Skip if we already have the info
+  const skipMetadataFetch = filesize && title && title !== 'video' && title !== 'Instagram Video' && title !== 'YouTube Video' && title !== 'Instagram';
 
-    const child = spawnYtDlp(infoArgs);
-    let stdout = "";
-    child.stdout.on('data', d => stdout += d);
-    await new Promise(r => child.on('close', r));
+  if (!skipMetadataFetch) {
+    try {
+      const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist", "--flat-playlist"];
+      configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath, false);
+      infoArgs.push(url);
 
-    const info = tryParseJson(stdout);
-    if (info) {
-      if (info.title && (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram')) {
-        title = info.title;
-      }
+      const child = spawnYtDlp(infoArgs);
+      let stdout = "";
+      child.stdout.on('data', d => stdout += d);
+      await new Promise(r => child.on('close', r));
 
-      // Robust Filesize Calculation
-      filesize = info.filesize || info.filesize_approx;
+      const info = tryParseJson(stdout);
+      if (info) {
+        if (info.title && (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram')) {
+          title = info.title;
+        }
 
-      if (formatId && info.formats) {
-        // Handle merged formats like "137+140"
-        if (typeof formatId === 'string' && formatId.includes('+')) {
-          const IDs = formatId.split('+');
-          let total = 0;
-          IDs.forEach(id => {
-            const f = info.formats.find(x => x.format_id === id);
-            if (f) total += (f.filesize || f.filesize_approx || 0);
-          });
-          if (total > 0) filesize = total;
+        // Robust Filesize Calculation
+        filesize = info.filesize || info.filesize_approx;
+
+        if (formatId && info.formats) {
+          // Handle merged formats like "137+140"
+          if (typeof formatId === 'string' && formatId.includes('+')) {
+            const IDs = formatId.split('+');
+            let total = 0;
+            IDs.forEach(id => {
+              const f = info.formats.find(x => x.format_id === id);
+              if (f) total += (f.filesize || f.filesize_approx || 0);
+            });
+            if (total > 0) filesize = total;
+          } else {
+            // Single format
+            const f = info.formats.find(x => x.format_id === formatId);
+            if (f) filesize = f.filesize || f.filesize_approx;
+          }
+        }
+
+        if (filesize) {
+          console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
+          logger.info("Metadata resolved filesize", { jobId, filesize });
         } else {
-          // Single format
-          const f = info.formats.find(x => x.format_id === formatId);
-          if (f) filesize = f.filesize || f.filesize_approx;
+          console.log(`[Worker] Could not resolve filesize for ${jobId}`);
         }
       }
-
-      if (filesize) {
-        console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
-        logger.info("Metadata resolved filesize", { jobId, filesize });
-      } else {
-        console.log(`[Worker] Could not resolve filesize for ${jobId}`);
-      }
+    } catch (err) {
+      logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
     }
-  } catch (err) {
-    logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
   }
 
   // 2. Initialize Stream Pipe (Discovery delayed for multi-stream/merged formats)
   let streamPipe = null;
+  let useDiskFallback = false;
+  let isStreaming = false;
+
   if (mode === 'stream') {
     streamPipe = new PassThrough();
+    isStreaming = true;
 
     // Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
     const isDash = formatId && formatId.includes('+');
-    const useDiskFallback = isDash;
+    useDiskFallback = isDash;
 
     // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
     if (!useDiskFallback) {
@@ -942,12 +952,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     }
   }
 
-  // 3. Setup Disk Fallback vs Direct Pipe
-  const isDash = formatId && formatId.includes('+');
-  const isStreaming = !!streamPipe;
-  const useDiskFallback = isStreaming && isDash;
-
-  // 4. Build Arguments
+  // 3. Cleanup redundant definitions and setup arguments
   let tempFilePath = null;
   if (useDiskFallback) {
     tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
@@ -966,7 +971,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         "--newline"
       ];
 
-      configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath);
+      configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
       if (url.includes("vimeo.com")) {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -3909,6 +3914,7 @@ app.post("/download", async (req, res) => {
       title: req.body.title || 'video',
       mode: 'stream',
       dlToken: req.body.dlToken, // Pass token to job
+      filesize: req.body.filesize, // Optimization: pass filesize if already known from qualities fetch
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
       downloadAccelerator: req.body.downloadAccelerator === "true"
