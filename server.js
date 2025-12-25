@@ -2864,6 +2864,26 @@ app.get("/zip-job-status/:id", (req, res) => {
   });
 });
 
+app.get('/job-status/:jobId', async (req, res) => {
+  const { jobId } = req.params;
+  const job = await videoQueue.getJob(jobId);
+
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  const state = await job.getState();
+  const progress = job.progress;
+  const result = job.returnvalue;
+
+  res.json({
+    id: job.id,
+    state,
+    progress,
+    result
+  });
+});
+
 // Endpoint to download the final zip
 app.get("/download-zip-result/:id", (req, res) => {
   const jobId = req.params.id;
@@ -3715,7 +3735,7 @@ app.post("/download", async (req, res) => {
       status: 'queued',
       jobId,
       message: "Download queued. You will be notified via WebSocket when it starts.",
-      pollUrl: `/zip-job-status/${jobId}` // Reusing existing status endpoint pattern if possible or client uses IO
+      pollUrl: `/job-status/${jobId}` 
     });
 
   } catch (error) {

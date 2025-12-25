@@ -713,11 +713,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   function showDownloadPreparing(message) {
-    if (!downloadProgressText) {
-      return;
+    const waitMessage = document.getElementById("download-wait-message");
+    if (waitMessage) {
+      waitMessage.textContent = message || "Preparing Download...";
+      waitMessage.style.display = "block";
+      waitMessage.classList.add("show");
     }
-    downloadProgressText.style.display = "block";
-    downloadProgressText.textContent = message || "";
+    if (downloadProgressText) {
+      downloadProgressText.style.display = "block";
+      downloadProgressText.textContent = message || "";
+    }
   }
 
   // Keyboard events for urlInput
@@ -1802,75 +1807,100 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then((data) => {
           if (data.jobId) {
-            // Job queued successfully, redirect to stream endpoint
-            // This triggers the browser's download manager
-            // Job queued successfully, redirect to stream endpoint
-            // This triggers the browser's download manager
+            // Show preparing status
+            showDownloadPreparing("Queued...");
 
-            // Show wait message first
-            if (waitMessage) {
-              waitMessage.style.display = "block";
-              void waitMessage.offsetWidth;
-              waitMessage.classList.add("show");
-            }
-
-            // Redirect to stream
-            window.location.href = `/stream/${data.jobId}`;
-
-            // Restore Cookie Detection for True Success
-            if (successMessage && fields.dlToken) {
-              const dlToken = fields.dlToken;
-              const checkDownloadStart = setInterval(() => {
-                if (document.cookie.indexOf(dlToken + '=') !== -1) {
-                  clearInterval(checkDownloadStart);
-
-                  // Success! Download detected
-                  successMessage.style.display = "flex";
-                  successMessage.classList.add("show");
-                  successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Download started! Check your downloads.';
-
-                  if (waitMessage) {
-                    waitMessage.classList.remove("show");
-                    waitMessage.style.display = "none";
-                  }
-
-                  // Cleanup cookie
-                  document.cookie = dlToken + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-
-                  // Reset UI
-                  setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    downloadOtherBtn.classList.remove("disabled");
-                    downloadOtherBtn.removeAttribute("disabled");
-                    downloadOtherBtn.disabled = false;
-                    downloadProgressText.style.display = "none";
-                  }, 3000);
-                }
-              }, 500);
-
-              // 60s timeout
-              setTimeout(() => {
-                clearInterval(checkDownloadStart);
-                // If timed out but no error, maybe it just worked silently? 
-                // Or we could let the user retry. 
-                downloadBtn.disabled = false;
-              }, 60000);
-            }
+            // Start polling for progress
+            pollJobStatus(data.jobId, fields.dlToken);
           }
         })
         .catch((err) => {
           console.error("Download Error:", err);
           alert(err.message);
-          downloadBtn.disabled = false;
-          downloadOtherBtn.classList.remove("disabled");
-          downloadOtherBtn.removeAttribute("disabled");
-          downloadOtherBtn.disabled = false;
+          resetDownloadUI();
+        });
+    }
+
+    function pollJobStatus(jobId, dlToken) {
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/job-status/${jobId}`);
+          if (!response.ok) return;
+
+          const data = await response.json();
+
+          if (data.state === 'active') {
+            const percent = data.progress || 0;
+            showDownloadPreparing(`Downloading: ${Math.round(percent)}%`);
+          } else if (data.state === 'completed') {
+            clearInterval(interval);
+            showDownloadPreparing("Starting Download...");
+
+            // Trigger the actual file download via stream
+            triggerFileDownload(jobId, dlToken);
+          } else if (data.state === 'failed') {
+            clearInterval(interval);
+            alert("Download failed on server. Please try again.");
+            resetDownloadUI();
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 1000);
+    }
+
+    function triggerFileDownload(jobId, dlToken) {
+      // Use hidden iframe to trigger download so we don't leave the page
+      let iframe = document.getElementById('download-iframe');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'download-iframe';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+      iframe.src = `/stream/${jobId}`;
+
+      // Check for success cookie
+      const checkDownloadStart = setInterval(() => {
+        if (document.cookie.indexOf(dlToken + '=') !== -1) {
+          clearInterval(checkDownloadStart);
+          const successMessage = document.getElementById("success-message");
+          const waitMessage = document.getElementById("download-wait-message");
+
+          if (successMessage) {
+            successMessage.style.display = "flex";
+            successMessage.classList.add("show");
+            successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Download started! Check your downloads.';
+          }
+
           if (waitMessage) {
             waitMessage.classList.remove("show");
             waitMessage.style.display = "none";
           }
-        });
+
+          document.cookie = dlToken + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+          resetDownloadUI();
+        }
+      }, 500);
+
+      // Timeout after 60s
+      setTimeout(() => clearInterval(checkDownloadStart), 60000);
     }
+
+    function resetDownloadUI() {
+      if (downloadBtn) downloadBtn.disabled = false;
+      if (downloadOtherBtn) {
+        downloadOtherBtn.classList.remove("disabled");
+        downloadOtherBtn.removeAttribute("disabled");
+        downloadOtherBtn.disabled = false;
+      }
+      const waitMessage = document.getElementById("download-wait-message");
+      if (waitMessage) {
+        waitMessage.classList.remove("show");
+        waitMessage.style.display = "none";
+      }
+    }
+
   }
 
   // Queue Management System
