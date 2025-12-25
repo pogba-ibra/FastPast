@@ -134,13 +134,13 @@ async function fetchMetaBrowserLess(url, userAgent) {
     });
 
     const html = response.data;
-    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) || 
-                       html.match(/<title>([^<]+)<\/title>/i) ||
-                       html.match(/"title":"([^"]+)"/i);
-                       
-    const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/i) || 
-                       html.match(/"thumbnail_url":"([^"]+)"/i) ||
-                       html.match(/"display_url":"([^"]+)"/i);
+    const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i) ||
+      html.match(/<title>([^<]+)<\/title>/i) ||
+      html.match(/"title":"([^"]+)"/i);
+
+    const thumbMatch = html.match(/<meta property="og:image" content="([^"]+)"/i) ||
+      html.match(/"thumbnail_url":"([^"]+)"/i) ||
+      html.match(/"display_url":"([^"]+)"/i);
 
     return {
       title: titleMatch ? titleMatch[1].replace(/&amp;/g, '&').replace(/\\u([0-9a-fA-F]{4})/g, (m, p) => String.fromCharCode(parseInt(p, 16))) : 'Meta Video',
@@ -825,19 +825,11 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     }
   }
 
-  // 3. Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
-  // Merging requires seeking, which Pipes (-) don't support.
-  const isDash = formatId && formatId.includes('+');
+  // 3. Determine if we can stream directly
   const isStreaming = !!streamPipe;
-  const useDiskFallback = isStreaming && isDash;
 
   // 4. Build Arguments
-  let tempFilePath = null;
-  if (useDiskFallback) {
-    tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
-  }
-
-  const outputTemplate = useDiskFallback ? tempFilePath : (isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`)));
+  const outputTemplate = isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`));
 
   return new Promise((resolve, reject) => {
     try {
@@ -886,6 +878,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       args.push("--merge-output-format", "mp4");
 
+      // Direct Streaming over Pipe (-) requires fragmented MP4 for merging DASH formats
+      // This avoids "seeking in non-seekable device" error in FFmpeg when piping merged streams
+      if (isStreaming) {
+        args.push("--postprocessor-args", "ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof");
+      }
+
       if (start && end) {
         args.push("--download-sections", `*${start}-${end}`);
         args.push("--force-keyframes-at-cuts");
@@ -903,12 +901,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       let stderr = "";
 
       // If direct streaming, pipe stdout to the PassThrough
-      if (isStreaming && !useDiskFallback) {
+      if (isStreaming) {
         ytDlp.stdout.pipe(streamPipe);
       }
 
       ytDlp.stdout.on("data", (data) => {
-        if (!isStreaming || useDiskFallback) {
+        if (!isStreaming) {
           const line = data.toString();
           const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
           if (match) {
@@ -934,16 +932,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       ytDlp.on("close", async (code) => {
         if (code === 0) {
-          // If we used disk fallback for streaming, pipe the finished file to the stream now
-          if (useDiskFallback && fs.existsSync(tempFilePath)) {
-            const readStream = fs.createReadStream(tempFilePath);
-            readStream.pipe(streamPipe);
-            readStream.on('end', () => {
-              fs.unlink(tempFilePath, () => { });
-              setTimeout(() => activeStreams.delete(jobId), 1000);
-            });
-          } else if (streamPipe && !useDiskFallback) {
-            // Already piped during process, just end it
+          if (streamPipe) {
             streamPipe.end();
             setTimeout(() => activeStreams.delete(jobId), 1000);
           }
@@ -951,7 +940,6 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
           io.emit('job_complete', { jobId, url });
           resolve({ status: 'completed' });
         } else {
-          if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
           if (streamPipe) streamPipe.end();
 
           const cleanStderr = stderr.slice(-500);
@@ -3580,7 +3568,7 @@ app.post("/get-qualities", async (req, res) => {
             try {
               const cookieFile = videoUrl.includes('instagram.com') ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
               const extraction = await extractFacebookVideoUrl(videoUrl, path.resolve(__dirname, cookieFile), req.headers['user-agent']).catch(() => null);
-              
+
               if (extraction && (extraction.videoUrl || extraction.candidateStreams?.length > 0)) {
                 console.log("✅ [Qualities Fallback V2] Recovered with headless extraction sniffer.");
                 const mockVideoInfo = JSON.stringify({
@@ -3735,7 +3723,7 @@ app.post("/download", async (req, res) => {
       status: 'queued',
       jobId,
       message: "Download queued. You will be notified via WebSocket when it starts.",
-      pollUrl: `/job-status/${jobId}` 
+      pollUrl: `/job-status/${jobId}`
     });
 
   } catch (error) {
