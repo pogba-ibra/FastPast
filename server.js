@@ -260,10 +260,12 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
       else targetCookieFile = "www.facebook.com_cookies.txt";
     }
     else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
+    else if (url.includes("threads.net") || url.includes("threads.com")) targetCookieFile = "www.instagram.com_cookies.txt"; // Threads uses Instagram cookies
     else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
     else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
+
 
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
     if (fs.existsSync(cookiesPath)) {
@@ -276,14 +278,15 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
         pushUnique("--cookies", fallbackPath);
       }
     }
+  }
 
-    // 7. Rate Limiting for YouTube (Avoid IP blocks)
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      pushUnique("--min-sleep-interval", "5");
-      pushUnique("--max-sleep-interval", "10");
-    }
+  // 7. Rate Limiting for YouTube (Avoid IP blocks)
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    pushUnique("--min-sleep-interval", "5");
+    pushUnique("--max-sleep-interval", "10");
   }
 }
+
 
 // Verification: Log yt-dlp version and runtime details on startup
 function verifyYtDlpRuntime() {
