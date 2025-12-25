@@ -32,8 +32,7 @@ async function getSharedBrowser() {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--single-process'
+                '--disable-gpu'
             ]
         });
 
@@ -148,7 +147,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
                 const igMatch = fullUrl.match(/\/(?:p|reels|reel)\/([^/]+)/);
                 if (igMatch && igMatch[1]) {
                     // Start with embed URL as it's often more resilient to login walls
-                    fullUrl = `https://www.instagram.com/reel/${igMatch[1]}/embed/`;
+                    fullUrl = `https://www.instagram.com/reels/${igMatch[1]}/embed/`;
                 }
             }
         }
@@ -364,6 +363,11 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
     } catch (error) {
         console.error('❌ Facebook extraction error:', error.message);
+        // If "Target closed" or "Context closed", it means sharedBrowser might be dead
+        if (error.message.includes('Target closed') || error.message.includes('context has been closed') || error.message.includes('browser has been closed')) {
+            console.log('🔄 sharedBrowser appears dead, forcing null for next attempt...');
+            sharedBrowser = null;
+        }
         throw error;
     } finally {
         if (context) await context.close().catch(() => { });

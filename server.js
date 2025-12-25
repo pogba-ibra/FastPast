@@ -119,8 +119,8 @@ async function fetchMetaBrowserLess(url, userAgent) {
   try {
     let targetUrl = url;
     // Instagram specific: Try embed URL first as it's often more resilient
-    if (url.includes('instagram.com') && (url.includes('/p/') || url.includes('/reel/'))) {
-      const match = url.match(/\/(?:p|reel)\/([^/]+)/);
+    if (url.includes('instagram.com') && (url.includes('/p/') || url.includes('/reel/') || url.includes('/reels/'))) {
+      const match = url.match(/\/(?:p|reel|reels)\/([^/]+)/);
       if (match) targetUrl = `https://www.instagram.com/reel/${match[1]}/embed/`;
     }
 
@@ -210,11 +210,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
-    // 1. Client Impersonation (Dec 2025 Standard)
-    // Avoid impersonation for YouTube (native is better) and VK (causes 400 Bad Request)
     if (!isYouTube && !isVK) {
-      // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
-      pushUnique("--impersonate", isMeta ? "safari" : "chrome");
+      // Use Chrome impersonation for most platforms as it's the gold standard for curl-cffi
+      pushUnique("--impersonate", "chrome");
     }
 
     // 2. Connectivity: Force IPv4 for major platforms to avoid IPv6 timeouts/hangs (Fly.io specific stability)
