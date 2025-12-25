@@ -3570,21 +3570,20 @@ app.post("/get-qualities", async (req, res) => {
             stderr: stderrTrimmed.substring(0, 500),
           });
 
-          // User Request: Fail-Safe Fallback v2 for Meta (FB/IG)
-          // If yt-dlp fails (Exit Code 1) on Meta, attempt lightweight axios scrap as fallback
-          const isMeta = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch") || videoUrl.includes("instagram.com");
+          // Fail-Safe Fallback for Facebook ONLY (not Instagram/Threads)
+          const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
 
-          if (code === 1 && isMeta) {
-            console.log("🛡️ [Qualities Fallback V2] yt-dlp failed (Exit 1) on Meta Platform. Attempting headless extraction...");
+          if (code === 1 && isFacebook) {
+            console.log("🛡️ [Qualities Fallback] yt-dlp failed on Facebook. Attempting headless extraction...");
 
             try {
-              const cookieFile = videoUrl.includes('instagram.com') ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
+              const cookieFile = 'www.facebook.com_cookies.txt';
               const extraction = await extractFacebookVideoUrl(videoUrl, path.resolve(__dirname, cookieFile), req.headers['user-agent']).catch(() => null);
 
               if (extraction && (extraction.videoUrl || extraction.candidateStreams?.length > 0)) {
-                console.log("✅ [Qualities Fallback V2] Recovered with headless extraction sniffer.");
+                console.log("✅ [Qualities Fallback] Recovered with headless extraction.");
                 const mockVideoInfo = JSON.stringify({
-                  title: extraction.title || (videoUrl.includes('instagram.com') ? "Instagram Video" : "Facebook Video"),
+                  title: extraction.title || "Facebook Video",
                   thumbnail: extraction.thumbnail,
                   formats: [
                     { format_id: "direct_hd", ext: "mp4", resolution: "unknown", url: extraction.videoUrl || extraction.candidateStreams[0].url }
@@ -3593,10 +3592,10 @@ app.post("/get-qualities", async (req, res) => {
                 return processVideoInfo(mockVideoInfo, stderr);
               }
 
-              console.log("🛡️ [Qualities Fallback V2] Headless failed, trying lightweight scrap...");
+              console.log("🛡️ [Qualities Fallback] Headless failed, trying lightweight scrap...");
               const metaData = await fetchMetaBrowserLess(videoUrl, req.headers['user-agent']);
               const mockFallbackInfo = JSON.stringify({
-                title: metaData.title || (videoUrl.includes('instagram.com') ? "Instagram Video" : "Facebook Video"),
+                title: metaData.title || "Facebook Video",
                 thumbnail: metaData.thumbnail,
                 formats: [
                   { format_id: "best", ext: "mp4", resolution: "unknown", url: videoUrl }
@@ -3605,7 +3604,7 @@ app.post("/get-qualities", async (req, res) => {
 
               return processVideoInfo(mockFallbackInfo, stderr);
             } catch (scrapErr) {
-              console.warn("❌ [Qualities Fallback V2] Fallback failed:", scrapErr.message);
+              console.warn("❌ [Qualities Fallback] Fallback failed:", scrapErr.message);
             }
           }
 
