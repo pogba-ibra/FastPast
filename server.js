@@ -896,10 +896,25 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       await new Promise(r => child.on('close', r));
 
       const info = tryParseJson(stdout);
-      if (info && info.title) {
-        title = info.title;
-        // Update map entry if exists
-        if (activeStreams.has(jobId)) activeStreams.get(jobId).title = title;
+      if (info) {
+        if (info.title) {
+          title = info.title;
+          // Update map entry if exists
+          if (activeStreams.has(jobId)) activeStreams.get(jobId).title = title;
+        }
+
+        // Capture filesize for IDM progress bar
+        let filesize = info.filesize || info.filesize_approx;
+        // If specific format was requested, try to get its size
+        if (formatId && info.formats) {
+          const f = info.formats.find(x => x.format_id === formatId);
+          if (f) filesize = f.filesize || f.filesize_approx;
+        }
+
+        if (filesize && activeStreams.has(jobId)) {
+          activeStreams.get(jobId).filesize = filesize;
+          logger.info("Resolved filesize for streaming", { jobId, filesize });
+        }
       }
     } catch (err) {
       logger.warn("Worker title resolution failed", { jobId, error: err.message });
@@ -3898,6 +3913,14 @@ app.get("/stream/:jobId", async (req, res) => {
 
     res.setHeader("Content-Disposition", `attachment; filename="${filename}.mp4"; filename*=UTF-8''${encoded}.mp4`);
     res.setHeader("Content-Type", "video/mp4");
+
+    // Fix for IDM: Provide Content-Length if resolved by worker
+    if (entry.filesize) {
+      res.setHeader("Content-Length", entry.filesize);
+      res.setHeader("Accept-Ranges", "bytes"); // Allow ranges if we know the size
+    } else {
+      res.setHeader("Accept-Ranges", "none");
+    }
 
     // Set download token cookie if present in job (triggers frontend success)
     if (entry.dlToken) {
