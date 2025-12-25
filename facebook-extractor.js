@@ -7,14 +7,6 @@ let browserLock = false;
  * Get or launch the shared browser instance
  */
 async function getSharedBrowser() {
-    if (sharedBrowser) {
-        // Check if browser is still connected
-        if (sharedBrowser.isConnected()) return sharedBrowser;
-        console.log('🔄 Shared browser disconnected, restarting...');
-        await sharedBrowser.close().catch(() => { });
-        sharedBrowser = null;
-    }
-
     if (browserLock) {
         // Wait for other process to finish launching
         while (browserLock) {
@@ -25,6 +17,17 @@ async function getSharedBrowser() {
 
     browserLock = true;
     try {
+        if (sharedBrowser) {
+            // Check if browser is still connected
+            if (sharedBrowser.isConnected()) {
+                browserLock = false; // Release lock early
+                return sharedBrowser;
+            }
+            console.log('🔄 Shared browser disconnected, restarting...');
+            await sharedBrowser.close().catch(() => { });
+            sharedBrowser = null;
+        }
+
         console.log('🌐 Launching Shared Chromium Instance...');
         sharedBrowser = await playwright.chromium.launch({
             headless: true,

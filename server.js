@@ -211,8 +211,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
     if (!isYouTube && !isVK) {
-      // Use Chrome impersonation for most platforms as it's the gold standard for curl-cffi
-      pushUnique("--impersonate", "chrome");
+      // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
+      // Use Chrome for other platforms (Tiktok, etc)
+      pushUnique("--impersonate", isMeta ? "safari" : "chrome");
     }
 
     // 2. Connectivity: Force IPv4 for major platforms to avoid IPv6 timeouts/hangs (Fly.io specific stability)
@@ -222,8 +223,12 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     }
 
     // 3. User-Agent Matching
-    // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
-    pushUnique("--user-agent", DESKTOP_UA);
+    // Force Desktop User-Agent for all platforms ONLY if NOT impersonating
+    // yt-dlp impersonation handles the UA internally; overriding it can cause detection
+    const isImpersonating = !isYouTube && !isVK;
+    if (!isImpersonating) {
+      pushUnique("--user-agent", DESKTOP_UA);
+    }
 
     if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
