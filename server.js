@@ -140,6 +140,72 @@ async function fetchMetaBrowserLess(url, userAgent) {
   }
 }
 
+// Helper: Parse Netscape cookies specifically for axios headers
+function parseNetscapeToAxios(cookieContent) {
+  if (!cookieContent) return '';
+  const lines = cookieContent.split('\n');
+  const cookieList = [];
+  for (const line of lines) {
+    if (line.trim().startsWith('#') || !line.trim()) continue;
+    const parts = line.split('\t');
+    if (parts.length >= 7) {
+      cookieList.push(`${parts[5].trim()}=${parts[6].trim()}`);
+    }
+  }
+  return cookieList.join('; ');
+}
+
+// Helper: Browser-less Threads extractor (Scrapes direct video URL from meta tags)
+async function extractThreadsBrowserless(url, cookieFile) {
+  try {
+    let targetUrl = url.replace('threads.com', 'threads.net');
+    if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl.replace(/^\/*/, '');
+
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+
+    if (cookieFile && fs.existsSync(cookieFile)) {
+      const cookieContent = fs.readFileSync(cookieFile, 'utf8');
+      const cookieHeader = parseNetscapeToAxios(cookieContent);
+      if (cookieHeader) headers['Cookie'] = cookieHeader;
+    }
+
+    logger.info('Performing browser-less Threads extraction...', { targetUrl });
+    const response = await axios.get(targetUrl, { headers, timeout: 15000 });
+    const html = response.data;
+
+    // Extract Metadata
+    const videoUrlMatch = html.match(/property="og:video" content="([^"]+)"/i) ||
+      html.match(/"video_url":"([^"]+)"/i);
+    const titleMatch = html.match(/property="og:title" content="([^"]+)"/i) ||
+      html.match(/<title>([^<]+)<\/title>/i);
+    const thumbMatch = html.match(/property="og:image" content="([^"]+)"/i);
+
+    if (videoUrlMatch) {
+      const rawVideoUrl = videoUrlMatch[1].replace(/&amp;/g, '&').replace(/\\u0026/g, '&');
+      logger.info('✅ Threads direct video URL found (browser-less)');
+      return {
+        videoUrl: rawVideoUrl,
+        title: titleMatch ? titleMatch[1].replace(/&amp;/g, '&') : 'Threads Video',
+        thumbnail: thumbMatch ? thumbMatch[1].replace(/&amp;/g, '&') : null,
+        userAgent: headers['User-Agent']
+      };
+    }
+
+    logger.warn('⚠️ Threads video URL not found in meta tags');
+    return { videoUrl: null };
+  } catch (err) {
+    logger.error('Threads browser-less extraction failed:', err.message);
+    return { videoUrl: null };
+  }
+}
+
+
 
 // Helper to spawn yt-dlp using the Pip-installed Nightly build
 function spawnYtDlp(args, options = {}) {
@@ -3578,14 +3644,20 @@ app.post("/get-qualities", async (req, res) => {
           const isThreadsFallback = videoUrl.includes("threads.net") || videoUrl.includes("threads.com");
 
           if (code === 1 && (isFacebook || isThreadsFallback)) {
-            console.log(`🛡️ [Qualities Fallback] yt-dlp failed on ${isThreadsFallback ? 'Threads' : 'Facebook'}. Attempting headless extraction...`);
-
             try {
-              const cookieFile = isThreadsFallback ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
-              const extraction = await extractFacebookVideoUrl(videoUrl, path.resolve(__dirname, cookieFile), req.headers['user-agent']).catch(() => null);
+              let extraction = null;
+              if (isThreadsFallback) {
+                console.log("🛡️ [Qualities Fallback] yt-dlp failed on Threads. Attempting browser-less extraction...");
+                const cookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
+                extraction = await extractThreadsBrowserless(videoUrl, cookieFile);
+              } else {
+                console.log("🛡️ [Qualities Fallback] yt-dlp failed on Facebook. Attempting headless extraction...");
+                const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+                extraction = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']).catch(() => null);
+              }
 
-              if (extraction && (extraction.videoUrl || extraction.candidateStreams?.length > 0)) {
-                console.log("✅ [Qualities Fallback] Recovered with headless extraction.");
+              if (extraction && (extraction.videoUrl || (extraction.candidateStreams && extraction.candidateStreams.length > 0))) {
+                console.log("✅ [Qualities Fallback] Recovered with direct extraction.");
                 const mockVideoInfo = JSON.stringify({
                   title: extraction.title || (isThreadsFallback ? "Threads Video" : "Facebook Video"),
                   thumbnail: extraction.thumbnail,
@@ -3689,21 +3761,31 @@ app.post("/download", async (req, res) => {
         url = resolved.normalizedUrl;
       }
 
-      // Handle Direct browser extraction for Facebook and Threads
+      // Handle Direct extraction
       const isFacebook = url?.includes?.('facebook.com') || url?.includes?.('fb.watch');
       if (isFacebook || isThreads) {
-        // Facebook uses direct_hd format, Threads always uses Playwright since yt-dlp fails
-        const isFacebookDirectHD = isFacebook && (req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd');
-
-        if (isThreads || isFacebookDirectHD) {
-          const cookieFile = isThreads ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
-          const extractionResult = await extractFacebookVideoUrl(url, path.resolve(__dirname, cookieFile), req.headers['user-agent']);
+        if (isThreads) {
+          // Threads: Browser-less extraction (Metadata scraping)
+          const cookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
+          const extractionResult = await extractThreadsBrowserless(url, cookieFile);
 
           if (extractionResult.videoUrl) {
             url = extractionResult.videoUrl;
             req.body._browserExtractedTitle = extractionResult.title;
-            req.body._freshCookiePath = extractionResult.freshCookiePath;
             req.body._userAgent = extractionResult.userAgent;
+          }
+        } else if (isFacebook) {
+          // Facebook: Browser extraction (Only for direct_hd format)
+          const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
+          if (isDirectHD) {
+            const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+            const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+            if (extractionResult.videoUrl) {
+              url = extractionResult.videoUrl;
+              req.body._browserExtractedTitle = extractionResult.title;
+              req.body._freshCookiePath = extractionResult.freshCookiePath;
+              req.body._userAgent = extractionResult.userAgent;
+            }
           }
         }
       }

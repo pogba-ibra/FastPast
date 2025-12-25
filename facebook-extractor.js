@@ -151,11 +151,6 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
                     fullUrl = `https://www.instagram.com/reel/${igMatch[1]}/embed/`;
                 }
             }
-        } else if (fullUrl.includes('threads.net') || fullUrl.includes('threads.com')) {
-            // Threads normalization: Ensure we're using the post URL
-            // Example: https://www.threads.net/@user/post/ID
-            fullUrl = fullUrl.replace('threads.com', 'threads.net');
-            if (!fullUrl.startsWith('https://')) fullUrl = 'https://' + fullUrl;
         }
 
         console.log(`🔍 Navigating to STAGE 3 URL: ${fullUrl}`);
