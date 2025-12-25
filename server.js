@@ -1050,34 +1050,40 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       ytDlp.on("close", async (code) => {
         if (code === 0) {
-          // If we used disk fallback for streaming, pipe the finished file to the stream now
+          // If we used disk fallback for streaming, we don't pipe to PassThrough anymore.
+          // Instead, we mark the file as ready for direct serving.
           if (useDiskFallback && fs.existsSync(tempFilePath)) {
-            // CRITICAL: Now that the file is ready on disk, we measure its EXACT size
             const exactFilesize = fs.statSync(tempFilePath).size;
             console.log(`[Worker] Disk fallback finished. Exact size: ${exactFilesize} bytes`);
 
-            // Expose the pipe to the /stream endpoint now that we have the exact size
             const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
-            entry.pipe = streamPipe;
+            entry.filePath = tempFilePath; // Mark for direct serving
+            entry.filesize = exactFilesize;
             entry.title = title;
-            entry.filesize = exactFilesize; // OVERWRITE with absolute truth
             entry.dlToken = job.data.dlToken;
+            entry.ready = true; // Signal the /stream endpoint
             activeStreams.set(jobId, entry);
 
-            const readStream = fs.createReadStream(tempFilePath);
-            readStream.pipe(streamPipe);
-            readStream.on('end', () => {
-              fs.unlink(tempFilePath, () => { });
-              setTimeout(() => activeStreams.delete(jobId), 2000);
-            });
-          } else if (streamPipe && !useDiskFallback) {
-            // Already piped during process, just end it
-            streamPipe.end();
-            setTimeout(() => activeStreams.delete(jobId), 1000);
-          }
+            io.emit('job_complete', { jobId, url });
+            resolve({ status: 'completed' });
 
-          io.emit('job_complete', { jobId, url });
-          resolve({ status: 'completed' });
+            // Cleanup handled by the 1-hour global cleanup or a specific timeout
+            setTimeout(() => {
+              try {
+                if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                activeStreams.delete(jobId);
+              } catch (e) { }
+            }, 60 * 60 * 1000); // 1 hour persist
+          } else if (streamPipe && !useDiskFallback) {
+            // Sequential streams still use pipes (one-shot)
+            streamPipe.end();
+            io.emit('job_complete', { jobId, url });
+            resolve({ status: 'completed' });
+            setTimeout(() => activeStreams.delete(jobId), 5000);
+          } else {
+            io.emit('job_complete', { jobId, url });
+            resolve({ status: 'completed' });
+          }
         } else {
           if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
           if (streamPipe) streamPipe.end();
@@ -3946,46 +3952,49 @@ app.get("/stream/:jobId", async (req, res) => {
     res.setHeader("Content-Disposition", `attachment; filename="${filename}.mp4"; filename*=UTF-8''${encoded}.mp4`);
     res.setHeader("Content-Type", "video/mp4");
 
-    // Fix for IDM: Provide Content-Length if resolved by worker
-    if (entry.filesize) {
-      res.setHeader("Content-Length", entry.filesize);
+    if (entry.filePath) {
+      // Direct file serving (Supports IDM multi-connection/resuming)
+      res.setHeader("Accept-Ranges", "bytes");
+      if (entry.filesize) res.setHeader("Content-Length", entry.filesize);
+    } else {
+      // Live pipe (Single connection only)
+      if (entry.filesize) res.setHeader("Content-Length", entry.filesize);
+      res.setHeader("Accept-Ranges", "none");
     }
-
-    // Explicitly disable ranges because we're piping sequential data from yt-dlp
-    // Multithreaded downloads (Range requests) would fail or corrupt the stream.
-    res.setHeader("Accept-Ranges", "none");
 
     // Set download token cookie if present in job (triggers frontend success)
     if (entry.dlToken) {
       res.setHeader('Set-Cookie', `${entry.dlToken}=true; Path=/; Max-Age=3600; SameSite=Lax`);
     }
-
-    // Set download token cookie if present in job (we might need to check job data)
-    // For now, assume script.js handles cookie via dlToken if it sees the stream start
     entry.headersSent = true;
   };
 
-  // 4. If pipe already exists, connect it
-  if (entry.pipe) {
-    sendStreamHeaders();
-    entry.pipe.pipe(res);
-  } else {
-    // Wait for worker to create the pipe (Increased timeout to 10 mins for 4K processing)
-    let checkCount = 0;
-    const interval = setInterval(() => {
-      checkCount++;
-      const currentEntry = activeStreams.get(jobId);
-      if (currentEntry && currentEntry.pipe) {
-        clearInterval(interval);
+  // 4. Waiting logic
+  let checkCount = 0;
+  const interval = setInterval(() => {
+    checkCount++;
+    const currentEntry = activeStreams.get(jobId);
+
+    // Check if worker marked it ready (either pipe or filePath)
+    if (currentEntry && (currentEntry.pipe || currentEntry.filePath)) {
+      clearInterval(interval);
+
+      if (currentEntry.filePath) {
+        // Serve using optimized res.sendFile
+        sendStreamHeaders();
+        res.sendFile(currentEntry.filePath, (err) => {
+          if (err) logger.error("res.sendFile error", { jobId, error: err.message });
+        });
+      } else if (currentEntry.pipe) {
+        // Serve via pipe
         sendStreamHeaders();
         currentEntry.pipe.pipe(res);
-      } else if (checkCount > 1200) {
-        // 10 minutes timeout (1200 * 500ms)
-        clearInterval(interval);
-        if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out. High-quality videos may take several minutes to process on the server." });
       }
-    }, 500);
-  }
+    } else if (checkCount > 1200) {
+      clearInterval(interval);
+      if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out. High-quality videos may take several minutes to process on the server." });
+    }
+  }, 500);
 
   res.on('close', () => {
     const e = activeStreams.get(jobId);
