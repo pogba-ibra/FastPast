@@ -7,6 +7,14 @@ let browserLock = false;
  * Get or launch the shared browser instance
  */
 async function getSharedBrowser() {
+    if (sharedBrowser) {
+        // Check if browser is still connected
+        if (sharedBrowser.isConnected()) return sharedBrowser;
+        console.log('🔄 Shared browser disconnected, restarting...');
+        await sharedBrowser.close().catch(() => { });
+        sharedBrowser = null;
+    }
+
     if (browserLock) {
         // Wait for other process to finish launching
         while (browserLock) {
@@ -17,17 +25,6 @@ async function getSharedBrowser() {
 
     browserLock = true;
     try {
-        if (sharedBrowser) {
-            // Check if browser is still connected
-            if (sharedBrowser.isConnected()) {
-                browserLock = false; // Release lock early
-                return sharedBrowser;
-            }
-            console.log('🔄 Shared browser disconnected, restarting...');
-            await sharedBrowser.close().catch(() => { });
-            sharedBrowser = null;
-        }
-
         console.log('🌐 Launching Shared Chromium Instance...');
         sharedBrowser = await playwright.chromium.launch({
             headless: true,
@@ -35,7 +32,8 @@ async function getSharedBrowser() {
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--disable-gpu'
+                '--disable-gpu',
+                '--single-process'
             ]
         });
 
@@ -150,7 +148,7 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
                 const igMatch = fullUrl.match(/\/(?:p|reels|reel)\/([^/]+)/);
                 if (igMatch && igMatch[1]) {
                     // Start with embed URL as it's often more resilient to login walls
-                    fullUrl = `https://www.instagram.com/reels/${igMatch[1]}/embed/`;
+                    fullUrl = `https://www.instagram.com/reel/${igMatch[1]}/embed/`;
                 }
             }
         }
@@ -158,13 +156,11 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         console.log(`🔍 Navigating to STAGE 3 URL: ${fullUrl}`);
 
         try {
-            // Navigate and wait for reasonable load (User Request: Use networkidle and longer timeout)
+            // Navigate and wait for reasonable load
             await page.goto(fullUrl, { waitUntil: 'networkidle', timeout: 60000 });
 
-            // User Request: Add random longer wait and simulated mouse movement for human-like behavior
-            console.log('🖱️ Simulating human-like delay and mouse activity...');
-            await page.waitForTimeout(10000 + Math.random() * 10000);
-            await page.mouse.move(Math.random() * 1920, Math.random() * 1080);
+            // Brief wait for dynamic content
+            await page.waitForTimeout(3000);
         } catch (navError) {
             console.log(`⚠️ Navigation timeout/error: ${navError.message}`);
             // Fallback: try to continue anyway as sniffer might have worked
@@ -206,37 +202,21 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
         } catch { /* ignore overlay errors */ }
 
         // 3. Playback Simulation: Trigger HD streams by interacting with the video
-        console.log('👇 Simulating Stage 3 playback and scrolling...');
+        console.log('👇 Triggering video playback...');
         try {
             await page.evaluate(() => window.scrollBy(0, 500));
-            await page.waitForTimeout(2000);
+            await page.waitForTimeout(1000);
 
             // Wait for any video element
             const videoElem = await page.waitForSelector('video', { timeout: 15000 }).catch(() => { });
 
             if (videoElem) {
-                console.log('🎬 Video element found, performing multi-point interaction...');
-                const box = await videoElem.boundingBox();
-                if (box) {
-                    // Click center
-                    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-                    await page.waitForTimeout(1000);
-                    // Click top-left (often where play buttons or toggles are)
-                    await page.mouse.click(box.x + 20, box.y + 20);
-                } else {
-                    await videoElem.click({ force: true }).catch(() => { });
-                }
-            } else {
-                // Proactive fallback: Click common player zones in major viewport
-                console.log('🖱️ No video element visible, clicking common zones...');
-                const { width, height } = page.viewportSize();
-                await page.mouse.click(width / 2, height / 2); // Center
-                await page.waitForTimeout(500);
-                await page.mouse.click(width / 2, height / 3); // Upper center
+                console.log('🎬 Video element found, clicking to play...');
+                await videoElem.click({ force: true }).catch(() => { });
             }
 
-            console.log('⏳ Waiting 12 seconds for HD stream discovery...');
-            await page.waitForTimeout(12000);
+            console.log('⏳ Waiting for stream discovery...');
+            await page.waitForTimeout(3000);
 
             // User Request Stage 3: Direct SRC Fallback if sniffer failed
             if (!snortedVideo) {
@@ -366,11 +346,6 @@ async function extractFacebookVideoUrl(url, cookieFile, requestUA) {
 
     } catch (error) {
         console.error('❌ Facebook extraction error:', error.message);
-        // If "Target closed" or "Context closed", it means sharedBrowser might be dead
-        if (error.message.includes('Target closed') || error.message.includes('context has been closed') || error.message.includes('browser has been closed')) {
-            console.log('🔄 sharedBrowser appears dead, forcing null for next attempt...');
-            sharedBrowser = null;
-        }
         throw error;
     } finally {
         if (context) await context.close().catch(() => { });
