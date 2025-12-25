@@ -41,24 +41,14 @@ const getPythonCommand = () => {
   return process.platform === 'win32' ? 'py' : 'python3';
 };
 
-// Helper: Resolve shortened URLs (Facebook/Instagram Share Links)
+// Helper: Resolve shortened URLs (Facebook Share Links only)
 async function resolveFacebookUrl(url) {
-  // Normalize Instagram URLs first (strip tracking garbage)
-  if (url.includes('instagram.com')) {
-    try {
-      const urlObj = new URL(url);
-      // Remove all search params (igsh, utm_source, etc)
-      urlObj.search = '';
-      // Support reels, posts, stories
-      url = urlObj.toString();
-      // Standardize to www.instagram.com
-      url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?instagram\.com/, 'https://www.instagram.com');
-    } catch (e) {
-      console.warn("URL normalization failed", { url, error: e.message });
-    }
+  // Only handle Facebook URLs
+  if (!url.includes('facebook.com') && !url.includes('fb.watch')) {
+    return { normalizedUrl: url, originalUrl: url };
   }
 
-  if (url.includes('facebook.com/share') || url.includes('fb.watch') || url.includes('instagram.com/share')) {
+  if (url.includes('facebook.com/share') || url.includes('fb.watch')) {
     try {
       console.log('Recursive URL Resolution: Resolving shortened URL:', url);
       // Try HEAD first for speed
@@ -103,11 +93,9 @@ async function resolveFacebookUrl(url) {
     }
   }
 
-  // Final standardization for standard links
+  // Final standardization for Facebook links only
   if (url.includes('facebook.com')) {
     url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?facebook\.com/, 'https://www.facebook.com');
-  } else if (url.includes('instagram.com')) {
-    url = url.replace(/^(?:https?:\/\/)?(?:www\.|m\.|web\.|mbasic\.)?instagram\.com/, 'https://www.instagram.com');
   }
 
   return { normalizedUrl: url, originalUrl: url };
@@ -3674,41 +3662,42 @@ app.post("/download", async (req, res) => {
     return res.status(400).json({ error: "Video URL is required." });
   }
 
-  // Resolve shortened URLs (Facebook/Instagram)
-  try {
-    const resolved = await resolveFacebookUrl(url);
-    url = resolved.normalizedUrl;
+  // Resolve shortened URLs (Facebook only - Instagram/Threads handled by yt-dlp directly)
+  const isInstagramOrThreads = url?.includes?.('instagram.com') || url?.includes?.('threads.net') || url?.includes?.('threads.com');
 
-    // Handle Direct HD Capture for Facebook ONLY (not Instagram/Threads)
-    // Instagram and Threads will use yt-dlp with cookies directly
-    const isInstagramOrThreads = url?.includes?.('instagram.com') || url?.includes?.('threads.net') || url?.includes?.('threads.com');
+  if (!isInstagramOrThreads) {
+    try {
+      const resolved = await resolveFacebookUrl(url);
+      url = resolved.normalizedUrl;
 
-    if (!isInstagramOrThreads && (url?.includes?.('facebook.com') || url?.includes?.('fb.watch'))) {
-      const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
-      if (isDirectHD) {
-        const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-        const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
-        if (extractionResult.videoUrl) {
-          url = extractionResult.videoUrl;
-          req.body._browserExtractedTitle = extractionResult.title;
-          req.body._freshCookiePath = extractionResult.freshCookiePath;
-          req.body._userAgent = extractionResult.userAgent;
+      // Handle Direct HD Capture for Facebook ONLY
+      if (url?.includes?.('facebook.com') || url?.includes?.('fb.watch')) {
+        const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
+        if (isDirectHD) {
+          const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
+          const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+          if (extractionResult.videoUrl) {
+            url = extractionResult.videoUrl;
+            req.body._browserExtractedTitle = extractionResult.title;
+            req.body._freshCookiePath = extractionResult.freshCookiePath;
+            req.body._userAgent = extractionResult.userAgent;
+          }
         }
       }
+    } catch (err) {
+      logger.warn('URL resolution failed, using original', { error: err.message });
     }
+  }
 
-    // For Instagram/Threads, pass the cookie file directly to yt-dlp
-    if (isInstagramOrThreads) {
-      const instagramCookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
-      if (fs.existsSync(instagramCookieFile)) {
-        req.body._freshCookiePath = instagramCookieFile;
-        logger.info('Using Instagram cookies for yt-dlp', { url });
-      } else {
-        logger.warn('Instagram cookie file not found', { path: instagramCookieFile });
-      }
+  // For Instagram/Threads, just pass the cookie file directly to yt-dlp (no URL manipulation)
+  if (isInstagramOrThreads) {
+    const instagramCookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
+    if (fs.existsSync(instagramCookieFile)) {
+      req.body._freshCookiePath = instagramCookieFile;
+      logger.info('Using Instagram cookies for yt-dlp', { url });
+    } else {
+      logger.warn('Instagram cookie file not found', { path: instagramCookieFile });
     }
-  } catch (err) {
-    logger.warn('URL resolution failed, using original', { error: err.message });
   }
 
   const fmt = format || req.body.format;
