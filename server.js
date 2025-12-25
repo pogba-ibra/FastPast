@@ -3006,7 +3006,19 @@ app.get("/video-info", async (req, res) => {
     const infoArgs = ["-m", "yt_dlp", "-J"];
     // Extract User-Agent from request if possible (for debug/test endpoints we might not have it)
     const requestUA = req ? req.headers['user-agent'] : null;
-    configureAntiBlockingArgs(infoArgs, url, requestUA); // Apply global anti-blocking (UA, IPv4)
+
+    // For Instagram/Threads, pass cookies directly (same as download endpoint)
+    let cookiePath = null;
+    const isInstagramOrThreads = url?.includes?.('instagram.com') || url?.includes?.('threads.net') || url?.includes?.('threads.com');
+    if (isInstagramOrThreads) {
+      const instagramCookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
+      if (fs.existsSync(instagramCookieFile)) {
+        cookiePath = instagramCookieFile;
+        logger.info('Using Instagram cookies for quality fetch', { url });
+      }
+    }
+
+    configureAntiBlockingArgs(infoArgs, url, requestUA, cookiePath); // Apply global anti-blocking (UA, IPv4, cookies)
     infoArgs.push(url);
 
     const ytDlp = spawnYtDlp(infoArgs);
