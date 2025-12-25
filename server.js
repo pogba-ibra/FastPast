@@ -372,11 +372,6 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting for YouTube (Avoid IP blocks)
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    pushUnique("--min-sleep-interval", "5");
-    pushUnique("--max-sleep-interval", "10");
-  }
 }
 
 
@@ -722,35 +717,47 @@ function selectVideoQualities(formats) {
 
   const selectedHeights = Array.from(heightMap.keys())
     .sort((a, b) => a - b)
-    .slice(-6);
+    .slice(-6); // Keep up to 6 highest quality options
 
-  return selectedHeights
-    .map((height) => {
-      const entry = heightMap.get(height);
-      if (!entry) {
-        return null;
-      }
+  const qualities = [];
+
+  // Add fallback options for video-only downloads
+  qualities.push(buildFallbackQuality(1080));
+  qualities.push(buildFallbackQuality(720));
+  qualities.push(buildFallbackQuality(480));
+
+  // Add selected qualities based on available formats
+  for (const height of selectedHeights) {
+    const entry = heightMap.get(height);
+    if (entry) {
+      let bestFormat = null;
+      let hasAudio = false;
+
       if (entry.combined) {
-        return {
-          value: entry.combined.format.format_id,
-          text: buildQualityLabel(height),
-          height,
-          hasAudio: true,
-          ext: entry.combined.format.ext || "mp4",
-        };
+        bestFormat = entry.combined.format;
+        hasAudio = true;
+      } else if (entry.videoOnly) {
+        bestFormat = entry.videoOnly.format;
+        hasAudio = false;
       }
-      if (entry.videoOnly) {
-        return {
-          value: `${entry.videoOnly.format.format_id}+bestaudio/best`,
-          text: buildQualityLabel(height),
-          height,
-          hasAudio: false,
-          ext: entry.videoOnly.format.ext || "mp4",
-        };
+
+      if (bestFormat) {
+        qualities.push({
+          value: bestFormat.format_id,
+          text: buildQualityLabel(bestFormat.height),
+          height: bestFormat.height,
+          hasAudio: hasAudio,
+          ext: bestFormat.ext,
+          filesize: bestFormat.filesize || bestFormat.filesize_approx || null, // Add filesize here
+        });
       }
-      return null;
-    })
-    .filter(Boolean);
+    }
+  }
+
+  // Sort by height descending and remove duplicates (if any, though unlikely with this logic)
+  return qualities
+    .sort((a, b) => b.height - a.height)
+    .filter((v, i, a) => a.findIndex(t => (t.height === v.height && t.hasAudio === v.hasAudio)) === i);
 }
 
 const vkHostAliases = new Set([
@@ -3530,56 +3537,33 @@ app.post("/get-qualities", async (req, res) => {
         }
 
         let qualities = [];
+        const videoFormats = Array.isArray(videoInfo.formats) ? videoInfo.formats : [];
+        const mp4Qualities = selectVideoQualities(videoFormats);
+        const mp3Qualities = [
+          { value: "128kbps", text: "128 kbps (Standard Quality)" },
+          { value: "192kbps", text: "192 kbps (High Quality)" },
+          { value: "256kbps", text: "256 kbps (Very High Quality)" },
+          { value: "320kbps", text: "320 kbps (Lossless Quality)" }
+        ];
 
-        if (format === "mp4") {
-          const videoFormats = Array.isArray(videoInfo.formats)
-            ? videoInfo.formats
-            : [];
-
-          logger.info(
-            `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
-          );
-
-          qualities = selectVideoQualities(videoFormats);
-
-          // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
-          // Ensure capturedExtractions and its properties are checked
-          if (capturedExtractions && capturedExtractions.videoUrl) {
-            console.log('💎 Injecting Direct HD Capture stream discovered by Playwright sniffer');
-            qualities.unshift({
-              value: `direct_capture|${capturedExtractions.videoUrl}${capturedExtractions.audioUrl ? `|${capturedExtractions.audioUrl}` : ''}`,
-              text: "Direct HD (Bypass - Highest Quality)",
-              height: 1080,
-              hasAudio: !!capturedExtractions.audioUrl,
-              ext: "mp4"
-            });
-          }
-
-          if (qualities.length === 0) {
-            qualities = [
-              buildFallbackQuality(720),
-              buildFallbackQuality(1080),
-              buildFallbackQuality(1440),
-              buildFallbackQuality(2160),
-            ];
-          }
-
-          logger.info(`Selected formats for ${videoUrl}`, {
-            selections: qualities.map((q) => ({
-              height: q.height,
-              selector: q.value,
-              hasAudio: q.hasAudio,
-            })),
+        // Ensure Direct HD capture is injected if found (specifically for Meta fallback/sniffer)
+        if (capturedExtractions && capturedExtractions.videoUrl) {
+          mp4Qualities.unshift({
+            value: `direct_capture|${capturedExtractions.videoUrl}${capturedExtractions.audioUrl ? `|${capturedExtractions.audioUrl}` : ''}`,
+            text: "Direct HD (Bypass - Highest Quality)",
+            height: 1080,
+            hasAudio: !!capturedExtractions.audioUrl,
+            ext: "mp4"
           });
-        } else if (format === "mp3") {
-          // For MP3, return standard audio qualities
-          qualities.push(
-            { value: "128kbps", text: "128 kbps (Standard Quality)" },
-            { value: "192kbps", text: "192 kbps (High Quality)" },
-            { value: "256kbps", text: "256 kbps (Very High Quality)" },
-            { value: "320kbps", text: "320 kbps (Lossless Quality)" }
-          );
         }
+
+        // Fallback if no qualities found (MP4)
+        if (mp4Qualities.length === 0) {
+          [720, 1080, 1440, 2160].forEach(h => mp4Qualities.push(buildFallbackQuality(h)));
+        }
+
+        // Backward compatibility: Set 'qualities' based on requested format
+        qualities = (format === "mp3") ? mp3Qualities : mp4Qualities;
 
         // Special handling for Instagram and Threads thumbnails
         let finalThumbnail = videoInfo ? (videoInfo.thumbnail || (videoInfo.thumbnails && videoInfo.thumbnails.length > 0 ? videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url : null)) : null;
@@ -3640,6 +3624,8 @@ app.post("/get-qualities", async (req, res) => {
 
         const result = {
           qualities,
+          mp4Data: { qualities: mp4Qualities, duration: videoInfo?.duration },
+          mp3Data: { qualities: mp3Qualities, duration: videoInfo?.duration },
           thumbnail: finalThumbnail,
           title: videoTitle,
           duration: videoDuration,

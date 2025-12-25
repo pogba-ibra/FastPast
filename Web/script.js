@@ -61,21 +61,101 @@ async function openDownloadsFolder() {
   }
 }
 
-// Global function to fetch video data (needed by playlist options)
-// TODO: This needs a real backend endpoint - using mock data for now
-async function fetchVideoData(videoUrl) {
+
+
+function createFallbackQuality(height) {
+  const label =
+    height >= 1080
+      ? "High Quality"
+      : height >= 720
+        ? "HD Quality"
+        : "Standard Quality";
+  return {
+    value: `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
+    text: `${height}p (${label})`,
+    height,
+  };
+}
+
+// Function to get available qualities for a video using yt-dlp
+async function getAvailableQualities(videoUrl, format) {
   try {
-    const response = await fetch(`/video-info?url=${encodeURIComponent(videoUrl)}`);
+    console.log("Fetching qualities for", videoUrl, format);
+    const response = await fetch("/get-qualities", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ videoUrl, format }),
+    });
+
     if (!response.ok) {
-      throw new Error("Failed to fetch video data");
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
     const data = await response.json();
+    console.log("Fetched data:", data);
+
+    // Check if this is a Vimeo authentication error
+    if (
+      videoUrl.includes("vimeo.com") &&
+      data.error &&
+      data.error.includes("logged-in")
+    ) {
+      throw new Error(data.error);
+    }
+
     return data;
   } catch (error) {
-    console.error("Error fetching video data:", error);
-    // Fallback or re-throw? Re-throw so caller handles it
-    throw error;
+    console.error("Error fetching qualities:", error);
+
+    // For Vimeo authentication errors, don't use fallback - throw the error
+    if (
+      videoUrl.includes("vimeo.com") &&
+      error.message &&
+      error.message.includes("logged-in")
+    ) {
+      throw error;
+    }
+
+    // Fallback to mock qualities if server is unavailable (for non-Vimeo or other errors)
+    if (format === "mp4") {
+      return {
+        qualities: [
+          createFallbackQuality(720),
+          createFallbackQuality(1080),
+          createFallbackQuality(1440),
+          createFallbackQuality(2160),
+        ],
+        thumbnail: "",
+        title: "",
+        duration: 3600,
+      };
+    } else if (format === "mp3") {
+      return {
+        qualities: [
+          { value: "64kbps", text: "64 kbps (Low Quality)" },
+          { value: "128kbps", text: "128 kbps (Standard Quality)" },
+          { value: "192kbps", text: "192 kbps (High Quality)" },
+          { value: "256kbps", text: "256 kbps (Very High Quality)" },
+          { value: "320kbps", text: "320 kbps (Lossless Quality)" },
+        ],
+        thumbnail: "",
+        title: "",
+      };
+    }
+    return { qualities: [], thumbnail: "", title: "" };
   }
+}
+
+// Wrapper function to load video qualities (used by playlist logic)
+async function fetchVideoData(videoUrl) {
+  // Single call provides both MP4 and MP3 metadata/qualities
+  const data = await getAvailableQualities(videoUrl, "mp4");
+
+  // Add videoUrl to the data object for compatibility with playlist logic
+  data.videoUrl = videoUrl;
+  return data;
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -744,90 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function createFallbackQuality(height) {
-    const label =
-      height >= 1080
-        ? "High Quality"
-        : height >= 720
-          ? "HD Quality"
-          : "Standard Quality";
-    return {
-      value: `bestvideo[height<=${height}]+bestaudio/best[height<=${height}]/best`,
-      text: `${height}p (${label})`,
-      height,
-    };
-  }
 
-  // Function to get available qualities for a video using yt-dlp
-  async function getAvailableQualities(videoUrl, format) {
-    try {
-      console.log("Fetching qualities for", videoUrl, format);
-      const response = await fetch("/get-qualities", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ videoUrl, format }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Fetched data:", data);
-
-      // Check if this is a Vimeo authentication error
-      if (
-        videoUrl.includes("vimeo.com") &&
-        data.error &&
-        data.error.includes("logged-in")
-      ) {
-        throw new Error(data.error);
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error fetching qualities:", error);
-
-      // For Vimeo authentication errors, don't use fallback - throw the error
-      if (
-        videoUrl.includes("vimeo.com") &&
-        error.message &&
-        error.message.includes("logged-in")
-      ) {
-        throw error;
-      }
-
-      // Fallback to mock qualities if server is unavailable (for non-Vimeo or other errors)
-      if (format === "mp4") {
-        return {
-          qualities: [
-            createFallbackQuality(720),
-            createFallbackQuality(1080),
-            createFallbackQuality(1440),
-            createFallbackQuality(2160),
-          ],
-          thumbnail: "",
-          title: "",
-          duration: 3600,
-        };
-      } else if (format === "mp3") {
-        return {
-          qualities: [
-            { value: "64kbps", text: "64 kbps (Low Quality)" },
-            { value: "128kbps", text: "128 kbps (Standard Quality)" },
-            { value: "192kbps", text: "192 kbps (High Quality)" },
-            { value: "256kbps", text: "256 kbps (Very High Quality)" },
-            { value: "320kbps", text: "320 kbps (Lossless Quality)" },
-          ],
-          thumbnail: "",
-          title: "",
-        };
-      }
-      return { qualities: [], thumbnail: "", title: "" };
-    }
-  }
 
   // Function to populate quality options based on selected format
   function populateQualityOptions() {
@@ -1545,32 +1542,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Function to load video qualities before showing preview
   // Fetch video data (metadata and qualities)
-  async function fetchVideoData(videoUrl) {
-    // Special handling for Vimeo: Check if video is downloadable first
-    if (videoUrl.includes("vimeo.com")) {
-      try {
-        await getAvailableQualities(videoUrl, "mp4");
-      } catch (error) {
-        if (error.message && error.message.includes("logged-in")) {
-          throw new Error("The download link not found.");
-        }
-        throw error;
-      }
-    }
-
-    let mp4Data, mp3Data;
-    if (!videoUrl.includes("vimeo.com")) {
-      [mp4Data, mp3Data] = await Promise.all([
-        getAvailableQualities(videoUrl, "mp4"),
-        getAvailableQualities(videoUrl, "mp3"),
-      ]);
-    } else {
-      mp4Data = await getAvailableQualities(videoUrl, "mp4");
-      mp3Data = await getAvailableQualities(videoUrl, "mp3");
-    }
-
-    return { mp4Data, mp3Data, videoUrl };
-  }
 
   // Update UI with fetched video data
   function updateUIWithData(data) {
