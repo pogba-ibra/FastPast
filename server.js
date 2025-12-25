@@ -1072,7 +1072,9 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
               try {
                 if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
                 activeStreams.delete(jobId);
-              } catch (e) { }
+              } catch {
+                // Ignore cleanup errors
+              }
             }, 60 * 60 * 1000); // 1 hour persist
           } else if (streamPipe && !useDiskFallback) {
             // Sequential streams still use pipes (one-shot)
