@@ -876,7 +876,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   // 1. Mandatory Metadata Resolution for Streaming/Accuracy
   // We resolve title and filesize BEFORE initializing the stream pipe to prevent IDM header race conditions
   try {
-    const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist", "--flat-playlist"];
+    const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist"];
     configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath);
     infoArgs.push(url);
 
@@ -890,15 +890,33 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       if (info.title && (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram')) {
         title = info.title;
       }
+
+      // Robust Filesize Calculation
       filesize = info.filesize || info.filesize_approx;
 
-      // If specific format was requested, try to get its size
       if (formatId && info.formats) {
-        const f = info.formats.find(x => x.format_id === formatId);
-        if (f) filesize = f.filesize || f.filesize_approx;
+        // Handle merged formats like "137+140"
+        if (typeof formatId === 'string' && formatId.includes('+')) {
+          const IDs = formatId.split('+');
+          let total = 0;
+          IDs.forEach(id => {
+            const f = info.formats.find(x => x.format_id === id);
+            if (f) total += (f.filesize || f.filesize_approx || 0);
+          });
+          if (total > 0) filesize = total;
+        } else {
+          // Single format
+          const f = info.formats.find(x => x.format_id === formatId);
+          if (f) filesize = f.filesize || f.filesize_approx;
+        }
       }
 
-      if (filesize) logger.info("Metadata resolved filesize", { jobId, filesize });
+      if (filesize) {
+        console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
+        logger.info("Metadata resolved filesize", { jobId, filesize });
+      } else {
+        console.log(`[Worker] Could not resolve filesize for ${jobId}`);
+      }
     }
   } catch (err) {
     logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
