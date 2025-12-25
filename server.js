@@ -119,8 +119,8 @@ async function fetchMetaBrowserLess(url, userAgent) {
   try {
     let targetUrl = url;
     // Instagram specific: Try embed URL first as it's often more resilient
-    if (url.includes('instagram.com') && (url.includes('/p/') || url.includes('/reel/') || url.includes('/reels/'))) {
-      const match = url.match(/\/(?:p|reel|reels)\/([^/]+)/);
+    if (url.includes('instagram.com') && (url.includes('/p/') || url.includes('/reel/'))) {
+      const match = url.match(/\/(?:p|reel)\/([^/]+)/);
       if (match) targetUrl = `https://www.instagram.com/reel/${match[1]}/embed/`;
     }
 
@@ -210,9 +210,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
+    // 1. Client Impersonation (Dec 2025 Standard)
+    // Avoid impersonation for YouTube (native is better) and VK (causes 400 Bad Request)
     if (!isYouTube && !isVK) {
       // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
-      // Use Chrome for other platforms (Tiktok, etc)
       pushUnique("--impersonate", isMeta ? "safari" : "chrome");
     }
 
@@ -223,12 +224,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     }
 
     // 3. User-Agent Matching
-    // Force Desktop User-Agent for all platforms ONLY if NOT impersonating
-    // yt-dlp impersonation handles the UA internally; overriding it can cause detection
-    const isImpersonating = !isYouTube && !isVK;
-    if (!isImpersonating) {
-      pushUnique("--user-agent", DESKTOP_UA);
-    }
+    // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
+    pushUnique("--user-agent", DESKTOP_UA);
 
     if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
@@ -3682,8 +3679,11 @@ app.post("/download", async (req, res) => {
     const resolved = await resolveFacebookUrl(url);
     url = resolved.normalizedUrl;
 
-    // Handle Direct HD Capture for Facebook if needed
-    if (url?.includes?.('facebook.com') || url?.includes?.('fb.watch')) {
+    // Handle Direct HD Capture for Facebook ONLY (not Instagram/Threads)
+    // Instagram and Threads will use yt-dlp with cookies directly
+    const isInstagramOrThreads = url?.includes?.('instagram.com') || url?.includes?.('threads.net') || url?.includes?.('threads.com');
+
+    if (!isInstagramOrThreads && (url?.includes?.('facebook.com') || url?.includes?.('fb.watch'))) {
       const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
       if (isDirectHD) {
         const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
@@ -3694,6 +3694,17 @@ app.post("/download", async (req, res) => {
           req.body._freshCookiePath = extractionResult.freshCookiePath;
           req.body._userAgent = extractionResult.userAgent;
         }
+      }
+    }
+
+    // For Instagram/Threads, pass the cookie file directly to yt-dlp
+    if (isInstagramOrThreads) {
+      const instagramCookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
+      if (fs.existsSync(instagramCookieFile)) {
+        req.body._freshCookiePath = instagramCookieFile;
+        logger.info('Using Instagram cookies for yt-dlp', { url });
+      } else {
+        logger.warn('Instagram cookie file not found', { path: instagramCookieFile });
       }
     }
   } catch (err) {
