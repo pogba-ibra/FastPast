@@ -193,26 +193,20 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
   };
 
   // User Request: Enable aria2c for fast multi-threaded downloads (Tuned for stability)
-  // External downloaders like aria2c do not support streaming to stdout (-o -)
-  const isStreamingToStdout = args.indexOf("-o") !== -1 && args[args.indexOf("-o") + 1] === "-";
-  if (!isStreamingToStdout) {
-    pushUnique("--downloader", "aria2c");
-    pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
-  } else {
-    console.log("🚀 Streaming to stdout detected, skipping aria2c");
-  }
+  pushUnique("--downloader", "aria2c");
+  pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
 
   const isRestricted = [
     "youtube.com", "youtu.be",
     "instagram.com",
     "tiktok.com",
-    "facebook.com", "fb.watch", "fb.com",
+    "facebook.com", "fb.watch",
     "twitter.com", "x.com",
     "vk.com", "vk.ru", "vkvideo.ru"
   ].some(d => url.includes(d));
 
   if (isRestricted) {
-    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net");
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
     const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
@@ -233,11 +227,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
     pushUnique("--user-agent", DESKTOP_UA);
 
-    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net")) {
+    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
-      const ref = url.includes('instagram.com') ? 'https://www.instagram.com/' :
-        url.includes('threads.net') ? 'https://www.threads.net/' : 'https://www.facebook.com/';
-      pushUnique("--add-header", `Referer:${ref}`);
+      pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
@@ -666,7 +658,7 @@ function selectVideoQualities(formats) {
       }
       if (entry.videoOnly) {
         return {
-          value: `${entry.videoOnly.format.format_id}+ba[ext=m4a]/ba/best`,
+          value: `${entry.videoOnly.format.format_id}+bestaudio/best`,
           text: buildQualityLabel(height),
           height,
           hasAudio: false,
@@ -791,7 +783,7 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  let { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
   let title = job.data.title || 'video';
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
@@ -833,11 +825,19 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     }
   }
 
-  // 3. Determine if we can stream directly
+  // 3. Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
+  // Merging requires seeking, which Pipes (-) don't support.
+  const isDash = formatId && formatId.includes('+');
   const isStreaming = !!streamPipe;
+  const useDiskFallback = isStreaming && isDash;
 
   // 4. Build Arguments
-  const outputTemplate = isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`));
+  let tempFilePath = null;
+  if (useDiskFallback) {
+    tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
+  }
+
+  const outputTemplate = useDiskFallback ? tempFilePath : (isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`)));
 
   return new Promise((resolve, reject) => {
     try {
@@ -856,36 +856,17 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
       }
 
-      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net");
-
       if (formatId) {
-        // Handle Direct Capture Bypass (Special Format ID injected by sniffer)
-        if (formatId.startsWith("direct_capture|")) {
-          const parts = formatId.split("|");
-          const vUrl = parts[1];
-          if (vUrl) {
-            url = vUrl;
-            formatId = "best";
-            console.log(`[Worker] Direct Capture Bypass: ${url}`);
-          }
-        }
-
         // Use the specific formatId. If it doesn't already have merge instructions (+),
-        // we add a robust audio selector to ensure sound is included.
+        // we add +bestaudio to ensure sound is included.
         let finalFmt = formatId;
         if (!finalFmt.includes('+') && !finalFmt.includes('/')) {
-          if (isMeta) {
-            finalFmt = `${finalFmt}+ba[ext=m4a]/ba/best`;
-          } else {
-            finalFmt = `${finalFmt}+bestaudio/best`;
-          }
-        } else if (isMeta && finalFmt.includes('+bestaudio/best')) {
-          // Upgrade existing generic audio selector to Meta-compatible one
-          finalFmt = finalFmt.replace('+bestaudio/best', '+ba[ext=m4a]/ba/best');
+          finalFmt = `${finalFmt}+bestaudio/best`;
         }
         args.push("-f", finalFmt);
       } else if (format) {
         let finalFormat = format;
+        const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
         if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
           finalFormat = getMetaFormatSelector(qualityLabel || "720p");
         }
@@ -905,17 +886,6 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       args.push("--merge-output-format", "mp4");
 
-      // Direct Streaming over Pipe (-) requires fragmented MP4 for merging DASH formats
-      // This avoids "seeking in non-seekable device" error in FFmpeg when piping merged streams
-      if (isStreaming && format !== 'mp3') {
-        let flags = "ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof";
-        if (isMeta) {
-          // Force AAC re-encoding for Meta platforms to ensure reliable audio muxing in fMP4 streams
-          flags += " -c:v copy -c:a aac -b:a 128k";
-        }
-        args.push("--postprocessor-args", flags);
-      }
-
       if (start && end) {
         args.push("--download-sections", `*${start}-${end}`);
         args.push("--force-keyframes-at-cuts");
@@ -933,12 +903,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       let stderr = "";
 
       // If direct streaming, pipe stdout to the PassThrough
-      if (isStreaming) {
+      if (isStreaming && !useDiskFallback) {
         ytDlp.stdout.pipe(streamPipe);
       }
 
       ytDlp.stdout.on("data", (data) => {
-        if (!isStreaming) {
+        if (!isStreaming || useDiskFallback) {
           const line = data.toString();
           const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
           if (match) {
@@ -964,7 +934,16 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       ytDlp.on("close", async (code) => {
         if (code === 0) {
-          if (streamPipe) {
+          // If we used disk fallback for streaming, pipe the finished file to the stream now
+          if (useDiskFallback && fs.existsSync(tempFilePath)) {
+            const readStream = fs.createReadStream(tempFilePath);
+            readStream.pipe(streamPipe);
+            readStream.on('end', () => {
+              fs.unlink(tempFilePath, () => { });
+              setTimeout(() => activeStreams.delete(jobId), 1000);
+            });
+          } else if (streamPipe && !useDiskFallback) {
+            // Already piped during process, just end it
             streamPipe.end();
             setTimeout(() => activeStreams.delete(jobId), 1000);
           }
@@ -972,6 +951,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
           io.emit('job_complete', { jobId, url });
           resolve({ status: 'completed' });
         } else {
+          if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
           if (streamPipe) streamPipe.end();
 
           const cleanStderr = stderr.slice(-500);
