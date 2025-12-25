@@ -785,7 +785,7 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
+  let { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode } = job.data;
   let title = job.data.title || 'video';
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
