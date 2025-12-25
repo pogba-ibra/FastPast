@@ -193,8 +193,14 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
   };
 
   // User Request: Enable aria2c for fast multi-threaded downloads (Tuned for stability)
-  pushUnique("--downloader", "aria2c");
-  pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
+  // External downloaders like aria2c do not support streaming to stdout (-o -)
+  const isStreamingToStdout = args.indexOf("-o") !== -1 && args[args.indexOf("-o") + 1] === "-";
+  if (!isStreamingToStdout) {
+    pushUnique("--downloader", "aria2c");
+    pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
+  } else {
+    console.log("🚀 Streaming to stdout detected, skipping aria2c");
+  }
 
   const isRestricted = [
     "youtube.com", "youtu.be",
@@ -902,7 +908,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       // Direct Streaming over Pipe (-) requires fragmented MP4 for merging DASH formats
       // This avoids "seeking in non-seekable device" error in FFmpeg when piping merged streams
       if (isStreaming && format !== 'mp3') {
-        args.push("--postprocessor-args", "ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof");
+        let flags = "ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof";
+        if (isMeta) {
+          // Force AAC re-encoding for Meta platforms to ensure reliable audio muxing in fMP4 streams
+          flags += " -c:v copy -c:a aac -b:a 128k";
+        }
+        args.push("--postprocessor-args", flags);
       }
 
       if (start && end) {
