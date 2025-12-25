@@ -871,54 +871,51 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
 
-  // 1. Create a PassThrough if streaming is requested
+  let filesize = null;
+
+  // 1. Mandatory Metadata Resolution for Streaming/Accuracy
+  // We resolve title and filesize BEFORE initializing the stream pipe to prevent IDM header race conditions
+  try {
+    const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist", "--flat-playlist"];
+    configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath);
+    infoArgs.push(url);
+
+    const child = spawnYtDlp(infoArgs);
+    let stdout = "";
+    child.stdout.on('data', d => stdout += d);
+    await new Promise(r => child.on('close', r));
+
+    const info = tryParseJson(stdout);
+    if (info) {
+      if (info.title && (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram')) {
+        title = info.title;
+      }
+      filesize = info.filesize || info.filesize_approx;
+      
+      // If specific format was requested, try to get its size
+      if (formatId && info.formats) {
+        const f = info.formats.find(x => x.format_id === formatId);
+        if (f) filesize = f.filesize || f.filesize_approx;
+      }
+      
+      if (filesize) logger.info("Metadata resolved filesize", { jobId, filesize });
+    }
+  } catch (err) {
+    logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
+  }
+
+  // 2. Initialize Stream Pipe
   let streamPipe = null;
   if (mode === 'stream') {
     streamPipe = new PassThrough();
     // Pre-initialize map entry so /stream endpoint can find it immediately
-    const entry = activeStreams.get(jobId) || { pipe: streamPipe, res: null, headersSent: false, title, dlToken: job.data.dlToken };
+    // Note: We only attach the pipe AFTER metadata is resolved above
+    const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
     entry.pipe = streamPipe;
     entry.title = title;
+    entry.filesize = filesize;
     entry.dlToken = job.data.dlToken;
     activeStreams.set(jobId, entry);
-  }
-
-  // 2. Resolve Better Title (if currently generic)
-  if (title === 'video' || title === 'Instagram Video' || title === 'YouTube Video' || title === 'Instagram') {
-    try {
-      const infoArgs = ["--dump-json", "--no-playlist", "--flat-playlist"];
-      configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath);
-      infoArgs.push(url);
-
-      const child = spawnYtDlp(["-m", "yt_dlp", ...infoArgs]);
-      let stdout = "";
-      child.stdout.on('data', d => stdout += d);
-      await new Promise(r => child.on('close', r));
-
-      const info = tryParseJson(stdout);
-      if (info) {
-        if (info.title) {
-          title = info.title;
-          // Update map entry if exists
-          if (activeStreams.has(jobId)) activeStreams.get(jobId).title = title;
-        }
-
-        // Capture filesize for IDM progress bar
-        let filesize = info.filesize || info.filesize_approx;
-        // If specific format was requested, try to get its size
-        if (formatId && info.formats) {
-          const f = info.formats.find(x => x.format_id === formatId);
-          if (f) filesize = f.filesize || f.filesize_approx;
-        }
-
-        if (filesize && activeStreams.has(jobId)) {
-          activeStreams.get(jobId).filesize = filesize;
-          logger.info("Resolved filesize for streaming", { jobId, filesize });
-        }
-      }
-    } catch (err) {
-      logger.warn("Worker title resolution failed", { jobId, error: err.message });
-    }
   }
 
   // 3. Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
