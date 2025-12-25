@@ -712,16 +712,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 
-  function showDownloadPreparing(message) {
+  function showDownloadPreparing() {
     const waitMessage = document.getElementById("download-wait-message");
     if (waitMessage) {
-      waitMessage.textContent = message || "Preparing Download...";
+      waitMessage.textContent = "Please wait....";
       waitMessage.style.display = "block";
       waitMessage.classList.add("show");
     }
     if (downloadProgressText) {
-      downloadProgressText.style.display = "block";
-      downloadProgressText.textContent = message || "";
+      downloadProgressText.style.display = "none";
     }
   }
 
@@ -1809,7 +1808,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .then((data) => {
           if (data.jobId) {
             // Show preparing status
-            showDownloadPreparing("Queued...");
+            showDownloadPreparing();
 
             // Start polling for progress
             pollJobStatus(data.jobId, fields.dlToken);
@@ -1830,14 +1829,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const data = await response.json();
 
-          if (data.state === 'active') {
-            const percent = data.progress || 0;
-            showDownloadPreparing(`Downloading: ${Math.round(percent)}%`);
+          if (data.state === 'active' || data.state === 'waiting' || data.state === 'pending') {
+            // Only show "Please wait...." during download/queue
+            showDownloadPreparing();
           } else if (data.state === 'completed') {
             clearInterval(interval);
-            showDownloadPreparing("Starting Download...");
-
-            // Trigger the actual file download via stream
+            // Success message is handled in triggerFileDownload when download cookie is detected
             triggerFileDownload(jobId, dlToken);
           } else if (data.state === 'failed') {
             clearInterval(interval);
@@ -1984,7 +1981,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (hasPending) {
             queuePending.style.display = "flex";
           } else {
-            queueStatus.style.display = "none";
+            if (queueStatus) queueStatus.style.display = "none";
           }
 
           // Continue processing queue
@@ -2057,7 +2054,7 @@ document.addEventListener("DOMContentLoaded", () => {
               // Hide queue if empty
               if (downloadQueue.length === 0) {
                 downloadQueueElement.style.display = "none";
-                queueStatus.style.display = "none";
+                if (queueStatus) queueStatus.style.display = "none";
               }
             }
           });
