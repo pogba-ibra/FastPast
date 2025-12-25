@@ -91,7 +91,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const downloadBtn = document.getElementById("download-btn");
   const downloadOtherBtn = document.getElementById("download-other-btn");
   const successMessage = document.getElementById("success-message");
-  const downloadProgressText = document.getElementById("download-progress-text");
   // ========== Playlist Navigation Functions ==========
 
   // Fetch playlist videos from server
@@ -664,7 +663,6 @@ document.addEventListener("DOMContentLoaded", () => {
       successMessage.classList.remove("show");
     }
 
-    if (downloadProgressText) downloadProgressText.style.display = "none";
     downloadBtn.disabled = false;
     downloadOtherBtn.disabled = false;
     downloadOtherBtn.classList.remove("disabled");
@@ -718,9 +716,6 @@ document.addEventListener("DOMContentLoaded", () => {
       waitMessage.textContent = "Please wait....";
       waitMessage.style.display = "block";
       waitMessage.classList.add("show");
-    }
-    if (downloadProgressText) {
-      downloadProgressText.style.display = "none";
     }
   }
 
@@ -1902,164 +1897,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Queue Management System
-  const downloadQueue = [];
-  const queueStatus = document.getElementById("queue-status");
-  const queuePending = document.getElementById("queue-pending");
-  const queueDownloading = document.getElementById("queue-downloading");
-  const queueCompleted = document.getElementById("queue-completed");
-  const downloadQueueElement = document.getElementById("download-queue");
-  const queueList = document.getElementById("queue-list");
-
   // Download Other Video Button Click Handler
   if (downloadOtherBtn) {
     downloadOtherBtn.addEventListener("click", () => {
       // Reload the page when the button is clicked
       window.location.reload();
-    });
-  }
-
-  // Process Queue Function
-  let isProcessingQueue = false;
-  function processQueue() {
-    if (isProcessingQueue || downloadQueue.length === 0) return;
-
-    isProcessingQueue = true;
-    const nextItem = downloadQueue.find((item) => item.status === "pending");
-
-    if (!nextItem) {
-      isProcessingQueue = false;
-      return;
-    }
-
-    // Update status to downloading
-    nextItem.status = "downloading";
-    updateQueueUI();
-
-    // Show downloading status
-    queuePending.style.display = "none";
-    queueDownloading.style.display = "flex";
-
-    // Simulate download progress
-    simulateDownload(nextItem);
-  }
-
-  // Simulate Download Function
-  function simulateDownload(item) {
-    let progress = 0;
-    const progressInterval = setInterval(() => {
-      progress += 5;
-
-      // Update queue item progress
-      const queueItemElement = document.getElementById(`queue-item-${item.id}`);
-      if (queueItemElement) {
-        const progressFill = queueItemElement.querySelector(
-          ".queue-item-progress-fill"
-        );
-        const statusText = queueItemElement.querySelector(".queue-item-status");
-
-        if (progressFill) progressFill.style.width = `${progress}%`;
-        if (statusText) statusText.textContent = `Downloading...${progress}%`;
-      }
-
-      if (progress >= 100) {
-        clearInterval(progressInterval);
-
-        // Update status to completed
-        item.status = "completed";
-        updateQueueUI();
-
-        // Show completed status
-        queueDownloading.style.display = "none";
-        queueCompleted.style.display = "flex";
-
-        // Hide completed status after 2 seconds
-        setTimeout(() => {
-          queueCompleted.style.display = "none";
-
-          // Check if there are more pending items
-          const hasPending = downloadQueue.some((i) => i.status === "pending");
-          if (hasPending) {
-            queuePending.style.display = "flex";
-          } else {
-            if (queueStatus) queueStatus.style.display = "none";
-          }
-
-          // Continue processing queue
-          isProcessingQueue = false;
-          processQueue();
-        }, 2000);
-      }
-    }, 200);
-  }
-
-  // Update Queue UI Function
-  function updateQueueUI() {
-    queueList.innerHTML = "";
-
-    downloadQueue.forEach((item) => {
-      const queueItemElement = document.createElement("div");
-      queueItemElement.className = `queue-item ${item.status}`;
-      queueItemElement.id = `queue-item-${item.id}`;
-
-      const statusIcon =
-        item.status === "pending"
-          ? "fa-clock"
-          : item.status === "downloading"
-            ? "fa-download"
-            : "fa-check-circle";
-
-      const statusText =
-        item.status === "pending"
-          ? "Pending"
-          : item.status === "downloading"
-            ? "Downloading..."
-            : "Completed";
-
-      const progressWidth =
-        item.status === "completed"
-          ? "100%"
-          : item.status === "downloading"
-            ? "50%"
-            : "0%";
-
-      queueItemElement.innerHTML = `
-        <i class="fas ${statusIcon}"></i>
-        <div class="queue-item-info">
-          <div class="queue-item-title">${item.title}</div>
-          <div class="queue-item-status">${statusText}</div>
-          <div class="queue-item-progress">
-            <div class="queue-item-progress-fill" style="width: ${progressWidth}"></div>
-          </div>
-        </div>
-        <div class="queue-item-actions">
-          ${item.status === "pending"
-          ? `<button class="queue-item-action" title="Remove from queue"><i class="fas fa-times"></i></button>`
-          : ""
-        }
-        </div>
-      `;
-
-      queueList.appendChild(queueItemElement);
-
-      // Add event listener to remove button
-      if (item.status === "pending") {
-        const removeBtn = queueItemElement.querySelector(".queue-item-action");
-        if (removeBtn) {
-          removeBtn.addEventListener("click", () => {
-            const index = downloadQueue.findIndex((i) => i.id === item.id);
-            if (index !== -1) {
-              downloadQueue.splice(index, 1);
-              updateQueueUI();
-
-              // Hide queue if empty
-              if (downloadQueue.length === 0) {
-                downloadQueueElement.style.display = "none";
-                if (queueStatus) queueStatus.style.display = "none";
-              }
-            }
-          });
-        }
-      }
     });
   }
 
