@@ -200,13 +200,13 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     "youtube.com", "youtu.be",
     "instagram.com",
     "tiktok.com",
-    "facebook.com", "fb.watch",
+    "facebook.com", "fb.watch", "fb.com",
     "twitter.com", "x.com",
     "vk.com", "vk.ru", "vkvideo.ru"
   ].some(d => url.includes(d));
 
   if (isRestricted) {
-    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net");
     const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
@@ -227,9 +227,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath) {
     // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
     pushUnique("--user-agent", DESKTOP_UA);
 
-    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
+    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
-      pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
+      const ref = url.includes('instagram.com') ? 'https://www.instagram.com/' :
+        url.includes('threads.net') ? 'https://www.threads.net/' : 'https://www.facebook.com/';
+      pushUnique("--add-header", `Referer:${ref}`);
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
@@ -658,7 +660,7 @@ function selectVideoQualities(formats) {
       }
       if (entry.videoOnly) {
         return {
-          value: `${entry.videoOnly.format.format_id}+bestaudio/best`,
+          value: `${entry.videoOnly.format.format_id}+ba[ext=m4a]/ba/best`,
           text: buildQualityLabel(height),
           height,
           hasAudio: false,
@@ -848,17 +850,36 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
       }
 
+      const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("fb.com") || url.includes("instagram.com") || url.includes("threads.net");
+
       if (formatId) {
+        // Handle Direct Capture Bypass (Special Format ID injected by sniffer)
+        if (formatId.startsWith("direct_capture|")) {
+          const parts = formatId.split("|");
+          const vUrl = parts[1];
+          if (vUrl) {
+            url = vUrl;
+            formatId = "best";
+            console.log(`[Worker] Direct Capture Bypass: ${url}`);
+          }
+        }
+
         // Use the specific formatId. If it doesn't already have merge instructions (+),
-        // we add +bestaudio to ensure sound is included.
+        // we add a robust audio selector to ensure sound is included.
         let finalFmt = formatId;
         if (!finalFmt.includes('+') && !finalFmt.includes('/')) {
-          finalFmt = `${finalFmt}+bestaudio/best`;
+          if (isMeta) {
+            finalFmt = `${finalFmt}+ba[ext=m4a]/ba/best`;
+          } else {
+            finalFmt = `${finalFmt}+bestaudio/best`;
+          }
+        } else if (isMeta && finalFmt.includes('+bestaudio/best')) {
+          // Upgrade existing generic audio selector to Meta-compatible one
+          finalFmt = finalFmt.replace('+bestaudio/best', '+ba[ext=m4a]/ba/best');
         }
         args.push("-f", finalFmt);
       } else if (format) {
         let finalFormat = format;
-        const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
         if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
           finalFormat = getMetaFormatSelector(qualityLabel || "720p");
         }
@@ -880,7 +901,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       // Direct Streaming over Pipe (-) requires fragmented MP4 for merging DASH formats
       // This avoids "seeking in non-seekable device" error in FFmpeg when piping merged streams
-      if (isStreaming) {
+      if (isStreaming && format !== 'mp3') {
         args.push("--postprocessor-args", "ffmpeg:-movflags frag_keyframe+empty_moov+default_base_moof");
       }
 
