@@ -922,22 +922,27 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
   }
 
-  // 2. Initialize Stream Pipe
+  // 2. Initialize Stream Pipe (Discovery delayed for multi-stream/merged formats)
   let streamPipe = null;
   if (mode === 'stream') {
     streamPipe = new PassThrough();
-    // Pre-initialize map entry so /stream endpoint can find it immediately
-    // Note: We only attach the pipe AFTER metadata is resolved above
-    const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
-    entry.pipe = streamPipe;
-    entry.title = title;
-    entry.filesize = filesize;
-    entry.dlToken = job.data.dlToken;
-    activeStreams.set(jobId, entry);
+
+    // Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
+    const isDash = formatId && formatId.includes('+');
+    const useDiskFallback = isDash;
+
+    // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
+    if (!useDiskFallback) {
+      const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
+      entry.pipe = streamPipe;
+      entry.title = title;
+      entry.filesize = filesize;
+      entry.dlToken = job.data.dlToken;
+      activeStreams.set(jobId, entry);
+    }
   }
 
-  // 3. Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
-  // Merging requires seeking, which Pipes (-) don't support.
+  // 3. Setup Disk Fallback vs Direct Pipe
   const isDash = formatId && formatId.includes('+');
   const isStreaming = !!streamPipe;
   const useDiskFallback = isStreaming && isDash;
@@ -1047,11 +1052,23 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         if (code === 0) {
           // If we used disk fallback for streaming, pipe the finished file to the stream now
           if (useDiskFallback && fs.existsSync(tempFilePath)) {
+            // CRITICAL: Now that the file is ready on disk, we measure its EXACT size
+            const exactFilesize = fs.statSync(tempFilePath).size;
+            console.log(`[Worker] Disk fallback finished. Exact size: ${exactFilesize} bytes`);
+
+            // Expose the pipe to the /stream endpoint now that we have the exact size
+            const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
+            entry.pipe = streamPipe;
+            entry.title = title;
+            entry.filesize = exactFilesize; // OVERWRITE with absolute truth
+            entry.dlToken = job.data.dlToken;
+            activeStreams.set(jobId, entry);
+
             const readStream = fs.createReadStream(tempFilePath);
             readStream.pipe(streamPipe);
             readStream.on('end', () => {
               fs.unlink(tempFilePath, () => { });
-              setTimeout(() => activeStreams.delete(jobId), 1000);
+              setTimeout(() => activeStreams.delete(jobId), 2000);
             });
           } else if (streamPipe && !useDiskFallback) {
             // Already piped during process, just end it
@@ -3953,7 +3970,7 @@ app.get("/stream/:jobId", async (req, res) => {
     sendStreamHeaders();
     entry.pipe.pipe(res);
   } else {
-    // Wait for worker to create the pipe
+    // Wait for worker to create the pipe (Increased timeout to 10 mins for 4K processing)
     let checkCount = 0;
     const interval = setInterval(() => {
       checkCount++;
@@ -3962,10 +3979,10 @@ app.get("/stream/:jobId", async (req, res) => {
         clearInterval(interval);
         sendStreamHeaders();
         currentEntry.pipe.pipe(res);
-      } else if (checkCount > 60) {
-        // 30 seconds timeout
+      } else if (checkCount > 1200) {
+        // 10 minutes timeout (1200 * 500ms)
         clearInterval(interval);
-        if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out" });
+        if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out. High-quality videos may take several minutes to process on the server." });
       }
     }, 500);
   }
