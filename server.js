@@ -155,7 +155,7 @@ function parseNetscapeToAxios(cookieContent) {
   return cookieList.join('; ');
 }
 
-// Helper: Browser-less Threads extractor (Scrapes direct video URL from meta tags)
+// Helper: Browser-less Threads extractor (Scrapes direct video URL from meta tags or JSON)
 async function extractThreadsBrowserless(url, cookieFile) {
   try {
     let targetUrl = url.replace('threads.com', 'threads.net');
@@ -167,10 +167,24 @@ async function extractThreadsBrowserless(url, cookieFile) {
       'Accept-Language': 'en-US,en;q=0.9',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
+      'X-IG-App-ID': '238260118697367', // Critical for Threads data population
+      'X-ASBD-ID': '129477',            // Helps bypass bot detection
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
     };
 
-    if (cookieFile && fs.existsSync(cookieFile)) {
-      const cookieContent = fs.readFileSync(cookieFile, 'utf8');
+    // Use Threads-specific cookies if available, otherwise use provided (Instagram)
+    let actualCookieFile = cookieFile;
+    const threadsCookiePath = path.resolve(__dirname, 'www.threads.com_cookies.txt');
+    if (fs.existsSync(threadsCookiePath)) {
+      actualCookieFile = threadsCookiePath;
+      logger.info('Using Threads-specific cookies for extraction');
+    }
+
+    if (actualCookieFile && fs.existsSync(actualCookieFile)) {
+      const cookieContent = fs.readFileSync(actualCookieFile, 'utf8');
       const cookieHeader = parseNetscapeToAxios(cookieContent);
       if (cookieHeader) headers['Cookie'] = cookieHeader;
     }
@@ -180,14 +194,24 @@ async function extractThreadsBrowserless(url, cookieFile) {
     const html = response.data;
 
     // Extract Metadata
+    // Priority 1: og:video
+    // Priority 2: video_versions in JSON (found in script tags, handle escaped slashes)
+    // Priority 3: raw video_url key
     const videoUrlMatch = html.match(/property="og:video" content="([^"]+)"/i) ||
+      html.match(/"video_versions":\[{"type":\d+,"url":"(https:(?:\\\/\\\/|[^"])+?\.mp4[^"]*?)"/) ||
       html.match(/"video_url":"([^"]+)"/i);
+
     const titleMatch = html.match(/property="og:title" content="([^"]+)"/i) ||
       html.match(/<title>([^<]+)<\/title>/i);
     const thumbMatch = html.match(/property="og:image" content="([^"]+)"/i);
 
     if (videoUrlMatch) {
-      const rawVideoUrl = videoUrlMatch[1].replace(/&amp;/g, '&').replace(/\\u0026/g, '&');
+      // Decode escaped slashes and other characters if it came from JSON
+      let rawVideoUrl = videoUrlMatch[1]
+        .replace(/\\\/|\\\//g, '/')
+        .replace(/\\u0026/g, '&')
+        .replace(/&amp;/g, '&');
+
       logger.info('✅ Threads direct video URL found (browser-less)');
       return {
         videoUrl: rawVideoUrl,
@@ -197,7 +221,7 @@ async function extractThreadsBrowserless(url, cookieFile) {
       };
     }
 
-    logger.warn('⚠️ Threads video URL not found in meta tags');
+    logger.warn('⚠️ Threads video URL not found in meta tags or script blobs');
     return { videoUrl: null };
   } catch (err) {
     logger.error('Threads browser-less extraction failed:', err.message);
