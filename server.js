@@ -3573,20 +3573,21 @@ app.post("/get-qualities", async (req, res) => {
             stderr: stderrTrimmed.substring(0, 500),
           });
 
-          // Fail-Safe Fallback for Facebook ONLY (not Instagram/Threads)
+          // Fail-Safe Fallback for Facebook and Threads (not Instagram)
           const isFacebook = videoUrl.includes("facebook.com") || videoUrl.includes("fb.watch");
+          const isThreadsFallback = videoUrl.includes("threads.net") || videoUrl.includes("threads.com");
 
-          if (code === 1 && isFacebook) {
-            console.log("🛡️ [Qualities Fallback] yt-dlp failed on Facebook. Attempting headless extraction...");
+          if (code === 1 && (isFacebook || isThreadsFallback)) {
+            console.log(`🛡️ [Qualities Fallback] yt-dlp failed on ${isThreadsFallback ? 'Threads' : 'Facebook'}. Attempting headless extraction...`);
 
             try {
-              const cookieFile = 'www.facebook.com_cookies.txt';
+              const cookieFile = isThreadsFallback ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
               const extraction = await extractFacebookVideoUrl(videoUrl, path.resolve(__dirname, cookieFile), req.headers['user-agent']).catch(() => null);
 
               if (extraction && (extraction.videoUrl || extraction.candidateStreams?.length > 0)) {
                 console.log("✅ [Qualities Fallback] Recovered with headless extraction.");
                 const mockVideoInfo = JSON.stringify({
-                  title: extraction.title || "Facebook Video",
+                  title: extraction.title || (isThreadsFallback ? "Threads Video" : "Facebook Video"),
                   thumbnail: extraction.thumbnail,
                   formats: [
                     { format_id: "direct_hd", ext: "mp4", resolution: "unknown", url: extraction.videoUrl || extraction.candidateStreams[0].url }
@@ -3598,7 +3599,7 @@ app.post("/get-qualities", async (req, res) => {
               console.log("🛡️ [Qualities Fallback] Headless failed, trying lightweight scrap...");
               const metaData = await fetchMetaBrowserLess(videoUrl, req.headers['user-agent']);
               const mockFallbackInfo = JSON.stringify({
-                title: metaData.title || "Facebook Video",
+                title: metaData.title || (isThreadsFallback ? "Threads Video" : "Facebook Video"),
                 thumbnail: metaData.thumbnail,
                 formats: [
                   { format_id: "best", ext: "mp4", resolution: "unknown", url: videoUrl }
@@ -3676,20 +3677,28 @@ app.post("/download", async (req, res) => {
     return res.status(400).json({ error: "Video URL is required." });
   }
 
-  // Resolve shortened URLs (Facebook only - Instagram/Threads handled by yt-dlp directly)
-  const isInstagramOrThreads = url?.includes?.('instagram.com') || url?.includes?.('threads.net') || url?.includes?.('threads.com');
+  // Platform detection
+  const isInstagram = url?.includes?.('instagram.com');
+  const isThreads = url?.includes?.('threads.net') || url?.includes?.('threads.com');
 
-  if (!isInstagramOrThreads) {
+  if (!isInstagram) {
     try {
-      const resolved = await resolveFacebookUrl(url);
-      url = resolved.normalizedUrl;
-
-      // Handle Direct HD Capture for Facebook ONLY
+      // Resolve shortened URLs (Facebook only)
       if (url?.includes?.('facebook.com') || url?.includes?.('fb.watch')) {
-        const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
-        if (isDirectHD) {
-          const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-          const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
+        const resolved = await resolveFacebookUrl(url);
+        url = resolved.normalizedUrl;
+      }
+
+      // Handle Direct browser extraction for Facebook and Threads
+      const isFacebook = url?.includes?.('facebook.com') || url?.includes?.('fb.watch');
+      if (isFacebook || isThreads) {
+        // Facebook uses direct_hd format, Threads always uses Playwright since yt-dlp fails
+        const isFacebookDirectHD = isFacebook && (req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd');
+
+        if (isThreads || isFacebookDirectHD) {
+          const cookieFile = isThreads ? 'www.instagram.com_cookies.txt' : 'www.facebook.com_cookies.txt';
+          const extractionResult = await extractFacebookVideoUrl(url, path.resolve(__dirname, cookieFile), req.headers['user-agent']);
+
           if (extractionResult.videoUrl) {
             url = extractionResult.videoUrl;
             req.body._browserExtractedTitle = extractionResult.title;
@@ -3699,12 +3708,12 @@ app.post("/download", async (req, res) => {
         }
       }
     } catch (err) {
-      logger.warn('URL resolution failed, using original', { error: err.message });
+      logger.warn('Browser extraction failed, using original', { error: err.message });
     }
   }
 
-  // For Instagram/Threads, just pass the cookie file directly to yt-dlp (no URL manipulation)
-  if (isInstagramOrThreads) {
+  // For Instagram (supported by yt-dlp), just pass the cookie file directly
+  if (isInstagram) {
     const instagramCookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
     if (fs.existsSync(instagramCookieFile)) {
       req.body._freshCookiePath = instagramCookieFile;
