@@ -1768,6 +1768,7 @@ document.addEventListener("DOMContentLoaded", () => {
         endTime: endInput?.value || "",
         title: videoTitle.textContent || "video",
         filesize: selectedQuality?.filesize || "",
+        hasAudio: selectedQuality?.hasAudio || false,
         dlToken: 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
         token: localStorage.getItem("sessionToken") || "",
       };

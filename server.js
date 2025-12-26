@@ -756,6 +756,7 @@ function selectVideoQualities(formats) {
           height,
           hasAudio: true,
           ext: entry.combined.format.ext || "mp4",
+          filesize: entry.combined.format.filesize || entry.combined.format.filesize_approx,
         };
       }
       if (entry.videoOnly) {
@@ -765,6 +766,7 @@ function selectVideoQualities(formats) {
           height,
           hasAudio: false,
           ext: entry.videoOnly.format.ext || "mp4",
+          filesize: entry.videoOnly.format.filesize || entry.videoOnly.format.filesize_approx,
         };
       }
       return null;
@@ -885,9 +887,10 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 const videoWorker = new BullWorker('video-downloads', async (job) => {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle } = job.data;
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
   let title = jobTitle || job.data.title || 'video';
-  let filesize = jobFilesize || null;
+  let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
+  let hasAudio = jobHasAudio === true || jobHasAudio === "true";
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
@@ -992,19 +995,44 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
+      // CRITICAL: Disable aria2c for streaming/merging to prevent stalls
+      if (isStreaming && (url.includes("youtube.com") || url.includes("youtu.be"))) {
+        // Use internal downloader for YouTube streaming to avoid pipe issues
+        const downloaderIndex = args.indexOf("--downloader");
+        if (downloaderIndex !== -1) {
+          args.splice(downloaderIndex, 2); // Remove --downloader aria2c
+        }
+        const downloaderArgsIndex = args.indexOf("--downloader-args");
+        if (downloaderArgsIndex !== -1) {
+          args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
+        }
+      }
+
       if (url.includes("vimeo.com")) {
         args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
       }
 
       if (formatId) {
-        // Use the specific formatId. If it doesn't already have merge instructions (+),
-        // we add +bestaudio to ensure sound is included.
+        // Use specific formatId. 
         let finalFmt = formatId;
-        if (!finalFmt.includes('+') && !finalFmt.includes('/')) {
+
+        // Optimization: Only add audio if we know the selected video-only stream needs it.
+        // If hasAudio is true, the stream already has audio (combined) or it's a special multi-format string already.
+        const isCombined = finalFmt.includes('+') || finalFmt.includes('/') || hasAudio;
+
+        if (!isCombined) {
           finalFmt = `${finalFmt}+bestaudio/best`;
         }
+
         args.push("-f", finalFmt);
-      } else if (format) {
+
+        // DASH merging + Pipe = stalls. 
+        // Force disk fallback if we added audio or it's a manual merge.
+        if (finalFmt.includes('+')) {
+          useDiskFallback = true;
+        }
+      }
+      else if (format) {
         let finalFormat = format;
         const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
         if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
@@ -3949,6 +3977,7 @@ app.post("/download", async (req, res) => {
       mode: 'stream',
       dlToken: req.body.dlToken, // Pass token to job
       filesize: req.body.filesize, // Optimization: pass filesize if already known from qualities fetch
+      hasAudio: req.body.hasAudio, // Optimization: pass audio info
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
       downloadAccelerator: req.body.downloadAccelerator === "true"
