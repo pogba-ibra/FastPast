@@ -1082,7 +1082,10 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         args.push("--force-keyframes-at-cuts");
       }
 
-      if (downloadAccelerator) {
+      // Download Accelerator (Default to TRUE for speed, unless explicitly disabled)
+      const useAccelerator = downloadAccelerator !== "false" && downloadAccelerator !== false;
+
+      if (useAccelerator) {
         args.push("--concurrent-fragments", "5");
       }
 
