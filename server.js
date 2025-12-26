@@ -305,8 +305,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
 
     // 3. User-Agent Matching
-    // Force Desktop User-Agent for all platforms to ensure HD streams (User Request: Ignore client UA)
-    pushUnique("--user-agent", DESKTOP_UA);
+    // Prioritize the actual browser UA to appear more human, fallback to forced desktop
+    const finalUA = requestUA || DESKTOP_UA;
+    pushUnique("--user-agent", finalUA);
 
     if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
@@ -3572,9 +3573,7 @@ app.post("/get-qualities", async (req, res) => {
     //   ytDlpInfoArgs.push("--cookies-from-browser", "chrome"); // Disabled for server compatibility
     // }
 
-    // Use forced desktop User-Agent for all platforms (User Request)
-    // We use push instead of pushUnique here because this acts as the "best effort" override for all extractors
-    ytDlpInfoArgs.push("--user-agent", DESKTOP_UA);
+    // User-Agent is already handled by configureAntiBlockingArgs
 
     ytDlpInfoArgs.push(videoUrl);
 
@@ -3770,7 +3769,18 @@ app.post("/get-qualities", async (req, res) => {
 
       let responseSent = false;
 
+      const fetchTimeout = setTimeout(() => {
+        if (responseSent) return;
+        responseSent = true;
+        console.error(`🔴 [Timeout] Qualities fetch for ${videoUrl} exceeded 25s. Killing process.`);
+        ytDlpProcess.kill('SIGKILL');
+        if (!res.headersSent) {
+          res.status(504).json({ error: "Video processing timed out. Please try again with a different format or URL." });
+        }
+      }, 25000);
+
       ytDlpProcess.on("close", async (code) => {
+        clearTimeout(fetchTimeout);
         if (responseSent) return;
         responseSent = true;
 
@@ -3857,9 +3867,9 @@ app.post("/get-qualities", async (req, res) => {
       });
 
       ytDlpProcess.on("error", async (error) => {
+        clearTimeout(fetchTimeout);
         if (responseSent) return;
-
-        // 1. Try API Fallback before failing
+        responseSent = true;
         const apiData = await fetchFromRapidApi(videoUrl);
         if (apiData) {
           responseSent = true;
