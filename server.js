@@ -936,8 +936,9 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       const metaTimeout = setTimeout(() => {
         child.kill('SIGKILL');
-        logger.warn("Worker metadata resolution timed out", { jobId });
-      }, 15000);
+        // Silent timeout: proceed with defaults, don't correct the user
+        // logger.debug("Worker metadata resolution timed out (Non-critical)", { jobId });
+      }, 30000); // Increased to 30s to match new patience levels
 
       child.stdout.on('data', d => stdout += d);
       await new Promise(r => child.on('close', () => {
