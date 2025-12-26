@@ -3817,15 +3817,19 @@ app.post("/get-qualities", async (req, res) => {
 
       let responseSent = false;
 
+      // YouTube legitimately takes longer (10-15s) especially for Shorts with cookie auth
+      const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
+      const timeoutDuration = isYouTube ? 20000 : 10000;
+
       const fetchTimeout = setTimeout(() => {
         if (responseSent) return;
         responseSent = true;
-        console.error(`🔴 [Timeout] Qualities fetch for ${videoUrl} exceeded 10s. Killing process.`);
+        console.error(`🔴 [Timeout] Qualities fetch for ${videoUrl} exceeded ${timeoutDuration / 1000}s. Killing process.`);
         ytDlpProcess.kill('SIGKILL');
         if (!res.headersSent) {
           res.status(504).json({ error: "Video processing timed out. Please try again with a different format or URL." });
         }
-      }, 10000);
+      }, timeoutDuration);
 
       ytDlpProcess.on("close", async (code) => {
         clearTimeout(fetchTimeout);
