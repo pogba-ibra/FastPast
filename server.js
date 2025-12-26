@@ -359,9 +359,27 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
     else if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      const ytPath = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
-      if (fs.existsSync(ytPath)) targetCookieFile = path.relative(__dirname, ytPath);
-      else targetCookieFile = "www.youtube.com_cookies.txt";
+      // YouTube: Broad search for dedicated cookies
+      const candidates = [
+        path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt'),
+        path.join(__dirname, 'www.youtube.com_cookies.txt'),
+        path.join(__dirname, 'youtube.com_cookies.txt'),
+        path.join(__dirname, 'downloads', 'youtube_cookies.txt')
+      ];
+
+      let found = false;
+      for (const p of candidates) {
+        if (fs.existsSync(p)) {
+          targetCookieFile = path.relative(__dirname, p);
+          console.log(`🎬 YouTube cookie candidate FOUND: ${p}`);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        console.warn(`⚠️ YouTube cookie file NOT FOUND in candidates. Bot check likely.`);
+        targetCookieFile = "www.youtube.com_cookies.txt"; // Default fallback (path resolution will fail gracefully)
+      }
     }
 
 
@@ -1007,6 +1025,8 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       ];
 
       configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
+
+      console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
       // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
       if (isStreaming) {
@@ -3741,9 +3761,9 @@ app.post("/get-qualities", async (req, res) => {
       const baseProcessArgs = ["-m", "yt_dlp", ...args];
 
       // Spawn unified process
-      // Spawn unified process
-      // const command = getPythonCommand(); // Handled by spawnYtDlp
-      logger.info("Spawning executeFetch", { args: baseProcessArgs });
+      logger.info("Spawning executeFetch with full args", { args: baseProcessArgs });
+      console.log(`[Diagnostic] yt-dlp args: ${baseProcessArgs.join(' ')}`);
+
       const ytDlpProcess = spawnYtDlp(baseProcessArgs, {
         stdio: ["pipe", "pipe", "pipe"],
       });
