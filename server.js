@@ -1084,8 +1084,9 @@ async function processVideoDownload(job) {
         args.push("--force-keyframes-at-cuts");
       }
 
-      // Download Accelerator (Default to TRUE for speed, unless explicitly disabled)
-      const useAccelerator = downloadAccelerator !== "false" && downloadAccelerator !== false;
+      // Download Accelerator (Force Enabled for Speed)
+      // We ignore the 'false' from the frontend to ensure 1080p merges are always fast.
+      const useAccelerator = true;
 
       if (useAccelerator) {
         args.push("--concurrent-fragments", "5");
