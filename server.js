@@ -388,9 +388,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Simplified YouTube Handling
-  // We strip back to basics: no aria2c, no player_client overrides, no sleep intervals.
-  // This avoids bot-check triggers and potential binary hanging.
+  // 7. YouTube Specific Configuration
+  // User Requested Args: Player Client + Impersonation
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     const downloaderIndex = args.indexOf("--downloader");
     if (downloaderIndex !== -1) {
@@ -400,6 +399,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     if (downloaderArgsIndex !== -1) {
       args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
     }
+
+    // Explicit User Request (~Dec 26)
+    pushUnique("--extractor-args", "youtube:player_client=web,android,ios,tv");
+    pushUnique("--impersonate", "chrome");
   }
 }
 
