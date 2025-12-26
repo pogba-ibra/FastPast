@@ -925,14 +925,24 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
   if (!skipMetadataFetch) {
     try {
+      console.log(`[Worker] Stage: Metadata Resolution (Job: ${jobId})`);
       const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist", "--flat-playlist"];
       configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath, false);
       infoArgs.push(url);
 
       const child = spawnYtDlp(infoArgs);
       let stdout = "";
+
+      const metaTimeout = setTimeout(() => {
+        child.kill('SIGKILL');
+        logger.warn("Worker metadata resolution timed out", { jobId });
+      }, 15000);
+
       child.stdout.on('data', d => stdout += d);
-      await new Promise(r => child.on('close', r));
+      await new Promise(r => child.on('close', () => {
+        clearTimeout(metaTimeout);
+        r();
+      }));
 
       const info = tryParseJson(stdout);
       if (info) {
@@ -1016,6 +1026,11 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
+      // STABILITY: Aggressive network guards
+      args.push("--socket-timeout", "30");
+      args.push("--abort-on-unavailable-fragment");
+
+      console.log(`[Worker] Stage: Post-Configuration (Job: ${jobId})`);
       console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
       // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
@@ -1157,8 +1172,10 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       });
 
       ytDlp.on("error", (err) => {
+        if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
         if (streamPipe) streamPipe.end();
-        io.emit('job_error', { jobId, error: err.message, url });
+        logger.error("videoWorker spawn error", { jobId, error: err.message });
+        io.emit('job_error', { jobId, error: `Process error: ${err.message}`, url });
         reject(err);
       });
 
