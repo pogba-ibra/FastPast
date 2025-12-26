@@ -358,6 +358,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
+    else if (url.includes("youtube.com") || url.includes("youtu.be")) targetCookieFile = "www.youtube.com_cookies.txt";
 
 
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
@@ -376,7 +377,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
   // 7. Rate Limiting and Anti-Blocking for YouTube
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
     // Standard extractor args for YouTube reliability
-    pushUnique("--extractor-args", "youtube:player_client=android,web,ios");
+    // Expanded player clients for better format discovery (web, android, ios, mweb, tv)
+    pushUnique("--extractor-args", "youtube:player_client=web,mweb,android,ios,tv");
 
     // Rate Limiting (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
     if (isDownload) {
@@ -894,7 +896,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
   const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
 
-  if (needsMerge && formatId) {
+  if (needsMerge && formatId && !isLegacyCombined) {
     finalFmt = `${formatId}+bestaudio/best`;
   }
 
