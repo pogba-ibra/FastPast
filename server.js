@@ -358,7 +358,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
-    else if (url.includes("youtube.com") || url.includes("youtu.be")) targetCookieFile = "www.youtube.com_cookies.txt";
+    else if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      const ytPath = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
+      if (fs.existsSync(ytPath)) targetCookieFile = path.relative(__dirname, ytPath);
+      else targetCookieFile = "www.youtube.com_cookies.txt";
+    }
 
 
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
