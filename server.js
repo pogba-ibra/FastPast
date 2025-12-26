@@ -375,8 +375,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
 
   // 7. Rate Limiting and Anti-Blocking for YouTube
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    // Impersonate iOS (Often less blocked/throttled than android/web)
-    pushUnique("--impersonate", "ios");
+    // Standard extractor args for YouTube reliability
     pushUnique("--extractor-args", "youtube:player_client=android,web,ios");
 
     // Rate Limiting (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
