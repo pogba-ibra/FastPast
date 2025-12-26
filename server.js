@@ -880,9 +880,23 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   let title = jobTitle || job.data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
 
-  // Robust Combined Format detection (Treat 18/22 as having audio)
-  const isLegacyCombined = formatId === "18" || formatId === "22" || formatId === "17";
+  // 1. Resolve Final Format and Merge requirements proactively
+  // We need this BEFORE initializing pipes to avoid deadlocks
+  const isLegacyCombined = String(formatId).trim() === "18" || String(formatId).trim() === "22" || String(formatId).trim() === "17";
   let hasAudio = (jobHasAudio === true || jobHasAudio === "true") || isLegacyCombined;
+
+  let finalFmt = formatId || format || 'best';
+
+  // Apply default selectors for generic keywords before checking for merges
+  if (!formatId && finalFmt === 'mp4') {
+    finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
+  }
+
+  const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
+
+  if (needsMerge && formatId) {
+    finalFmt = `${formatId}+bestaudio/best`;
+  }
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
@@ -951,9 +965,8 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     streamPipe = new PassThrough();
     isStreaming = true;
 
-    // Determine if we need disk fallback for DASH merging (DASH + Pipe = 0B failure)
-    const isDash = formatId && formatId.includes('+');
-    useDiskFallback = isDash;
+    // Determine if we need disk fallback for merging (Merge + Pipe = STALL)
+    useDiskFallback = String(finalFmt).includes('+');
 
     // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
     if (!useDiskFallback) {
@@ -1006,31 +1019,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       }
 
       if (formatId) {
-        // Use specific formatId. 
-        let finalFmt = formatId;
-
-        // STABILITY: Only add audio if we know the selected stream doesn't have it.
-        // If hasAudio is true, the stream is already combined.
-        const needsMerge = !hasAudio && !finalFmt.includes('+') && !finalFmt.includes('/');
-
-        if (needsMerge) {
-          finalFmt = `${finalFmt}+bestaudio/best`;
-        }
-
         args.push("-f", finalFmt);
-
-        // SILENT STABILITY: Any merge (+) paired with piping (-o -) causes stalls.
-        if (finalFmt.includes('+')) {
-          if (isStreaming && !useDiskFallback) {
-            useDiskFallback = true;
-            // Update output template to file path instead of "-"
-            tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
-            const outputIndex = args.indexOf("-o");
-            if (outputIndex !== -1) {
-              args[outputIndex + 1] = tempFilePath;
-            }
-          }
-        }
       }
       else if (format) {
         let finalFormat = format;
