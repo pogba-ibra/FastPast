@@ -882,7 +882,27 @@ if (!fs.existsSync(downloadDir)) {
 
 // Redis Connection Setup
 const redisConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  maxRetriesPerRequest: null
+  maxRetriesPerRequest: null,
+  lazyConnect: true, // Don't block startup on Redis connection
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
+
+// CRITICAL: Prevent process crash on Redis connection errors during startup
+redisConnection.on('error', (err) => {
+  logger.error('Redis connection error (non-fatal)', { error: err.message });
+  // Don't crash the process - let it retry in the background
+});
+
+redisConnection.on('connect', () => {
+  logger.info('Redis connected successfully');
+});
+
+// Attempt connection (non-blocking)
+redisConnection.connect().catch(err => {
+  logger.error('Initial Redis connection failed, will retry', { error: err.message });
 });
 
 // BullMQ Queue System
