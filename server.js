@@ -721,7 +721,7 @@ function buildFallbackQuality(height) {
   };
 }
 
-function selectVideoQualities(formats, isYouTube = false) {
+function selectVideoQualities(formats) {
   const heightMap = new Map();
   formats.forEach((format) => {
     if (!format || format.vcodec === "none" || !format.height) {
@@ -754,13 +754,6 @@ function selectVideoQualities(formats, isYouTube = false) {
       if (!entry) {
         return null;
       }
-
-      // STRICT FILTER: If isYouTube is true, ONLY allow combined formats (Instant Download)
-      // This hides 1080p+ split formats that cause server-side merges and browser timeouts.
-      if (isYouTube && !entry.combined) {
-        return null;
-      }
-
       if (entry.combined) {
         return {
           value: entry.combined.format.format_id,
@@ -912,13 +905,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
   // Apply default selectors for generic keywords before checking for merges
   if (!formatId && finalFmt === 'mp4') {
-    // INSTANT PLAYBACK FIX: For YouTube, prioritize "Best Combined" (720p/360p) to avoid merging delay
-    // For others, keep standard BestVideo+BestAudio
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      finalFmt = "b[ext=mp4]/best[ext=mp4]/best";
-    } else {
-      finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
-    }
+    finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
   }
 
   const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
@@ -1007,18 +994,15 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     // Determine if we need disk fallback for merging (Merge + Pipe = STALL)
     useDiskFallback = String(finalFmt).includes('+');
 
-    // Signal metadata resolution for instant headers in /stream (Deep Stability Fix)
-    const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
-    entry.title = title;
-    entry.filesize = filesize;
-    entry.metadataResolved = true;
-    entry.dlToken = job.data.dlToken;
-
-    // IF NOT merged, we can expose the pipe immediately
+    // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
     if (!useDiskFallback) {
+      const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
       entry.pipe = streamPipe;
+      entry.title = title;
+      entry.filesize = filesize;
+      entry.dlToken = job.data.dlToken;
+      activeStreams.set(jobId, entry);
     }
-    activeStreams.set(jobId, entry);
   }
 
   // 3. Cleanup redundant definitions and setup arguments
@@ -1079,12 +1063,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
         // Smarter default for standard formats when no specific ID is used
         if (finalFormat === 'mp4') {
-          // INSTANT PLAYBACK FIX: Re-apply priority for actual spawn arguments
-          if (url.includes("youtube.com") || url.includes("youtu.be")) {
-            args.push("-f", "b[ext=mp4]/best[ext=mp4]/best");
-          } else {
-            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
-          }
+          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
         } else if (finalFormat === 'mp3') {
           args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         } else {
@@ -1207,7 +1186,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   });
 }, {
   connection: redisConnection,
-  concurrency: 10,
+  concurrency: 20,
   lockDuration: 300000, // 5 minutes
   stalledInterval: 60000,
   maxStalledCount: 2
@@ -3636,7 +3615,7 @@ app.post("/get-qualities", async (req, res) => {
             `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
           );
 
-          qualities = selectVideoQualities(videoFormats, videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
+          qualities = selectVideoQualities(videoFormats);
 
           // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
           // Ensure capturedExtractions and its properties are checked
@@ -4104,28 +4083,21 @@ app.get("/stream/:jobId", async (req, res) => {
     checkCount++;
     const currentEntry = activeStreams.get(jobId);
 
-    if (!currentEntry) return;
-
-    // A. Handle Metadata (Deep Stability: Send headers immediately to prevent browser timeout)
-    if (currentEntry.metadataResolved && !currentEntry.headersSent) {
-      console.log(`📡 [Stream] Sending immediate headers for ${jobId} (Metadata resolved)`);
-      sendStreamHeaders();
-    }
-
-    // B. Handle Data Transmission
-    if (currentEntry.pipe) {
+    // Check if worker marked it ready (either pipe or filePath)
+    if (currentEntry && (currentEntry.pipe || currentEntry.filePath)) {
       clearInterval(interval);
-      sendStreamHeaders(); // Safety
-      currentEntry.pipe.pipe(res);
-    } else if (currentEntry.ready && currentEntry.filePath) {
-      clearInterval(interval);
-      sendStreamHeaders(); // Safety
 
-      // If we already sent headers via Step A, res.sendFile might conflict.
-      // We use createReadStream for total stability after manual header transmission.
-      const readStream = fs.createReadStream(currentEntry.filePath);
-      readStream.on('error', (err) => logger.error("Stream pipe error", { jobId, error: err.message }));
-      readStream.pipe(res);
+      if (currentEntry.filePath) {
+        // Serve using optimized res.sendFile
+        sendStreamHeaders();
+        res.sendFile(currentEntry.filePath, (err) => {
+          if (err) logger.error("res.sendFile error", { jobId, error: err.message });
+        });
+      } else if (currentEntry.pipe) {
+        // Serve via pipe
+        sendStreamHeaders();
+        currentEntry.pipe.pipe(res);
+      }
     } else if (checkCount > 1200) {
       clearInterval(interval);
       if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out. High-quality videos may take several minutes to process on the server." });
