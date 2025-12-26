@@ -4092,7 +4092,12 @@ app.get("/stream/:jobId", async (req, res) => {
         // Serve using optimized res.sendFile
         sendStreamHeaders();
         res.sendFile(currentEntry.filePath, (err) => {
-          if (err) logger.error("res.sendFile error", { jobId, error: err.message });
+          if (err) {
+            // EPIPE/ECONNABORTED = Client cancelled the download. Not a server error.
+            if (err.code !== 'EPIPE' && err.code !== 'ECONNABORTED') {
+              logger.error("res.sendFile error", { jobId, error: err.message });
+            }
+          }
         });
       } else if (currentEntry.pipe) {
         // Serve via pipe
