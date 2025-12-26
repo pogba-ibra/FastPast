@@ -1192,8 +1192,8 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   connection: redisConnection,
   concurrency: 20,
   lockDuration: 300000, // 5 minutes
-  stalledInterval: 60000,
-  maxStalledCount: 2
+  stalledInterval: 30000, // Check every 30s as requested
+  maxStalledCount: 10 // Allow 10 stalls before fail (User Request)
 });
 
 videoWorker.on('failed', (job, err) => {
