@@ -721,7 +721,7 @@ function buildFallbackQuality(height) {
   };
 }
 
-function selectVideoQualities(formats) {
+function selectVideoQualities(formats, isYouTube = false) {
   const heightMap = new Map();
   formats.forEach((format) => {
     if (!format || format.vcodec === "none" || !format.height) {
@@ -754,6 +754,13 @@ function selectVideoQualities(formats) {
       if (!entry) {
         return null;
       }
+
+      // STRICT FILTER: If isYouTube is true, ONLY allow combined formats (Instant Download)
+      // This hides 1080p+ split formats that cause server-side merges and browser timeouts.
+      if (isYouTube && !entry.combined) {
+        return null;
+      }
+
       if (entry.combined) {
         return {
           value: entry.combined.format.format_id,
@@ -3629,7 +3636,7 @@ app.post("/get-qualities", async (req, res) => {
             `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
           );
 
-          qualities = selectVideoQualities(videoFormats);
+          qualities = selectVideoQualities(videoFormats, videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be"));
 
           // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
           // Ensure capturedExtractions and its properties are checked
