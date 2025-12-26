@@ -358,7 +358,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       // Use fresh YouTube cookies from downloads folder
       const ytCookiePath = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
       if (fs.existsSync(ytCookiePath)) {
-        targetCookieFile = path.relative(__dirname, ytCookiePath);
+        targetCookieFile = path.join('downloads', 'www.youtube.com_cookies.txt');
       } else {
         targetCookieFile = "www.youtube.com_cookies.txt";
       }
