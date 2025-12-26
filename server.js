@@ -34,8 +34,6 @@ console.log("Starting Server...", { platform: process.platform, arch: process.ar
 
 // In-memory store for zip jobs
 // Structure: { [id]: { status: 'pending'|'processing'|'completed'|'failed', progress: 0, filePath: '', error: '' } }
-
-
 const zipJobs = new Map();
 const qualitiesCache = new Map();
 
@@ -354,15 +352,6 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       else if (fs.existsSync(v2)) targetCookieFile = path.relative(__dirname, v2);
       else targetCookieFile = "www.facebook.com_cookies.txt";
     }
-    else if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // Use fresh YouTube cookies from downloads folder
-      const ytCookiePath = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
-      if (fs.existsSync(ytCookiePath)) {
-        targetCookieFile = path.join('downloads', 'www.youtube.com_cookies.txt');
-      } else {
-        targetCookieFile = "www.youtube.com_cookies.txt";
-      }
-    }
     else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
     else if (url.includes("threads.net") || url.includes("threads.com")) targetCookieFile = "www.instagram.com_cookies.txt"; // Threads uses Instagram cookies
     else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
@@ -371,14 +360,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
 
-
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
-
-    // Debug: Log what we're checking for YouTube
-    if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      console.log(`🔍 YouTube cookie check: targetCookieFile="${targetCookieFile}", cookiesPath="${cookiesPath}", exists=${fs.existsSync(cookiesPath)}`);
-    }
-
     if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
     } else {
@@ -391,17 +373,12 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting and Anti-Blocking for YouTube
+  // 7. Rate Limiting for YouTube (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    // Impersonate iOS (Often less blocked/throttled than android/web)
-    pushUnique("--impersonate", "ios");
-    pushUnique("--extractor-args", "youtube:player_client=android,web,ios");
-
-    // Rate Limiting (Avoid IP blocks) - ONLY for downloads
     if (isDownload) {
-      pushUnique("--min-sleep-interval", "2");
-      pushUnique("--max-sleep-interval", "5");
-      pushUnique("--sleep-requests", "1"); // Avoid rate limits between fragments
+      pushUnique("--min-sleep-interval", "5");
+      pushUnique("--max-sleep-interval", "10");
+      pushUnique("--sleep-requests", "1");
     }
   }
 }
@@ -1003,9 +980,10 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
       configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
-      // CRITICAL: Disable aria2c for streaming/merging to prevent stalls
-      if (isStreaming && (url.includes("youtube.com") || url.includes("youtu.be"))) {
-        // Use internal downloader for YouTube streaming to avoid pipe issues
+      // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
+      if (isStreaming) {
+        // External downloaders like aria2c often hang when outputting to stdout,
+        // especially when yt-dlp needs to merge streams.
         const downloaderIndex = args.indexOf("--downloader");
         if (downloaderIndex !== -1) {
           args.splice(downloaderIndex, 2); // Remove --downloader aria2c
@@ -1024,21 +1002,15 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         // Use specific formatId. 
         let finalFmt = formatId;
 
-        // Optimization: Only add audio if we know the selected video-only stream needs it.
-        // If hasAudio is true, the stream already has audio (combined) or it's a special multi-format string already.
-        const isCombined = finalFmt.includes('+') || finalFmt.includes('/') || hasAudio;
+        // STABILITY: Only add audio if we know the selected stream doesn't have it.
+        // If hasAudio is true, the stream is already combined.
+        const needsMerge = !hasAudio && !finalFmt.includes('+') && !finalFmt.includes('/');
 
-        if (!isCombined) {
+        if (needsMerge) {
           finalFmt = `${finalFmt}+bestaudio/best`;
         }
 
         args.push("-f", finalFmt);
-
-        // DASH merging + Pipe = stalls. 
-        // Force disk fallback if we added audio or it's a manual merge.
-        if (finalFmt.includes('+')) {
-          useDiskFallback = true;
-        }
       }
       else if (format) {
         let finalFormat = format;
@@ -1049,11 +1021,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
         // Smarter default for standard formats when no specific ID is used
         if (finalFormat === 'mp4') {
-          if (url.includes("youtube.com") || url.includes("youtu.be")) {
-            args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
-          } else {
-            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
-          }
+          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
         } else if (finalFormat === 'mp3') {
           args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         } else {
@@ -1061,11 +1029,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         }
       } else {
         // Fallback: prefer MP4 for web compatibility
-        if (url.includes("youtube.com") || url.includes("youtu.be")) {
-          args.push("-f", "bestvideo+bestaudio/best");
-        } else {
-          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
-        }
+        args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
       }
 
       args.push("--merge-output-format", "mp4");
@@ -3854,12 +3818,10 @@ app.post("/get-qualities", async (req, res) => {
           });
         }
 
-
         // Cache successful result (fixes "Double Fetch" performance)
         qualitiesCache.set(cacheKey, { json: stdout, ts: Date.now() });
 
         processVideoInfo(stdout, stderr);
-
       });
 
       ytDlpProcess.on("error", async (error) => {
