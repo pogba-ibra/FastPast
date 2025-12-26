@@ -892,7 +892,8 @@ const videoQueue = new BullQueue('video-downloads', { connection: redisConnectio
 const activeStreams = new Map();
 
 // Worker for processing video downloads
-const videoWorker = new BullWorker('video-downloads', async (job) => {
+// Standalone function to process video downloads (Can be called by Worker OR Direct)
+async function processVideoDownload(job) {
   const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
   let title = jobTitle || job.data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
@@ -1189,6 +1190,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       reject(err);
     }
   });
+
+}
+
+// Original Worker just delegates to the function
+const videoWorker = new BullWorker('video-downloads', async (job) => {
+  return processVideoDownload(job);
 }, {
   connection: redisConnection,
   concurrency: 20,
@@ -4007,26 +4014,56 @@ app.post("/download", async (req, res) => {
 
   try {
     const jobId = uuidv4();
-    await videoQueue.add('standard-download', {
+    const jobData = {
       jobId,
       url,
       format: fmt,
-      formatId: formatSelector, // Pass specific format ID (e.g., "137")
+      formatId: formatSelector,
       qualityLabel: qualityLabel || qual,
       startTime,
       endTime,
       title: req.body.title || 'video',
       mode: 'stream',
-      dlToken: req.body.dlToken, // Pass token to job
-      filesize: req.body.filesize, // Optimization: pass filesize if already known from qualities fetch
-      hasAudio: req.body.hasAudio, // Optimization: pass audio info
+      dlToken: req.body.dlToken,
+      filesize: req.body.filesize,
+      hasAudio: req.body.hasAudio,
       userAgent: req.headers['user-agent'],
       _freshCookiePath: req.body._freshCookiePath,
-      downloadAccelerator: req.body.downloadAccelerator === "true"
-    }, {
+      downloadAccelerator: req.body.downloadAccelerator, // Pass raw value so worker handles default-true logic
+    };
+
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
+    if (isYouTube) {
+      // QUEUE BYPASS: Execute immediately (Infinite Concurrency for YouTube)
+      console.log(`[Queue Bypass] Starting Direct YouTube Download for ${jobId}`);
+
+      const mockJob = {
+        id: jobId,
+        data: jobData,
+        updateProgress: async () => {
+          // No-op for direct execution (Redis not involved) 
+        }
+      };
+
+      // Executor: Fire & Forget
+      processVideoDownload(mockJob).catch(err => {
+        logger.error(`Direct YouTube download failed`, { jobId, error: err.message });
+        io.emit('job_error', { jobId, error: err.message, url });
+      });
+
+      return res.json({
+        status: 'active', // Immediately active
+        jobId: jobId,
+        url: url
+      });
+    }
+
+    // Standard Queue for other platforms (Instagram, etc.)
+    await videoQueue.add('standard-download', jobData, {
       jobId: jobId,
-      removeOnComplete: { age: 3600, count: 100 }, // Keep 100 jobs or 1 hour
-      removeOnFail: { age: 24 * 3600 } // Keep failed jobs for 24 hours
+      removeOnComplete: { age: 3600, count: 100 },
+      removeOnFail: { age: 24 * 3600 }
     });
 
     res.json({
