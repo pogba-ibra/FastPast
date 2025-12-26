@@ -894,7 +894,7 @@ const activeStreams = new Map();
 // Worker for processing video downloads
 // Standalone function to process video downloads (Can be called by Worker OR Direct)
 async function processVideoDownload(job) {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
   let title = jobTitle || job.data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
 
