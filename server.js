@@ -957,9 +957,9 @@ async function processVideoDownload(job) {
 
       const metaTimeout = setTimeout(() => {
         child.kill('SIGKILL');
-        // Silent timeout: proceed with defaults, don't correct the user
+        // Silent timeout: proceed with defaults, don't spam logs
         // logger.debug("Worker metadata resolution timed out (Non-critical)", { jobId });
-      }, 30000); // Increased to 30s to match new patience levels
+      }, 10000); // 10s timeout for responsive behavior
 
       child.stdout.on('data', d => stdout += d);
       await new Promise(r => child.on('close', () => {
@@ -3822,12 +3822,12 @@ app.post("/get-qualities", async (req, res) => {
       const fetchTimeout = setTimeout(() => {
         if (responseSent) return;
         responseSent = true;
-        console.error(`🔴 [Timeout] Qualities fetch for ${videoUrl} exceeded 25s. Killing process.`);
+        console.error(`🔴 [Timeout] Qualities fetch for ${videoUrl} exceeded 10s. Killing process.`);
         ytDlpProcess.kill('SIGKILL');
         if (!res.headersSent) {
           res.status(504).json({ error: "Video processing timed out. Please try again with a different format or URL." });
         }
-      }, 25000);
+      }, 10000);
 
       ytDlpProcess.on("close", async (code) => {
         clearTimeout(fetchTimeout);
