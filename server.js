@@ -354,6 +354,15 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       else if (fs.existsSync(v2)) targetCookieFile = path.relative(__dirname, v2);
       else targetCookieFile = "www.facebook.com_cookies.txt";
     }
+    else if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      // Use fresh YouTube cookies from downloads folder
+      const ytCookiePath = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
+      if (fs.existsSync(ytCookiePath)) {
+        targetCookieFile = path.relative(__dirname, ytCookiePath);
+      } else {
+        targetCookieFile = "www.youtube.com_cookies.txt";
+      }
+    }
     else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
     else if (url.includes("threads.net") || url.includes("threads.com")) targetCookieFile = "www.instagram.com_cookies.txt"; // Threads uses Instagram cookies
     else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
