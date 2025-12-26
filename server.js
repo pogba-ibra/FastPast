@@ -391,10 +391,17 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting for YouTube (Avoid IP blocks) - ONLY for downloads
-  if (isDownload && (url.includes("youtube.com") || url.includes("youtu.be"))) {
-    pushUnique("--min-sleep-interval", "2");
-    pushUnique("--max-sleep-interval", "5");
+  // 7. Rate Limiting and Anti-Blocking for YouTube
+  if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    // Aggressively impersonate Android (More reliable for mobile-first video discovery)
+    pushUnique("--impersonate", "android");
+    pushUnique("--extractor-args", "youtube:player_client=android,web");
+
+    // Rate Limiting (Avoid IP blocks) - ONLY for downloads
+    if (isDownload) {
+      pushUnique("--min-sleep-interval", "2");
+      pushUnique("--max-sleep-interval", "5");
+    }
   }
 }
 
@@ -1041,7 +1048,11 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
         // Smarter default for standard formats when no specific ID is used
         if (finalFormat === 'mp4') {
-          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+          if (url.includes("youtube.com") || url.includes("youtu.be")) {
+            args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+          } else {
+            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+          }
         } else if (finalFormat === 'mp3') {
           args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         } else {
@@ -1049,7 +1060,11 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         }
       } else {
         // Fallback: prefer MP4 for web compatibility
-        args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          args.push("-f", "bestvideo+bestaudio/best");
+        } else {
+          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
+        }
       }
 
       args.push("--merge-output-format", "mp4");
