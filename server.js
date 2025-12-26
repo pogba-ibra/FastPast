@@ -4253,7 +4253,7 @@ process.on('SIGTERM', () => cleanupAndExit('SIGTERM'));
 process.on('SIGINT', () => cleanupAndExit('SIGINT'));
 
 // CRITICAL: Catch unhandled promise rejections to prevent process crashes during deployment
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled Promise Rejection (non-fatal)', {
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined
