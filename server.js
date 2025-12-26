@@ -1014,8 +1014,11 @@ async function processVideoDownload(job) {
     streamPipe = new PassThrough();
     isStreaming = true;
 
-    // Determine if we need disk fallback for merging (Merge + Pipe = STALL)
-    useDiskFallback = String(finalFmt).includes('+');
+    // Determine if we need disk fallback (conditions where streaming pipes cause deadlocks):
+    // 1. Merging multiple formats (e.g., 137+140) - server-side merge blocks pipe
+    // 2. Video trimming (start/end times) - must download full video first, cut, then serve
+    const hasTrimming = start && end;
+    useDiskFallback = String(finalFmt).includes('+') || hasTrimming;
 
     // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
     if (!useDiskFallback) {
