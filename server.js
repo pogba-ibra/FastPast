@@ -345,40 +345,40 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     if (url.includes("vimeo.com")) targetCookieFile = "vimeo.com_cookies.txt";
     else if (url.includes("vk.com") || url.includes("vk.ru")) targetCookieFile = "vkvideo.ru_cookies.txt";
     else if (url.includes("facebook.com") || url.includes("fb.watch")) {
-      // User Request: Prioritize v1 then v2 from downloads folder
+      // Prioritize root, then downloads folder (v1/v2 user request legacy)
+      const rootFB = path.join(__dirname, 'www.facebook.com_cookies.txt');
       const v1 = path.join(__dirname, 'downloads', 'www.facebook.com_cookies v1.txt');
       const v2 = path.join(__dirname, 'downloads', 'www.facebook.com_cookies v2.txt');
-      if (fs.existsSync(v1)) targetCookieFile = path.relative(__dirname, v1);
+
+      if (fs.existsSync(rootFB)) targetCookieFile = "www.facebook.com_cookies.txt";
+      else if (fs.existsSync(v1)) targetCookieFile = path.relative(__dirname, v1);
       else if (fs.existsSync(v2)) targetCookieFile = path.relative(__dirname, v2);
       else targetCookieFile = "www.facebook.com_cookies.txt";
     }
     else if (url.includes("instagram.com")) targetCookieFile = "www.instagram.com_cookies.txt";
     else if (url.includes("threads.net") || url.includes("threads.com")) targetCookieFile = "www.instagram.com_cookies.txt"; // Threads uses Instagram cookies
     else if (url.includes("pinterest.com")) targetCookieFile = "www.pinterest.com_cookies.txt";
-    else if (url.includes("reddit.com")) targetCookieFile = "www.reddit.com_cookies.txt";
+    else if (url.includes("reddit.com")) {
+      const rootReddit = path.join(__dirname, 'www.reddit.com_cookies.txt');
+      if (fs.existsSync(rootReddit)) targetCookieFile = "www.reddit.com_cookies.txt";
+      else targetCookieFile = path.join('downloads', 'www.reddit.com_cookies.txt');
+    }
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
     else if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // YouTube: Broad search for dedicated cookies
-      const candidates = [
-        path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt'),
-        path.join(__dirname, 'www.youtube.com_cookies.txt'),
-        path.join(__dirname, 'youtube.com_cookies.txt'),
-        path.join(__dirname, 'downloads', 'youtube_cookies.txt')
-      ];
+      // YouTube: Prioritize root (like other platforms), then downloads fallback
+      const rootYT = path.join(__dirname, 'www.youtube.com_cookies.txt');
+      const dlYT = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
 
-      let found = false;
-      for (const p of candidates) {
-        if (fs.existsSync(p)) {
-          targetCookieFile = path.relative(__dirname, p);
-          console.log(`🎬 YouTube cookie candidate FOUND: ${p}`);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        console.warn(`⚠️ YouTube cookie file NOT FOUND in candidates. Bot check likely.`);
-        targetCookieFile = "www.youtube.com_cookies.txt"; // Default fallback (path resolution will fail gracefully)
+      if (fs.existsSync(rootYT)) {
+        targetCookieFile = "www.youtube.com_cookies.txt";
+        console.log(`🎬 YouTube cookie FOUND in ROOT: ${rootYT}`);
+      } else if (fs.existsSync(dlYT)) {
+        targetCookieFile = path.relative(__dirname, dlYT);
+        console.log(`🎬 YouTube cookie FOUND in DOWNLOADS: ${dlYT}`);
+      } else {
+        console.warn(`⚠️ YouTube cookie NOT FOUND in expected locations. Bot check likely.`);
+        targetCookieFile = "www.youtube.com_cookies.txt"; // Default fallback
       }
     }
 
