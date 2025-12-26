@@ -365,9 +365,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
     } else {
-      // Fallback to standard cookies.txt if platform-specific one is missing
+      // Fallback to standard cookies.txt if platform-specific one is missing (EXCLUDING YouTube)
       const fallbackPath = path.join(__dirname, 'cookies.txt');
-      if (fs.existsSync(fallbackPath) && targetCookieFile !== 'cookies.txt') {
+      const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
+      if (fs.existsSync(fallbackPath) && targetCookieFile !== 'cookies.txt' && !isYouTube) {
         console.log(`🍪 ${targetCookieFile} missing, falling back to cookies.txt`);
         pushUnique("--cookies", fallbackPath);
       }
