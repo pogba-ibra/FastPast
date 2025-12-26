@@ -905,7 +905,13 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
   // Apply default selectors for generic keywords before checking for merges
   if (!formatId && finalFmt === 'mp4') {
-    finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
+    // INSTANT PLAYBACK FIX: For YouTube, prioritize "Best Combined" (720p/360p) to avoid merging delay
+    // For others, keep standard BestVideo+BestAudio
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      finalFmt = "b[ext=mp4]/best[ext=mp4]/best";
+    } else {
+      finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
+    }
   }
 
   const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
@@ -1066,7 +1072,12 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
 
         // Smarter default for standard formats when no specific ID is used
         if (finalFormat === 'mp4') {
-          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+          // INSTANT PLAYBACK FIX: Re-apply priority for actual spawn arguments
+          if (url.includes("youtube.com") || url.includes("youtu.be")) {
+            args.push("-f", "b[ext=mp4]/best[ext=mp4]/best");
+          } else {
+            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+          }
         } else if (finalFormat === 'mp3') {
           args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
         } else {
@@ -4102,7 +4113,7 @@ app.get("/stream/:jobId", async (req, res) => {
     } else if (currentEntry.ready && currentEntry.filePath) {
       clearInterval(interval);
       sendStreamHeaders(); // Safety
-      
+
       // If we already sent headers via Step A, res.sendFile might conflict.
       // We use createReadStream for total stability after manual header transmission.
       const readStream = fs.createReadStream(currentEntry.filePath);
