@@ -371,7 +371,14 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
 
 
+
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
+
+    // Debug: Log what we're checking for YouTube
+    if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      console.log(`🔍 YouTube cookie check: targetCookieFile="${targetCookieFile}", cookiesPath="${cookiesPath}", exists=${fs.existsSync(cookiesPath)}`);
+    }
+
     if (fs.existsSync(cookiesPath)) {
       pushUnique("--cookies", cookiesPath);
     } else {
