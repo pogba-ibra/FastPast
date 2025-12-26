@@ -400,9 +400,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
     }
 
-    // Explicit User Request (~Dec 26)
-    pushUnique("--extractor-args", "youtube:player_client=web,android,ios,tv");
-    pushUnique("--impersonate", "chrome");
+    // Simplified YouTube (No extra args, just clean cookies and no aria2c)
   }
 }
 
