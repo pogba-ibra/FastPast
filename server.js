@@ -994,15 +994,18 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
     // Determine if we need disk fallback for merging (Merge + Pipe = STALL)
     useDiskFallback = String(finalFmt).includes('+');
 
-    // IF NOT merged, we can expose the pipe immediately with the metadata-resolved (approximate) filesize
+    // Signal metadata resolution for instant headers in /stream (Deep Stability Fix)
+    const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
+    entry.title = title;
+    entry.filesize = filesize;
+    entry.metadataResolved = true;
+    entry.dlToken = job.data.dlToken;
+
+    // IF NOT merged, we can expose the pipe immediately
     if (!useDiskFallback) {
-      const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
       entry.pipe = streamPipe;
-      entry.title = title;
-      entry.filesize = filesize;
-      entry.dlToken = job.data.dlToken;
-      activeStreams.set(jobId, entry);
     }
+    activeStreams.set(jobId, entry);
   }
 
   // 3. Cleanup redundant definitions and setup arguments
@@ -1186,7 +1189,7 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   });
 }, {
   connection: redisConnection,
-  concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4,
+  concurrency: 10,
   lockDuration: 300000, // 5 minutes
   stalledInterval: 60000,
   maxStalledCount: 2
@@ -4083,21 +4086,28 @@ app.get("/stream/:jobId", async (req, res) => {
     checkCount++;
     const currentEntry = activeStreams.get(jobId);
 
-    // Check if worker marked it ready (either pipe or filePath)
-    if (currentEntry && (currentEntry.pipe || currentEntry.filePath)) {
-      clearInterval(interval);
+    if (!currentEntry) return;
 
-      if (currentEntry.filePath) {
-        // Serve using optimized res.sendFile
-        sendStreamHeaders();
-        res.sendFile(currentEntry.filePath, (err) => {
-          if (err) logger.error("res.sendFile error", { jobId, error: err.message });
-        });
-      } else if (currentEntry.pipe) {
-        // Serve via pipe
-        sendStreamHeaders();
-        currentEntry.pipe.pipe(res);
-      }
+    // A. Handle Metadata (Deep Stability: Send headers immediately to prevent browser timeout)
+    if (currentEntry.metadataResolved && !currentEntry.headersSent) {
+      console.log(`📡 [Stream] Sending immediate headers for ${jobId} (Metadata resolved)`);
+      sendStreamHeaders();
+    }
+
+    // B. Handle Data Transmission
+    if (currentEntry.pipe) {
+      clearInterval(interval);
+      sendStreamHeaders(); // Safety
+      currentEntry.pipe.pipe(res);
+    } else if (currentEntry.ready && currentEntry.filePath) {
+      clearInterval(interval);
+      sendStreamHeaders(); // Safety
+      
+      // If we already sent headers via Step A, res.sendFile might conflict.
+      // We use createReadStream for total stability after manual header transmission.
+      const readStream = fs.createReadStream(currentEntry.filePath);
+      readStream.on('error', (err) => logger.error("Stream pipe error", { jobId, error: err.message }));
+      readStream.pipe(res);
     } else if (checkCount > 1200) {
       clearInterval(interval);
       if (!res.headersSent) res.status(404).json({ error: "Stream initialization timed out. High-quality videos may take several minutes to process on the server." });
