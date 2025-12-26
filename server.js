@@ -3603,9 +3603,7 @@ app.post("/get-qualities", async (req, res) => {
 
     // Keep platform-specific headers only if NOT covered by configureAntiBlockingArgs
     // or if they are supplemental referring headers
-    if (videoUrl.includes("shorts")) {
-      ytDlpInfoArgs.push("--add-header", "Referer:https://www.youtube.com/");
-    }
+    // NOTE: YouTube Referer removed - it was triggering anti-bot and causing 10s+ hangs
 
     if (videoUrl.includes("instagram.com")) {
       ytDlpInfoArgs.push("--add-header", "Referer:https://www.instagram.com/");
