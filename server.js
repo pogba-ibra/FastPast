@@ -373,12 +373,17 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting for YouTube (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
+  // 7. Rate Limiting and Anti-Blocking for YouTube
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
+    // Impersonate iOS (Often less blocked/throttled than android/web)
+    pushUnique("--impersonate", "ios");
+    pushUnique("--extractor-args", "youtube:player_client=android,web,ios");
+
+    // Rate Limiting (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
     if (isDownload) {
-      pushUnique("--min-sleep-interval", "5");
-      pushUnique("--max-sleep-interval", "10");
-      pushUnique("--sleep-requests", "1");
+      pushUnique("--min-sleep-interval", "2");
+      pushUnique("--max-sleep-interval", "4");
+      pushUnique("--sleep-requests", "1"); // Avoid rate limits between fragments
     }
   }
 }
@@ -1140,7 +1145,13 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
       reject(err);
     }
   });
-}, { connection: redisConnection, concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4 });
+}, {
+  connection: redisConnection,
+  concurrency: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS) || 4,
+  lockDuration: 300000, // 5 minutes
+  stalledInterval: 60000,
+  maxStalledCount: 2
+});
 
 videoWorker.on('failed', (job, err) => {
   logger.error(`Job ${job.id} failed: ${err.message}`);
