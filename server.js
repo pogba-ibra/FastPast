@@ -366,25 +366,12 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
     else if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // YouTube: Prioritize root (like other platforms), then downloads fallback
-      const rootYT = path.join(__dirname, 'www.youtube.com_cookies.txt');
-      const dlYT = path.join(__dirname, 'downloads', 'www.youtube.com_cookies.txt');
-
-      if (fs.existsSync(rootYT)) {
-        targetCookieFile = "www.youtube.com_cookies.txt";
-        console.log(`🎬 YouTube cookie FOUND in ROOT: ${rootYT}`);
-      } else if (fs.existsSync(dlYT)) {
-        targetCookieFile = path.relative(__dirname, dlYT);
-        console.log(`🎬 YouTube cookie FOUND in DOWNLOADS: ${dlYT}`);
-      } else {
-        console.warn(`⚠️ YouTube cookie NOT FOUND in expected locations. Bot check likely.`);
-        targetCookieFile = "www.youtube.com_cookies.txt"; // Default fallback
-      }
+      targetCookieFile = "www.youtube.com_cookies.txt";
     }
-
 
     const cookiesPath = path.isAbsolute(targetCookieFile) ? targetCookieFile : path.resolve(__dirname, targetCookieFile);
     if (fs.existsSync(cookiesPath)) {
+      console.log(`🎬 Dedicated cookies FOUND: ${cookiesPath}`);
       pushUnique("--cookies", cookiesPath);
     } else {
       // Fallback to standard cookies.txt if platform-specific one is missing (EXCLUDING YouTube)
@@ -394,6 +381,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       if (fs.existsSync(fallbackPath) && targetCookieFile !== 'cookies.txt' && !isYouTube) {
         console.log(`🍪 ${targetCookieFile} missing, falling back to cookies.txt`);
         pushUnique("--cookies", fallbackPath);
+      } else if (isYouTube) {
+        console.warn(`⚠️ YouTube cookie file NOT FOUND at: ${cookiesPath}. Bot check likely.`);
       }
     }
   }
