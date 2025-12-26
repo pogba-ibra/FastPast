@@ -34,7 +34,10 @@ console.log("Starting Server...", { platform: process.platform, arch: process.ar
 
 // In-memory store for zip jobs
 // Structure: { [id]: { status: 'pending'|'processing'|'completed'|'failed', progress: 0, filePath: '', error: '' } }
+
+
 const zipJobs = new Map();
+const qualitiesCache = new Map();
 
 // Helper to get platform-specific python command
 const getPythonCommand = () => {
@@ -372,10 +375,10 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting for YouTube (Avoid IP blocks)
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    pushUnique("--min-sleep-interval", "5");
-    pushUnique("--max-sleep-interval", "10");
+  // 7. Rate Limiting for YouTube (Avoid IP blocks) - ONLY for downloads
+  if (isDownload && (url.includes("youtube.com") || url.includes("youtu.be"))) {
+    pushUnique("--min-sleep-interval", "2");
+    pushUnique("--max-sleep-interval", "5");
   }
 }
 
@@ -3676,6 +3679,16 @@ app.post("/get-qualities", async (req, res) => {
       }
     };
 
+    // SHORT-TERM CACHE HIT CHECK (Fixes "Double Fetch" performance)
+    const cacheKey = videoUrl;
+    if (qualitiesCache.has(cacheKey)) {
+      const entry = qualitiesCache.get(cacheKey);
+      if (Date.now() - entry.ts < 10000) { // 10s TTL
+        logger.info(`⚡ RAM Cache Hit for ${videoUrl}`);
+        return processVideoInfo(entry.json, "");
+      }
+    }
+
     // Helper to execute yt-dlp with retry capability
     const executeFetch = (args, isRetry = false) => {
       const baseProcessArgs = ["-m", "yt_dlp", ...args];
@@ -3781,7 +3794,12 @@ app.post("/get-qualities", async (req, res) => {
           });
         }
 
+
+        // Cache successful result (fixes "Double Fetch" performance)
+        qualitiesCache.set(cacheKey, { json: stdout, ts: Date.now() });
+
         processVideoInfo(stdout, stderr);
+
       });
 
       ytDlpProcess.on("error", async (error) => {
