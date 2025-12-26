@@ -393,14 +393,15 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
 
   // 7. Rate Limiting and Anti-Blocking for YouTube
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    // Aggressively impersonate Android (More reliable for mobile-first video discovery)
-    pushUnique("--impersonate", "android");
-    pushUnique("--extractor-args", "youtube:player_client=android,web");
+    // Impersonate iOS (Often less blocked/throttled than android/web)
+    pushUnique("--impersonate", "ios");
+    pushUnique("--extractor-args", "youtube:player_client=android,web,ios");
 
     // Rate Limiting (Avoid IP blocks) - ONLY for downloads
     if (isDownload) {
       pushUnique("--min-sleep-interval", "2");
       pushUnique("--max-sleep-interval", "5");
+      pushUnique("--sleep-requests", "1"); // Avoid rate limits between fragments
     }
   }
 }
