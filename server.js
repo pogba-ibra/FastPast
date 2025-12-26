@@ -879,7 +879,10 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
   const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, downloadAccelerator, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
   let title = jobTitle || job.data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
-  let hasAudio = jobHasAudio === true || jobHasAudio === "true";
+
+  // Robust Combined Format detection (Treat 18/22 as having audio)
+  const isLegacyCombined = formatId === "18" || formatId === "22" || formatId === "17";
+  let hasAudio = (jobHasAudio === true || jobHasAudio === "true") || isLegacyCombined;
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
   console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
@@ -1015,6 +1018,19 @@ const videoWorker = new BullWorker('video-downloads', async (job) => {
         }
 
         args.push("-f", finalFmt);
+
+        // SILENT STABILITY: Any merge (+) paired with piping (-o -) causes stalls.
+        if (finalFmt.includes('+')) {
+          if (isStreaming && !useDiskFallback) {
+            useDiskFallback = true;
+            // Update output template to file path instead of "-"
+            tempFilePath = path.join(downloadDir, `stream_temp_${jobId}_${Date.now()}.mp4`);
+            const outputIndex = args.indexOf("-o");
+            if (outputIndex !== -1) {
+              args[outputIndex + 1] = tempFilePath;
+            }
+          }
+        }
       }
       else if (format) {
         let finalFormat = format;
