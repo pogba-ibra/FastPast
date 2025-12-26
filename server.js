@@ -388,17 +388,17 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
   }
 
-  // 7. Rate Limiting and Anti-Blocking for YouTube
+  // 7. Simplified YouTube Handling
+  // We strip back to basics: no aria2c, no player_client overrides, no sleep intervals.
+  // This avoids bot-check triggers and potential binary hanging.
   if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    // Standard extractor args for YouTube reliability
-    // Expanded player clients for better format discovery (web, android, ios, mweb, tv)
-    pushUnique("--extractor-args", "youtube:player_client=web,mweb,android,ios,tv");
-
-    // Rate Limiting (Avoid IP blocks) - ONLY for downloads to preserve metadata speed
-    if (isDownload) {
-      pushUnique("--min-sleep-interval", "2");
-      pushUnique("--max-sleep-interval", "4");
-      pushUnique("--sleep-requests", "1"); // Avoid rate limits between fragments
+    const downloaderIndex = args.indexOf("--downloader");
+    if (downloaderIndex !== -1) {
+      args.splice(downloaderIndex, 2); // Remove --downloader aria2c
+    }
+    const downloaderArgsIndex = args.indexOf("--downloader-args");
+    if (downloaderArgsIndex !== -1) {
+      args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
     }
   }
 }
