@@ -691,8 +691,7 @@ function buildFallbackQuality(height) {
   };
 }
 
-function selectVideoQualities(formats, url = "") {
-  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+function selectVideoQualities(formats) {
   const heightMap = new Map();
   formats.forEach((format) => {
     if (!format || format.vcodec === "none" || !format.height) {
@@ -707,7 +706,7 @@ function selectVideoQualities(formats, url = "") {
       if (!entry.combined || scored.score > entry.combined.score) {
         entry.combined = scored;
       }
-    } else if (!isYouTube) {
+    } else {
       if (!entry.videoOnly || scored.score > entry.videoOnly.score) {
         entry.videoOnly = scored;
       }
@@ -896,16 +895,9 @@ async function processVideoDownload(job) {
 
   let finalFmt = formatId || format || 'best';
 
-  // OPTIMIZATION: If video is long (>10 mins) and not trimming, skip merge by using best combined format
-
   // Apply default selectors for generic keywords before checking for merges
-  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
   if (!formatId && finalFmt === 'mp4') {
-    if (isYouTube) {
-      finalFmt = "best[ext=mp4]/best";
-    } else {
-      finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
-    }
+    finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
   }
 
   const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
@@ -1033,7 +1025,6 @@ async function processVideoDownload(job) {
     // Helper function for regular server-side download
     function beginRegularDownload() {
       try {
-        const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
         let args = [
           "-o", outputTemplate,
           "--no-check-certificate",
@@ -1042,16 +1033,12 @@ async function processVideoDownload(job) {
           "--newline"
         ];
 
-        if (!isYouTube) {
-          args.push("--ffmpeg-location", "/usr/local/bin/ffmpeg");
-        }
+        args.push("--ffmpeg-location", "/usr/local/bin/ffmpeg");
 
         configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
-        if (!isYouTube) {
-          // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming for other platforms
-          args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
-        }
+        // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming
+        args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
 
         // STABILITY: Aggressive network guards
         args.push("--socket-timeout", "30");
@@ -1120,7 +1107,7 @@ async function processVideoDownload(job) {
           args.push("--merge-output-format", "mp4");
         }
 
-        if (start && end && !isYouTube) {
+        if (start && end) {
           args.push("--download-sections", `*${start}-${end}`);
           args.push("--force-keyframes-at-cuts");
         }
