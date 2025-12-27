@@ -313,6 +313,12 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
       pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
     }
+    else if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      // LEGACY RESTORATION: Add YT referer specifically for Shorts to prevent 403
+      if (url.includes("shorts")) {
+        pushUnique("--add-header", "Referer:https://www.youtube.com/");
+      }
+    }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
     }
@@ -374,16 +380,22 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     if (fs.existsSync(cookiesPath)) {
       console.log(`🎬 Dedicated cookies FOUND: ${cookiesPath}`);
       pushUnique("--cookies", cookiesPath);
+
+      // LEGACY RESTORATION: Rate Limiting for YouTube (Avoid IP blocks)
+      if (url.includes("youtube.com") || url.includes("youtu.be")) {
+        pushUnique("--min-sleep-interval", "5");
+        pushUnique("--max-sleep-interval", "10");
+      }
     } else {
-      // Fallback to standard cookies.txt if platform-specific one is missing (EXCLUDING YouTube)
-      const fallbackPath = path.join(__dirname, 'cookies.txt');
+      // Ultimate fallback: Use the generic cookies.txt if domain-specific one is missing
+      const rootCookies = path.resolve(__dirname, 'cookies.txt');
       const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
-      if (fs.existsSync(fallbackPath) && targetCookieFile !== 'cookies.txt' && !isYouTube) {
-        console.log(`🍪 ${targetCookieFile} missing, falling back to cookies.txt`);
-        pushUnique("--cookies", fallbackPath);
+      if (fs.existsSync(rootCookies) && !isYouTube) {
+        console.log(`🍪 Domain cookies missing, falling back to root cookies.txt`);
+        pushUnique("--cookies", rootCookies);
       } else if (isYouTube) {
-        console.warn(`⚠️ YouTube cookie file NOT FOUND at: ${cookiesPath}. Bot check likely.`);
+        console.log(`⚠️ YouTube cookies MISSING: ${cookiesPath}`);
       }
     }
   }
