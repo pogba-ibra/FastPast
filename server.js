@@ -1039,230 +1039,285 @@ async function processVideoDownload(job) {
 
   const outputTemplate = useDiskFallback ? tempFilePath : (isStreaming ? "-" : (outputPath || path.join(downloadDir, `${isZipItem ? 'Verified_Meta_' + jobId : '%(title)s'}.%(ext)s`)));
 
+  // Wrap everything in a Promise for consistent async handling
   return new Promise((resolve, reject) => {
-    try {
-      let args = [
-        "-o", outputTemplate,
-        "--no-check-certificate",
-        "--no-restrict-filenames",
-        "--ffmpeg-location", "/usr/local/bin/ffmpeg",
-        "--progress",
-        "--newline"
-      ];
+    // OPTIMIZATION: For YouTube streaming WITHOUT trimming, redirect to direct CDN URL (instant)
+    const isYouTubeStreaming = (url.includes('youtube.com') || url.includes('youtu.be')) && isStreaming && !useDiskFallback;
 
-      configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
+    if (isYouTubeStreaming) {
+      console.log(`[YouTube CDN Redirect] Getting direct URL for instant download: ${jobId}`);
 
-      // STABILITY: Aggressive network guards
-      args.push("--socket-timeout", "30");
-      args.push("--abort-on-unavailable-fragment");
+      // Get the direct stream URL using yt-dlp
+      const getUrlArgs = ["--get-url", "-f", formatId || "best[height<=1080]"];
+      configureAntiBlockingArgs(getUrlArgs, url, userAgent, _freshCookiePath, false);
+      getUrlArgs.push(url);
 
-      console.log(`[Worker] Stage: Post-Configuration (Job: ${jobId})`);
-      console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
+      const ytDlpGetUrl = spawnYtDlp(["-m", "yt_dlp", ...getUrlArgs]);
+      let directUrl = "";
 
-      // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
-      if (isStreaming) {
-        // External downloaders like aria2c often hang when outputting to stdout,
-        // especially when yt-dlp needs to merge streams.
-        const downloaderIndex = args.indexOf("--downloader");
-        if (downloaderIndex !== -1) {
-          args.splice(downloaderIndex, 2); // Remove --downloader aria2c
-        }
-        const downloaderArgsIndex = args.indexOf("--downloader-args");
-        if (downloaderArgsIndex !== -1) {
-          args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
-        }
-      }
+      ytDlpGetUrl.stdout.on("data", (data) => {
+        directUrl += data.toString();
+      });
 
-      if (url.includes("vimeo.com")) {
-        args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
-      }
+      ytDlpGetUrl.on("close", (code) => {
+        if (code === 0 && directUrl.trim()) {
+          const streamUrl = directUrl.trim().split('\n')[0]; //First line is video URL
+          console.log(`[YouTube CDN Redirect] Direct URL obtained, length: ${streamUrl.length}`);
 
-      if (formatId) {
-        args.push("-f", finalFmt);
-      }
-      else if (format) {
-        let finalFormat = format;
-        const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-        if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
-          finalFormat = getMetaFormatSelector(qualityLabel || "720p");
-        }
+          // Store the direct URL for the /stream endpoint to redirect
+          const entry = activeStreams.get(jobId) || {};
+          entry.directUrl = streamUrl;
+          entry.title = title;
+          entry.dlToken = job.data.dlToken;
+          entry.ready = true;
+          activeStreams.set(jobId, entry);
 
-        // Smarter default for standard formats when no specific ID is used
-        if (finalFormat === 'mp4') {
-          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
-        } else if (finalFormat === 'mp3') {
-          args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
+          io.emit('job_complete', { jobId, url });
+          resolve({ status: 'redirect_ready' });
         } else {
-          args.push("-f", finalFormat);
-        }
-      } else {
-        // Fallback: prefer MP4 for web compatibility
-        args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
-      }
-
-      args.push("--merge-output-format", "mp4");
-
-      if (start && end) {
-        args.push("--download-sections", `*${start}-${end}`);
-        args.push("--force-keyframes-at-cuts");
-      }
-
-      // Download Accelerator (Force Enabled for Speed)
-      // We ignore the 'false' from the frontend to ensure 1080p merges are always fast.
-      const useAccelerator = true;
-
-      if (useAccelerator) {
-        args.push("--concurrent-fragments", "5");
-      }
-
-      // Add verbose logging for YouTube to debug hangs
-      const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
-      if (isYouTube) {
-        args.push("--verbose");
-      }
-
-      args.push(url);
-
-      console.log("[Worker] Spawn yt-dlp args:", args.join(" "));
-      const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
-
-      let stderr = "";
-      let lastProgressTime = Date.now();
-
-      // Safety timeout: kill download if no progress for 5 minutes
-      const progressTimeout = setInterval(() => {
-        const timeSinceProgress = Date.now() - lastProgressTime;
-        if (timeSinceProgress > 300000) { // 5 minutes
-          console.error(`[Worker] Download hung for 5 minutes with no progress. Killing. Job: ${jobId}`);
-          clearInterval(progressTimeout);
-          ytDlp.kill('SIGKILL');
-        }
-      }, 30000); // Check every 30s
-
-      // If direct streaming, pipe stdout to the PassThrough
-      if (isStreaming && !useDiskFallback) {
-        ytDlp.stdout.pipe(streamPipe);
-      }
-
-      ytDlp.stdout.on("data", (data) => {
-        if (!isStreaming || useDiskFallback) {
-          const line = data.toString();
-          const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-          if (match) {
-            const percent = parseFloat(match[1]);
-            io.emit('job_progress', { jobId, percent, url });
-            job.updateProgress(percent);
-          }
+          console.warn(`[YouTube CDN Redirect] Failed to get direct URL, falling back to server download`);
+          beginRegularDownload();
         }
       });
 
-      ytDlp.stderr.on("data", (data) => {
-        const line = data.toString();
-        stderr += line;
-
-        // Log verbose output for YouTube debugging
-        if (isYouTube && (line.includes('[debug]') || line.includes('[info]') || line.includes('ERROR'))) {
-          console.log(`[yt-dlp] ${line.trim()}`);
-        }
-
-        // Parse yt-dlp progress format: [download] X%
-        const ytDlpMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-        if (ytDlpMatch) {
-          lastProgressTime = Date.now(); // Reset timeout
-          const percent = parseFloat(ytDlpMatch[1]);
-          io.emit('job_progress', { jobId, percent, url });
-          job.updateProgress(percent);
-        }
-
-        // Parse ffmpeg progress format (used for YouTube HLS streams): time=XX:XX:XX.XX
-        const ffmpegMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})/);
-        if (ffmpegMatch && (start || end)) {
-          lastProgressTime = Date.now(); // Reset timeout
-          const hours = parseInt(ffmpegMatch[1]);
-          const minutes = parseInt(ffmpegMatch[2]);
-          const seconds = parseInt(ffmpegMatch[3]);
-          const currentTime = hours * 3600 + minutes * 60 + seconds;
-
-          // Calculate percentage based on the trim duration
-          const [startH, startM, startS] = (start || '00:00').split(':').map(Number);
-          const [endH, endM, endS] = (end || '00:00').split(':').map(Number);
-          const startSec = (startH || 0) * 3600 + (startM || 0) * 60 + (startS || 0);
-          const endSec = (endH || 0) * 3600 + (endM || 0) * 60 + (endS || 0);
-          const duration = endSec - startSec;
-
-          if (duration > 0) {
-            const percent = Math.min(100, (currentTime / duration) * 100);
-            console.log(`[ffmpeg Progress] ${currentTime}s / ${duration}s (${percent.toFixed(1)}%)`);
-            io.emit('job_progress', { jobId, percent, url });
-            job.updateProgress(percent);
-          }
-        }
+      ytDlpGetUrl.on("error", (err) => {
+        console.error(`[YouTube CDN Redirect] Error getting direct URL:`, err.message);
+        beginRegularDownload();
       });
 
-      ytDlp.on("close", async (code) => {
-        clearInterval(progressTimeout); // Clean up safety timeout
-        if (code === 0) {
-          // If we used disk fallback for streaming, we don't pipe to PassThrough anymore.
-          // Instead, we mark the file as ready for direct serving.
-          if (useDiskFallback && fs.existsSync(tempFilePath)) {
-            const exactFilesize = fs.statSync(tempFilePath).size;
-            console.log(`[Worker] Disk fallback finished. Exact size: ${exactFilesize} bytes`);
+      return; // Exit early if doing CDN redirect
+    }
 
-            const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
-            entry.filePath = tempFilePath; // Mark for direct serving
-            entry.filesize = exactFilesize;
-            entry.title = title;
-            entry.dlToken = job.data.dlToken;
-            entry.ready = true; // Signal the /stream endpoint
-            activeStreams.set(jobId, entry);
+    // If not YouTube CDN redirect, proceed with regular download
+    beginRegularDownload();
 
-            io.emit('job_complete', { jobId, url });
-            resolve({ status: 'completed' });
+    // Helper function for regular server-side download
+    function beginRegularDownload() {
+      try {
+        let args = [
+          "-o", outputTemplate,
+          "--no-check-certificate",
+          "--no-restrict-filenames",
+          "--ffmpeg-location", "/usr/local/bin/ffmpeg",
+          "--progress",
+          "--newline"
+        ];
 
-            // Cleanup handled by the 1-hour global cleanup or a specific timeout
-            setTimeout(() => {
-              try {
-                if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-                activeStreams.delete(jobId);
-              } catch {
-                // Ignore cleanup errors
-              }
-            }, 60 * 60 * 1000); // 1 hour persist
-          } else if (streamPipe && !useDiskFallback) {
-            // Sequential streams still use pipes (one-shot)
-            streamPipe.end();
-            io.emit('job_complete', { jobId, url });
-            resolve({ status: 'completed' });
-            setTimeout(() => activeStreams.delete(jobId), 5000);
+        configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
+
+        // STABILITY: Aggressive network guards
+        args.push("--socket-timeout", "30");
+        args.push("--abort-on-unavailable-fragment");
+
+        console.log(`[Worker] Stage: Post-Configuration (Job: ${jobId})`);
+        console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
+
+        // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
+        if (isStreaming) {
+          // External downloaders like aria2c often hang when outputting to stdout,
+          // especially when yt-dlp needs to merge streams.
+          const downloaderIndex = args.indexOf("--downloader");
+          if (downloaderIndex !== -1) {
+            args.splice(downloaderIndex, 2); // Remove --downloader aria2c
+          }
+          const downloaderArgsIndex = args.indexOf("--downloader-args");
+          if (downloaderArgsIndex !== -1) {
+            args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
+          }
+        }
+
+        if (url.includes("vimeo.com")) {
+          args.push("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
+        }
+
+        if (formatId) {
+          args.push("-f", finalFmt);
+        }
+        else if (format) {
+          let finalFormat = format;
+          const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+          if (isMeta && finalFormat !== "best" && !url.includes("cdninstagram.com")) {
+            finalFormat = getMetaFormatSelector(qualityLabel || "720p");
+          }
+
+          // Smarter default for standard formats when no specific ID is used
+          if (finalFormat === 'mp4') {
+            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+          } else if (finalFormat === 'mp3') {
+            args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
           } else {
-            io.emit('job_complete', { jobId, url });
-            resolve({ status: 'completed' });
+            args.push("-f", finalFormat);
           }
         } else {
+          // Fallback: prefer MP4 for web compatibility
+          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
+        }
+
+        args.push("--merge-output-format", "mp4");
+
+        if (start && end) {
+          args.push("--download-sections", `*${start}-${end}`);
+          args.push("--force-keyframes-at-cuts");
+        }
+
+        // Download Accelerator (Force Enabled for Speed)
+        // We ignore the 'false' from the frontend to ensure 1080p merges are always fast.
+        const useAccelerator = true;
+
+        if (useAccelerator) {
+          args.push("--concurrent-fragments", "5");
+        }
+
+        // Add verbose logging for YouTube to debug hangs
+        const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+        if (isYouTube) {
+          args.push("--verbose");
+        }
+
+        args.push(url);
+
+        console.log("[Worker] Spawn yt-dlp args:", args.join(" "));
+        const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
+
+        let stderr = "";
+        let lastProgressTime = Date.now();
+
+        // Safety timeout: kill download if no progress for 5 minutes
+        const progressTimeout = setInterval(() => {
+          const timeSinceProgress = Date.now() - lastProgressTime;
+          if (timeSinceProgress > 300000) { // 5 minutes
+            console.error(`[Worker] Download hung for 5 minutes with no progress. Killing. Job: ${jobId}`);
+            clearInterval(progressTimeout);
+            ytDlp.kill('SIGKILL');
+          }
+        }, 30000); // Check every 30s
+
+        // If direct streaming, pipe stdout to the PassThrough
+        if (isStreaming && !useDiskFallback) {
+          ytDlp.stdout.pipe(streamPipe);
+        }
+
+        ytDlp.stdout.on("data", (data) => {
+          if (!isStreaming || useDiskFallback) {
+            const line = data.toString();
+            const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+            if (match) {
+              const percent = parseFloat(match[1]);
+              io.emit('job_progress', { jobId, percent, url });
+              job.updateProgress(percent);
+            }
+          }
+        });
+
+        ytDlp.stderr.on("data", (data) => {
+          const line = data.toString();
+          stderr += line;
+
+          // Log verbose output for YouTube debugging
+          if (isYouTube && (line.includes('[debug]') || line.includes('[info]') || line.includes('ERROR'))) {
+            console.log(`[yt-dlp] ${line.trim()}`);
+          }
+
+          // Parse yt-dlp progress format: [download] X%
+          const ytDlpMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+          if (ytDlpMatch) {
+            lastProgressTime = Date.now(); // Reset timeout
+            const percent = parseFloat(ytDlpMatch[1]);
+            io.emit('job_progress', { jobId, percent, url });
+            job.updateProgress(percent);
+          }
+
+          // Parse ffmpeg progress format (used for YouTube HLS streams): time=XX:XX:XX.XX
+          const ffmpegMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+          if (ffmpegMatch && (start || end)) {
+            lastProgressTime = Date.now(); // Reset timeout
+            const hours = parseInt(ffmpegMatch[1]);
+            const minutes = parseInt(ffmpegMatch[2]);
+            const seconds = parseInt(ffmpegMatch[3]);
+            const currentTime = hours * 3600 + minutes * 60 + seconds;
+
+            // Calculate percentage based on the trim duration
+            const [startH, startM, startS] = (start || '00:00').split(':').map(Number);
+            const [endH, endM, endS] = (end || '00:00').split(':').map(Number);
+            const startSec = (startH || 0) * 3600 + (startM || 0) * 60 + (startS || 0);
+            const endSec = (endH || 0) * 3600 + (endM || 0) * 60 + (endS || 0);
+            const duration = endSec - startSec;
+
+            if (duration > 0) {
+              const percent = Math.min(100, (currentTime / duration) * 100);
+              console.log(`[ffmpeg Progress] ${currentTime}s / ${duration}s (${percent.toFixed(1)}%)`);
+              io.emit('job_progress', { jobId, percent, url });
+              job.updateProgress(percent);
+            }
+          }
+        });
+
+        ytDlp.on("close", async (code) => {
+          clearInterval(progressTimeout); // Clean up safety timeout
+          if (code === 0) {
+            // If we used disk fallback for streaming, we don't pipe to PassThrough anymore.
+            // Instead, we mark the file as ready for direct serving.
+            if (useDiskFallback && fs.existsSync(tempFilePath)) {
+              const exactFilesize = fs.statSync(tempFilePath).size;
+              console.log(`[Worker] Disk fallback finished. Exact size: ${exactFilesize} bytes`);
+
+              const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
+              entry.filePath = tempFilePath; // Mark for direct serving
+              entry.filesize = exactFilesize;
+              entry.title = title;
+              entry.dlToken = job.data.dlToken;
+              entry.ready = true; // Signal the /stream endpoint
+              activeStreams.set(jobId, entry);
+
+              io.emit('job_complete', { jobId, url });
+              resolve({ status: 'completed' });
+
+              // Cleanup handled by the 1-hour global cleanup or a specific timeout
+              setTimeout(() => {
+                try {
+                  if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                  activeStreams.delete(jobId);
+                } catch {
+                  // Ignore cleanup errors
+                }
+              }, 60 * 60 * 1000); // 1 hour persist
+            } else if (streamPipe && !useDiskFallback) {
+              // Sequential streams still use pipes (one-shot)
+              streamPipe.end();
+              io.emit('job_complete', { jobId, url });
+              resolve({ status: 'completed' });
+              setTimeout(() => activeStreams.delete(jobId), 5000);
+            } else {
+              io.emit('job_complete', { jobId, url });
+              resolve({ status: 'completed' });
+            }
+          } else {
+            if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
+            if (streamPipe) streamPipe.end();
+
+            const cleanStderr = stderr.slice(-500);
+            const userFriendlyError = `Download process failed (Code ${code}). Details: ${cleanStderr}`;
+            io.emit('job_error', { jobId, error: userFriendlyError, url });
+            reject(new Error(userFriendlyError));
+          }
+        });
+
+        ytDlp.on("error", (err) => {
           if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
           if (streamPipe) streamPipe.end();
+          logger.error("videoWorker spawn error", { jobId, error: err.message });
+          io.emit('job_error', { jobId, error: `Process error: ${err.message}`, url });
+          reject(err);
+        });
 
-          const cleanStderr = stderr.slice(-500);
-          const userFriendlyError = `Download process failed (Code ${code}). Details: ${cleanStderr}`;
-          io.emit('job_error', { jobId, error: userFriendlyError, url });
-          reject(new Error(userFriendlyError));
-        }
-      });
 
-      ytDlp.on("error", (err) => {
-        if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
+
+      } catch (err) {
         if (streamPipe) streamPipe.end();
-        logger.error("videoWorker spawn error", { jobId, error: err.message });
-        io.emit('job_error', { jobId, error: `Process error: ${err.message}`, url });
         reject(err);
-      });
-
-    } catch (err) {
-      if (streamPipe) streamPipe.end();
-      reject(err);
-    }
-  });
-
+      }
+    } // End of beginRegularDownload helper
+  }); // End of main Promise
 }
 
 // Original Worker just delegates to the function
@@ -4199,9 +4254,21 @@ app.get("/stream/:jobId", async (req, res) => {
     checkCount++;
     const currentEntry = activeStreams.get(jobId);
 
-    // Check if worker marked it ready (either pipe or filePath)
-    if (currentEntry && (currentEntry.pipe || currentEntry.filePath)) {
+    // Check if worker marked it ready (pipe, filePath, or directUrl)
+    if (currentEntry && (currentEntry.pipe || currentEntry.filePath || currentEntry.directUrl)) {
       clearInterval(interval);
+
+      if (currentEntry.directUrl) {
+        // Redirect to direct YouTube CDN URL
+        console.log(`[YouTube CDN Redirect] Redirecting user to direct CDN URL for job ${jobId}`);
+
+        // Set success cookie if present
+        if (currentEntry.dlToken) {
+          res.setHeader('Set-Cookie', `${currentEntry.dlToken}=true; Path=/; Max-Age=3600; SameSite=Lax`);
+        }
+
+        return res.redirect(302, currentEntry.directUrl);
+      }
 
       if (currentEntry.filePath) {
         // Serve using optimized res.sendFile
