@@ -287,11 +287,14 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
   ].some(d => url.includes(d));
 
   if (isRestricted) {
+    // 1. Client Impersonation
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
 
-    // 1. Client Impersonation: Use Safari for stability on major platforms
-    const useSafari = isYouTube || url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-    if (useSafari) {
+    if (isYouTube) {
+      // YouTube Stability: Chrome-131 is the most stable impersonation for YouTube
+      pushUnique("--impersonate", "chrome-131");
+    } else if (isMeta) {
       pushUnique("--impersonate", "safari");
     } else if (!url.includes("vk.com") && !url.includes("vk.ru") && !url.includes("vkvideo.ru")) {
       pushUnique("--impersonate", "chrome");
@@ -305,7 +308,6 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     const finalUA = requestUA || DESKTOP_UA;
     pushUnique("--user-agent", finalUA);
 
-    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
     if (isMeta || isYouTube) {
       const referer = isYouTube ? 'https://www.youtube.com/' : (url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/');
       pushUnique("--add-header", `Referer:${referer}`);
@@ -318,7 +320,13 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
 
     // 3. Platform specific extractor args
-    if (url.includes("vimeo.com")) {
+    if (isYouTube) {
+      pushUnique("--extractor-args", "youtube:player_client=default,ios");
+      // YouTube Stability: Mimic human behavior with small delays
+      pushUnique("--sleep-interval", "1");
+      pushUnique("--max-sleep-interval", "5");
+    }
+    else if (url.includes("vimeo.com")) {
       pushUnique("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
     }
 
