@@ -898,8 +898,13 @@ async function processVideoDownload(job) {
   // OPTIMIZATION: If video is long (>10 mins) and not trimming, skip merge by using best combined format
 
   // Apply default selectors for generic keywords before checking for merges
+  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
   if (!formatId && finalFmt === 'mp4') {
-    finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
+    if (isYouTube) {
+      finalFmt = "best[ext=mp4]/best";
+    } else {
+      finalFmt = "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b";
+    }
   }
 
   const needsMerge = !hasAudio && !String(finalFmt).includes('+') && !String(finalFmt).includes('/');
@@ -1080,8 +1085,14 @@ async function processVideoDownload(job) {
           }
 
           // Smarter default for standard formats when no specific ID is used
+          const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
           if (finalFormat === 'mp4') {
-            args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+            if (isYouTube) {
+              // YouTube: Prefer single combined file to bypass ffmpeg (Normal behavior)
+              args.push("-f", "best[ext=mp4]/best");
+            } else {
+              args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+            }
           } else if (finalFormat === 'mp3') {
             args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
           } else {
@@ -1089,10 +1100,18 @@ async function processVideoDownload(job) {
           }
         } else {
           // Fallback: prefer combined formats to skip merging when possible
-          args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+          const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+          if (isYouTube) {
+            args.push("-f", "best[ext=mp4]/best");
+          } else {
+            args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
+          }
         }
 
-        args.push("--merge-output-format", "mp4");
+        // Only merge if we actually have a split-stream format (containing '+')
+        if (String(finalFmt).includes('+')) {
+          args.push("--merge-output-format", "mp4");
+        }
 
         if (start && end) {
           args.push("--download-sections", `*${start}-${end}`);
