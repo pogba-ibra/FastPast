@@ -1025,6 +1025,7 @@ async function processVideoDownload(job) {
     // Helper function for regular server-side download
     function beginRegularDownload() {
       try {
+        const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
         let args = [
           "-o", outputTemplate,
           "--no-check-certificate",
@@ -1079,7 +1080,6 @@ async function processVideoDownload(job) {
           }
 
           // Smarter default for standard formats when no specific ID is used
-          const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
           if (finalFormat === 'mp4') {
             if (isYouTube) {
               // YouTube: Prefer single combined file to bypass ffmpeg (Normal behavior)
@@ -1094,7 +1094,6 @@ async function processVideoDownload(job) {
           }
         } else {
           // Fallback: prefer combined formats to skip merging when possible
-          const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
           if (isYouTube) {
             args.push("-f", "best[ext=mp4]/best");
           } else {
@@ -1103,8 +1102,16 @@ async function processVideoDownload(job) {
         }
 
         // Only merge if we actually have a split-stream format (containing '+')
-        if (String(finalFmt).includes('+')) {
+        // STABILITY: Don't force mp4 for YouTube merges as it triggers slow vp9->h264 transcoding.
+        // Let it naturally pick MKV/WebM which is 100x faster for high resolution.
+        if (String(finalFmt).includes('+') && !isYouTube) {
           args.push("--merge-output-format", "mp4");
+        }
+
+        // OPTIMIZATION: For YouTube high-res merges, force "copy" mode to avoid transcoding.
+        // This makes merging nearly instantaneous regardless of video length.
+        if (isYouTube && String(finalFmt).includes('+')) {
+          args.push("--postprocessor-args", "ffmpeg:-c copy");
         }
 
         if (start && end) {
