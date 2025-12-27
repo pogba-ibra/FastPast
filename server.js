@@ -287,42 +287,33 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
   ].some(d => url.includes(d));
 
   if (isRestricted) {
-    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
-    const isVK = url.includes("vk.com") || url.includes("vk.ru") || url.includes("vkvideo.ru");
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
-    // 1. Client Impersonation (Dec 2025 Standard)
-    // Use Safari impersonation for Meta (FB/IG) and YouTube as it's often more stable and faster
-    if ((isMeta || isYouTube) && !isVK) {
+    // 1. Client Impersonation: Use Safari for stability on major platforms
+    const useSafari = isYouTube || url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
+    if (useSafari) {
       pushUnique("--impersonate", "safari");
-    } else if (!isVK) {
+    } else if (!url.includes("vk.com") && !url.includes("vk.ru") && !url.includes("vkvideo.ru")) {
       pushUnique("--impersonate", "chrome");
     }
 
-    // 2. Connectivity: Force IPv4 for major platforms to avoid IPv6 timeouts/hangs (Fly.io specific stability)
-    const needsIpv4 = isYouTube || isMeta || isVK || url.includes("tiktok.com");
-    if (needsIpv4) {
-      pushUnique("--force-ipv4");
-    }
+    // 2. Connectivity: Force IPv4 for stability (Fly.io specific)
+    pushUnique("--force-ipv4");
 
     // 3. User-Agent Matching
     // Prioritize the actual browser UA to appear more human, fallback to forced desktop
     const finalUA = requestUA || DESKTOP_UA;
     pushUnique("--user-agent", finalUA);
 
+    const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
     if (isMeta || isYouTube) {
       const referer = isYouTube ? 'https://www.youtube.com/' : (url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/');
       pushUnique("--add-header", `Referer:${referer}`);
-
-      // Only use player_client for metadata fetching, keep download stage "simple" as requested
-      if (isYouTube && !isDownload) {
-        pushUnique("--extractor-args", "youtube:player_client=default,ios");
-      }
     }
     else if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
     }
-    else if (!url.includes("youtube.com") && !url.includes("youtu.be") && !url.includes("reddit.com")) {
+    else if (!url.includes("reddit.com")) {
       // General fallback handled by top-level pushUnique
     }
 
@@ -337,9 +328,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
 
     // 5. Cache Management
-    if (isMeta || isYouTube) {
-      pushUnique("--rm-cache-dir");
-    }
+    pushUnique("--rm-cache-dir");
   }
 
   // 6. Cookies Authentication
@@ -380,28 +369,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     if (fs.existsSync(cookiesPath)) {
       console.log(`🎬 Dedicated cookies FOUND: ${cookiesPath}`);
       pushUnique("--cookies", cookiesPath);
-
-      // Rate Limiting for YouTube (DISABLED to prevent "years" of delay)
-      // if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      //   pushUnique("--min-sleep-interval", "5");
-      //   pushUnique("--max-sleep-interval", "10");
-      // }
-    } else {
-      // Ultimate fallback: Use the generic cookies.txt if domain-specific one is missing
-      const rootCookies = path.resolve(__dirname, 'cookies.txt');
-      const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
-
-      if (fs.existsSync(rootCookies) && !isYouTube) {
-        console.log(`🍪 Domain cookies missing, falling back to root cookies.txt`);
-        pushUnique("--cookies", rootCookies);
-      } else if (isYouTube) {
-        console.log(`⚠️ YouTube cookies MISSING: ${cookiesPath}`);
-      }
     }
   }
-
-  // 7. YouTube Specific Configuration
-  // Note: We handle aria2c removal in the worker logic based on pipe requirements
 }
 
 
@@ -927,11 +896,6 @@ async function processVideoDownload(job) {
   let finalFmt = formatId || format || 'best';
 
   // OPTIMIZATION: If video is long (>10 mins) and not trimming, skip merge by using best combined format
-  const isLongVideo = duration && parseFloat(duration) > 600;
-  if (isLongVideo && !start && !end) {
-    console.log(`[Worker] Long video detected (${duration}s). Overriding format to skip ffmpeg merge.`);
-    finalFmt = "best[height<=1080][ext=mp4]/best";
-  }
 
   // Apply default selectors for generic keywords before checking for merges
   if (!formatId && finalFmt === 'mp4') {
@@ -1056,52 +1020,6 @@ async function processVideoDownload(job) {
   // Wrap everything in a Promise for consistent async handling
   return new Promise((resolve, reject) => {
     // OPTIMIZATION: For YouTube streaming WITHOUT trimming, redirect to direct CDN URL (instant)
-    const isYouTubeStreaming = (url.includes('youtube.com') || url.includes('youtu.be')) && isStreaming && !useDiskFallback;
-
-    if (isYouTubeStreaming) {
-      console.log(`[YouTube CDN Redirect] Getting direct URL for instant download: ${jobId}`);
-
-      // Get the direct stream URL using yt-dlp
-      // Prefer single combined formats to allow direct CDN redirect (Skip ffmpeg merge server-side)
-      const getUrlArgs = ["--get-url", "-f", formatId || "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"];
-      configureAntiBlockingArgs(getUrlArgs, url, userAgent, _freshCookiePath, false);
-      getUrlArgs.push(url);
-
-      const ytDlpGetUrl = spawnYtDlp(["-m", "yt_dlp", ...getUrlArgs]);
-      let directUrl = "";
-
-      ytDlpGetUrl.stdout.on("data", (data) => {
-        directUrl += data.toString();
-      });
-
-      ytDlpGetUrl.on("close", (code) => {
-        if (code === 0 && directUrl.trim()) {
-          const streamUrl = directUrl.trim().split('\n')[0]; //First line is video URL
-          console.log(`[YouTube CDN Redirect] Direct URL obtained, length: ${streamUrl.length}`);
-
-          // Store the direct URL for the /stream endpoint to redirect
-          const entry = activeStreams.get(jobId) || {};
-          entry.directUrl = streamUrl;
-          entry.title = title;
-          entry.dlToken = job.data.dlToken;
-          entry.ready = true;
-          activeStreams.set(jobId, entry);
-
-          io.emit('job_complete', { jobId, url });
-          resolve({ status: 'redirect_ready' });
-        } else {
-          console.warn(`[YouTube CDN Redirect] Failed to get direct URL, falling back to server download`);
-          beginRegularDownload();
-        }
-      });
-
-      ytDlpGetUrl.on("error", (err) => {
-        console.error(`[YouTube CDN Redirect] Error getting direct URL:`, err.message);
-        beginRegularDownload();
-      });
-
-      return; // Exit early if doing CDN redirect
-    }
 
     // If not YouTube CDN redirect, proceed with regular download
     beginRegularDownload();
@@ -1186,11 +1104,6 @@ async function processVideoDownload(job) {
           args.push("--concurrent-fragments", "5");
         }
 
-        // Add verbose logging for YouTube to debug hangs
-        const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
-        if (isYouTube) {
-          args.push("--verbose");
-        }
 
         args.push(url);
 
@@ -1231,10 +1144,6 @@ async function processVideoDownload(job) {
           const line = data.toString();
           stderr += line;
 
-          // Log verbose output for YouTube debugging
-          if (isYouTube && (line.includes('[debug]') || line.includes('[info]') || line.includes('ERROR'))) {
-            console.log(`[yt-dlp] ${line.trim()}`);
-          }
 
           // Parse yt-dlp progress format: [download] X%
           const ytDlpMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
@@ -3941,9 +3850,8 @@ app.post("/get-qualities", async (req, res) => {
 
       let responseSent = false;
 
-      // YouTube legitimately takes longer (10-15s) especially for Shorts with cookie auth
-      const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be');
-      const timeoutDuration = isYouTube ? 20000 : 10000;
+      // Standardized timeout (15s) for all platforms
+      const timeoutDuration = 15000;
 
       const fetchTimeout = setTimeout(() => {
         if (responseSent) return;
@@ -4171,34 +4079,7 @@ app.post("/download", async (req, res) => {
       downloadAccelerator: req.body.downloadAccelerator, // Pass raw value so worker handles default-true logic
     };
 
-    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
-
-    if (isYouTube) {
-      // QUEUE BYPASS: Execute immediately (Infinite Concurrency for YouTube)
-      console.log(`[Queue Bypass] Starting Direct YouTube Download for ${jobId}`);
-
-      const mockJob = {
-        id: jobId,
-        data: jobData,
-        updateProgress: async () => {
-          // No-op for direct execution (Redis not involved) 
-        }
-      };
-
-      // Executor: Fire & Forget
-      processVideoDownload(mockJob).catch(err => {
-        logger.error(`Direct YouTube download failed`, { jobId, error: err.message });
-        io.emit('job_error', { jobId, error: err.message, url });
-      });
-
-      return res.json({
-        status: 'active', // Immediately active
-        jobId: jobId,
-        url: url
-      });
-    }
-
-    // Standard Queue for other platforms (Instagram, etc.)
+    // Unified Queue for all platforms (YouTube, Instagram, etc.)
     await videoQueue.add('standard-download', jobData, {
       jobId: jobId,
       removeOnComplete: { age: 3600, count: 100 },
