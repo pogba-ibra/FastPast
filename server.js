@@ -297,7 +297,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       // YouTube Stability: Use impersonation ALONE to ensure valid signatures.
       // Don't override with custom UA as it can break the client signature.
       pushUnique("--impersonate", "chrome-131");
-      const referer = 'www.youtube.com';
+      const referer = 'https://www.youtube.com/';
       pushUnique("--add-header", `Referer:${referer}`);
     } else if (isMeta) {
       pushUnique("--impersonate", "safari");
@@ -908,8 +908,15 @@ async function processVideoDownload(jobOrData) {
 
   let finalFmt = formatId || format || 'best';
 
-  // Apply default selectors for generic keywords before checking for merges
   const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
+  // Optimization: For YouTube Shorts, avoid legacy format 18 (throttled/low quality)
+  // Let it pick 'best' single file with audio
+  if (isYouTube && url.includes("/shorts/") && (finalFmt === '18' || !formatId)) {
+    finalFmt = 'best';
+  }
+
+  // Apply default selectors for generic keywords before checking for merges
   if (!formatId && finalFmt === 'mp4') {
     if (isYouTube) {
       finalFmt = "best[ext=mp4]/best";
@@ -1145,7 +1152,7 @@ async function processVideoDownload(jobOrData) {
         // We ignore the 'false' from the frontend to ensure 1080p merges are always fast.
         const useAccelerator = true;
 
-        if (useAccelerator) {
+        if (useAccelerator && !(isYouTube && isStreaming)) {
           args.push("--concurrent-fragments", "5");
         }
 
