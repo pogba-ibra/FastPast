@@ -891,9 +891,13 @@ const activeStreams = new Map();
 
 // Worker for processing video downloads
 // Standalone function to process video downloads (Can be called by Worker OR Direct)
-async function processVideoDownload(job) {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, mode, filesize: jobFilesize, duration: jobDuration, title: jobTitle, hasAudio: jobHasAudio } = job.data;
-  let title = jobTitle || job.data.title || 'video';
+async function processVideoDownload(jobOrData) {
+  const isJob = !!(jobOrData && jobOrData.data);
+  const data = isJob ? jobOrData.data : jobOrData;
+  const jobIdForLog = isJob ? jobOrData.id : data.jobId;
+
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, mode, filesize: jobFilesize, duration: jobDuration, title: jobTitle, hasAudio: jobHasAudio } = data;
+  let title = jobTitle || data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
   let duration = jobDuration || null;
 
@@ -921,7 +925,8 @@ async function processVideoDownload(job) {
   }
 
   logger.info(`Starting video download job`, { jobId, url, start, end, mode });
-  console.log(`[Worker] Processing Job ${job.id} (ID: ${jobId}) - ${url}`);
+  const logPrefix = isYouTube ? "" : `[Worker] `;
+  console.log(`${logPrefix}Processing Job ${jobIdForLog} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
 
   // 1. Mandatory Metadata Resolution for Streaming/Accuracy
@@ -931,7 +936,7 @@ async function processVideoDownload(job) {
 
   if (!skipMetadataFetch) {
     try {
-      console.log(`[Worker] Stage: Metadata Resolution (Job: ${jobId})`);
+      console.log(`${logPrefix}Stage: Metadata Resolution (Job: ${jobId})`);
       const infoArgs = ["-m", "yt_dlp", "--print-json", "--no-download", "--no-playlist", "--flat-playlist"];
       configureAntiBlockingArgs(infoArgs, url, userAgent, _freshCookiePath, false);
       infoArgs.push(url);
@@ -960,7 +965,7 @@ async function processVideoDownload(job) {
         // Extract duration if missing
         if (!duration && info.duration) {
           duration = info.duration;
-          console.log(`[Worker] Resolved duration for ${jobId}: ${duration}s`);
+          console.log(`${logPrefix}Resolved duration for ${jobId}: ${duration}s`);
         }
       }
 
@@ -985,10 +990,10 @@ async function processVideoDownload(job) {
       }
 
       if (filesize) {
-        console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
+        console.log(`${logPrefix}Resolved filesize for ${jobId}: ${filesize} bytes`);
         logger.info("Metadata resolved filesize", { jobId, filesize });
       } else {
-        console.log(`[Worker] Could not resolve filesize for ${jobId}`);
+        console.log(`${logPrefix}Could not resolve filesize for ${jobId}`);
       }
     } catch (err) {
       logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
@@ -1016,8 +1021,40 @@ async function processVideoDownload(job) {
       entry.pipe = streamPipe;
       entry.title = title;
       entry.filesize = filesize;
-      entry.dlToken = job.data.dlToken;
+      entry.dlToken = data.dlToken;
       activeStreams.set(jobId, entry);
+    }
+  }
+
+  // OPTIMIZATION: For YouTube streaming WITHOUT trimming, redirect to direct CDN URL (instant)
+  const canRedirect = isYouTube && mode === 'stream' && !start && !end;
+  if (canRedirect) {
+    try {
+      console.log(`${logPrefix}Attempting instant CDN redirect for YouTube (Job: ${jobId})`);
+      const redirectArgs = ["-m", "yt_dlp", "-g", url];
+      configureAntiBlockingArgs(redirectArgs, url, userAgent, _freshCookiePath, false);
+      const child = spawnYtDlp(redirectArgs);
+      let stdout = "";
+      child.stdout.on('data', d => stdout += d);
+
+      const redirectTimeout = setTimeout(() => {
+        child.kill('SIGKILL');
+      }, 8000);
+
+      const directUrl = await new Promise(r => {
+        child.on('close', () => {
+          clearTimeout(redirectTimeout);
+          r(stdout.trim());
+        });
+      });
+
+      if (directUrl && directUrl.startsWith('http')) {
+        console.log(`${logPrefix}Instant CDN redirect successful (Job: ${jobId})`);
+        io.emit('job_complete', { jobId, url, directUrl });
+        return { status: 'completed', directUrl };
+      }
+    } catch (err) {
+      console.log(`${logPrefix}Instant CDN redirect failed: ${err.message}`);
     }
   }
 
@@ -1031,9 +1068,7 @@ async function processVideoDownload(job) {
 
   // Wrap everything in a Promise for consistent async handling
   return new Promise((resolve, reject) => {
-    // OPTIMIZATION: For YouTube streaming WITHOUT trimming, redirect to direct CDN URL (instant)
-
-    // If not YouTube CDN redirect, proceed with regular download
+    // Proceed with regular download
     beginRegularDownload();
 
     // Helper function for regular server-side download
@@ -1067,14 +1102,14 @@ async function processVideoDownload(job) {
         args.push("--socket-timeout", "30");
         args.push("--abort-on-unavailable-fragment");
 
-        console.log(`[Worker] Stage: Post-Configuration (Job: ${jobId})`);
+        console.log(`${logPrefix}Stage: Post-Configuration (Job: ${jobId})`);
         console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
         // STABILITY: Disable aria2c ONLY for streaming directly to stdout pipes WITHOUT disk fallback.
         // External downloaders like aria2c often hang when outputting to stdout,
         // especially when yt-dlp needs to merge streams.
         if (isStreaming && !useDiskFallback) {
-          console.log(`[Worker] Disabling aria2c for direct pipe stream (Job: ${jobId})`);
+          console.log(`${logPrefix}Disabling aria2c for direct pipe stream (Job: ${jobId})`);
           const downloaderIndex = args.indexOf("--downloader");
           if (downloaderIndex !== -1) {
             args.splice(downloaderIndex, 2); // Remove --downloader aria2c
@@ -1084,7 +1119,7 @@ async function processVideoDownload(job) {
             args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
           }
         } else if (isStreaming && useDiskFallback) {
-          console.log(`[Worker] Keeping aria2c enabled for disk fallback download (Job: ${jobId})`);
+          console.log(`${logPrefix}Keeping aria2c enabled for disk fallback download (Job: ${jobId})`);
         }
 
         if (url.includes("vimeo.com")) {
@@ -1146,7 +1181,7 @@ async function processVideoDownload(job) {
 
         args.push(url);
 
-        console.log("[Worker] Spawn yt-dlp args:", args.join(" "));
+        console.log(`${logPrefix}Spawn yt-dlp args:`, args.join(" "));
         const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
         let stderr = "";
@@ -1156,7 +1191,7 @@ async function processVideoDownload(job) {
         const progressTimeout = setInterval(() => {
           const timeSinceProgress = Date.now() - lastProgressTime;
           if (timeSinceProgress > 300000) { // 5 minutes
-            console.error(`[Worker] Download hung for 5 minutes with no progress. Killing. Job: ${jobId}`);
+            console.error(`${logPrefix}Download hung for 5 minutes with no progress. Killing. Job: ${jobId}`);
             clearInterval(progressTimeout);
             ytDlp.kill('SIGKILL');
           }
@@ -1174,7 +1209,7 @@ async function processVideoDownload(job) {
             if (match) {
               const percent = parseFloat(match[1]);
               io.emit('job_progress', { jobId, percent, url });
-              job.updateProgress(percent);
+              if (isJob) jobOrData.updateProgress(percent);
             }
           }
         });
@@ -1190,7 +1225,7 @@ async function processVideoDownload(job) {
             lastProgressTime = Date.now(); // Reset timeout
             const percent = parseFloat(ytDlpMatch[1]);
             io.emit('job_progress', { jobId, percent, url });
-            job.updateProgress(percent);
+            if (isJob) jobOrData.updateProgress(percent);
           }
 
           // Parse ffmpeg progress format (used for YouTube HLS streams): time=XX:XX:XX.XX
@@ -1213,7 +1248,7 @@ async function processVideoDownload(job) {
               const percent = Math.min(100, (currentTime / duration) * 100);
               console.log(`[ffmpeg Progress] ${currentTime}s / ${duration}s (${percent.toFixed(1)}%)`);
               io.emit('job_progress', { jobId, percent, url });
-              job.updateProgress(percent);
+              if (isJob) jobOrData.updateProgress(percent);
             }
           }
         });
@@ -1225,13 +1260,13 @@ async function processVideoDownload(job) {
             // Instead, we mark the file as ready for direct serving.
             if (useDiskFallback && fs.existsSync(tempFilePath)) {
               const exactFilesize = fs.statSync(tempFilePath).size;
-              console.log(`[Worker] Disk fallback finished. Exact size: ${exactFilesize} bytes`);
+              console.log(`${logPrefix}Disk fallback finished. Exact size: ${exactFilesize} bytes`);
 
               const entry = activeStreams.get(jobId) || { res: null, headersSent: false };
               entry.filePath = tempFilePath; // Mark for direct serving
               entry.filesize = exactFilesize;
               entry.title = title;
-              entry.dlToken = job.data.dlToken;
+              entry.dlToken = data.dlToken;
               entry.ready = true; // Signal the /stream endpoint
               activeStreams.set(jobId, entry);
 
@@ -4118,7 +4153,24 @@ app.post("/download", async (req, res) => {
       downloadAccelerator: req.body.downloadAccelerator, // Pass raw value so worker handles default-true logic
     };
 
-    // Unified Queue for all platforms (YouTube, Instagram, etc.)
+    // STABILITY: Detect YouTube to bypass queue for immediate execution as requested.
+    const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+
+    if (isYouTube) {
+      // Direct execution for YouTube: no queue, no waiting, simple logs
+      processVideoDownload(jobData).catch(err => {
+        logger.error("Direct YouTube download failed", { jobId, error: err.message, url });
+      });
+
+      return res.json({
+        status: 'queued', // Keep 'queued' status for frontend compatibility
+        jobId,
+        message: "Download started immediately. You will be notified via WebSocket.",
+        pollUrl: `/job-status/${jobId}`
+      });
+    }
+
+    // Unified Queue for other platforms (Instagram, etc.)
     await videoQueue.add('standard-download', jobData, {
       jobId: jobId,
       removeOnComplete: { age: 3600, count: 100 },
