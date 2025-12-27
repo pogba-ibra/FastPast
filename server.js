@@ -1165,13 +1165,37 @@ async function processVideoDownload(job) {
           console.log(`[yt-dlp] ${line.trim()}`);
         }
 
-        // Always parse progress from stderr when download is active (DASH/Streaming)
-        const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-        if (match) {
+        // Parse yt-dlp progress format: [download] X%
+        const ytDlpMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+        if (ytDlpMatch) {
           lastProgressTime = Date.now(); // Reset timeout
-          const percent = parseFloat(match[1]);
+          const percent = parseFloat(ytDlpMatch[1]);
           io.emit('job_progress', { jobId, percent, url });
           job.updateProgress(percent);
+        }
+
+        // Parse ffmpeg progress format (used for YouTube HLS streams): time=XX:XX:XX.XX
+        const ffmpegMatch = line.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+        if (ffmpegMatch && (start || end)) {
+          lastProgressTime = Date.now(); // Reset timeout
+          const hours = parseInt(ffmpegMatch[1]);
+          const minutes = parseInt(ffmpegMatch[2]);
+          const seconds = parseInt(ffmpegMatch[3]);
+          const currentTime = hours * 3600 + minutes * 60 + seconds;
+
+          // Calculate percentage based on the trim duration
+          const [startH, startM, startS] = (start || '00:00').split(':').map(Number);
+          const [endH, endM, endS] = (end || '00:00').split(':').map(Number);
+          const startSec = (startH || 0) * 3600 + (startM || 0) * 60 + (startS || 0);
+          const endSec = (endH || 0) * 3600 + (endM || 0) * 60 + (endS || 0);
+          const duration = endSec - startSec;
+
+          if (duration > 0) {
+            const percent = Math.min(100, (currentTime / duration) * 100);
+            console.log(`[ffmpeg Progress] ${currentTime}s / ${duration}s (${percent.toFixed(1)}%)`);
+            io.emit('job_progress', { jobId, percent, url });
+            job.updateProgress(percent);
+          }
         }
       });
 
