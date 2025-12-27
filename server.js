@@ -387,11 +387,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       console.log(`🎬 Dedicated cookies FOUND: ${cookiesPath}`);
       pushUnique("--cookies", cookiesPath);
 
-      // LEGACY RESTORATION: Rate Limiting for YouTube (Avoid IP blocks)
-      if (url.includes("youtube.com") || url.includes("youtu.be")) {
-        pushUnique("--min-sleep-interval", "5");
-        pushUnique("--max-sleep-interval", "10");
-      }
+      // Rate Limiting for YouTube (DISABLED to prevent "years" of delay)
+      // if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      //   pushUnique("--min-sleep-interval", "5");
+      //   pushUnique("--max-sleep-interval", "10");
+      // }
     } else {
       // Ultimate fallback: Use the generic cookies.txt if domain-specific one is missing
       const rootCookies = path.resolve(__dirname, 'cookies.txt');
@@ -407,19 +407,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
   }
 
   // 7. YouTube Specific Configuration
-  // User Requested Args: Player Client + Impersonation
-  if (url.includes("youtube.com") || url.includes("youtu.be")) {
-    const downloaderIndex = args.indexOf("--downloader");
-    if (downloaderIndex !== -1) {
-      args.splice(downloaderIndex, 2); // Remove --downloader aria2c
-    }
-    const downloaderArgsIndex = args.indexOf("--downloader-args");
-    if (downloaderArgsIndex !== -1) {
-      args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
-    }
-
-    // Simplified YouTube (No extra args, just clean cookies and no aria2c)
-  }
+  // Note: We handle aria2c removal in the worker logic based on pipe requirements
 }
 
 
@@ -1145,10 +1133,11 @@ async function processVideoDownload(job) {
         console.log(`[Worker] Stage: Post-Configuration (Job: ${jobId})`);
         console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
-        // STABILITY: Disable aria2c for streaming/merging to prevent deadlocks in pipes
-        if (isStreaming) {
-          // External downloaders like aria2c often hang when outputting to stdout,
-          // especially when yt-dlp needs to merge streams.
+        // STABILITY: Disable aria2c ONLY for streaming directly to stdout pipes WITHOUT disk fallback.
+        // External downloaders like aria2c often hang when outputting to stdout,
+        // especially when yt-dlp needs to merge streams.
+        if (isStreaming && !useDiskFallback) {
+          console.log(`[Worker] Disabling aria2c for direct pipe stream (Job: ${jobId})`);
           const downloaderIndex = args.indexOf("--downloader");
           if (downloaderIndex !== -1) {
             args.splice(downloaderIndex, 2); // Remove --downloader aria2c
@@ -1157,6 +1146,8 @@ async function processVideoDownload(job) {
           if (downloaderArgsIndex !== -1) {
             args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
           }
+        } else if (isStreaming && useDiskFallback) {
+          console.log(`[Worker] Keeping aria2c enabled for disk fallback download (Job: ${jobId})`);
         }
 
         if (url.includes("vimeo.com")) {
