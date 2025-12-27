@@ -1080,10 +1080,9 @@ async function processVideoDownload(jobOrData) {
         console.log(`${logPrefix}Stage: Post-Configuration (Job: ${jobId})`);
         console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
-        // STABILITY: Disable aria2c ONLY for streaming directly to stdout pipes WITHOUT disk fallback.
-        // External downloaders like aria2c often hang when outputting to stdout,
-        // especially when yt-dlp needs to merge streams.
-        if (isStreaming && !useDiskFallback) {
+        // STABILITY: Disable aria2c for non-YouTube streaming directly to stdout pipes WITHOUT disk fallback.
+        // YouTube is safe because we force single-file formats (no merging), avoiding pipe deadlocks.
+        if (isStreaming && !useDiskFallback && !isYouTube) {
           console.log(`${logPrefix}Disabling aria2c for direct pipe stream (Job: ${jobId})`);
           const downloaderIndex = args.indexOf("--downloader");
           if (downloaderIndex !== -1) {
@@ -1093,8 +1092,8 @@ async function processVideoDownload(jobOrData) {
           if (downloaderArgsIndex !== -1) {
             args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
           }
-        } else if (isStreaming && useDiskFallback) {
-          console.log(`${logPrefix}Keeping aria2c enabled for disk fallback download (Job: ${jobId})`);
+        } else if (isStreaming && (useDiskFallback || isYouTube)) {
+          console.log(`${logPrefix}Keeping aria2c enabled for ${isYouTube ? 'YouTube direct' : 'disk fallback'} download (Job: ${jobId})`);
         }
 
         if (url.includes("vimeo.com")) {
