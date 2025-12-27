@@ -35,6 +35,7 @@ console.log("Starting Server...", { platform: process.platform, arch: process.ar
 // In-memory store for zip jobs
 // Structure: { [id]: { status: 'pending'|'processing'|'completed'|'failed', progress: 0, filePath: '', error: '' } }
 const zipJobs = new Map();
+const virtualJobs = new Map();
 const qualitiesCache = new Map();
 
 // Helper to get platform-specific python command
@@ -929,6 +930,11 @@ async function processVideoDownload(jobOrData) {
   console.log(`${logPrefix}Processing Job ${jobIdForLog} (ID: ${jobId}) - ${url}`);
   io.emit('job_start', { jobId, url });
 
+  // 1. Initialize Virtual Job Status (for polling compatibility)
+  if (!isJob) {
+    virtualJobs.set(jobId, { id: jobId, state: 'active', progress: 0, result: null });
+  }
+
   // 1. Mandatory Metadata Resolution for Streaming/Accuracy
   // We resolve title and filesize BEFORE initializing the stream pipe to prevent IDM header race conditions
   // Optimization: Skip if we already have the info
@@ -1210,6 +1216,7 @@ async function processVideoDownload(jobOrData) {
               const percent = parseFloat(match[1]);
               io.emit('job_progress', { jobId, percent, url });
               if (isJob) jobOrData.updateProgress(percent);
+              else if (virtualJobs.has(jobId)) virtualJobs.get(jobId).progress = percent;
             }
           }
         });
@@ -1226,6 +1233,7 @@ async function processVideoDownload(jobOrData) {
             const percent = parseFloat(ytDlpMatch[1]);
             io.emit('job_progress', { jobId, percent, url });
             if (isJob) jobOrData.updateProgress(percent);
+            else if (virtualJobs.has(jobId)) virtualJobs.get(jobId).progress = percent;
           }
 
           // Parse ffmpeg progress format (used for YouTube HLS streams): time=XX:XX:XX.XX
@@ -1249,6 +1257,7 @@ async function processVideoDownload(jobOrData) {
               console.log(`[ffmpeg Progress] ${currentTime}s / ${duration}s (${percent.toFixed(1)}%)`);
               io.emit('job_progress', { jobId, percent, url });
               if (isJob) jobOrData.updateProgress(percent);
+              else if (virtualJobs.has(jobId)) virtualJobs.get(jobId).progress = percent;
             }
           }
         });
@@ -1271,6 +1280,10 @@ async function processVideoDownload(jobOrData) {
               activeStreams.set(jobId, entry);
 
               io.emit('job_complete', { jobId, url });
+              if (!isJob && virtualJobs.has(jobId)) {
+                virtualJobs.get(jobId).state = 'completed';
+                virtualJobs.get(jobId).progress = 100;
+              }
               resolve({ status: 'completed' });
 
               // Cleanup handled by the 1-hour global cleanup or a specific timeout
@@ -1286,19 +1299,31 @@ async function processVideoDownload(jobOrData) {
               // Sequential streams still use pipes (one-shot)
               streamPipe.end();
               io.emit('job_complete', { jobId, url });
+              if (!isJob && virtualJobs.has(jobId)) {
+                virtualJobs.get(jobId).state = 'completed';
+                virtualJobs.get(jobId).progress = 100;
+              }
               resolve({ status: 'completed' });
               setTimeout(() => activeStreams.delete(jobId), 5000);
             } else {
               io.emit('job_complete', { jobId, url });
+              if (!isJob && virtualJobs.has(jobId)) {
+                virtualJobs.get(jobId).state = 'completed';
+                virtualJobs.get(jobId).progress = 100;
+              }
               resolve({ status: 'completed' });
             }
-          } else {
+          } else { // This 'else' block handles non-zero exit codes (failures)
             if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlink(tempFilePath, () => { });
             if (streamPipe) streamPipe.end();
 
             const cleanStderr = stderr.slice(-500);
             const userFriendlyError = `Download process failed (Code ${code}). Details: ${cleanStderr}`;
             io.emit('job_error', { jobId, error: userFriendlyError, url });
+            if (!isJob && virtualJobs.has(jobId)) {
+              virtualJobs.get(jobId).state = 'failed';
+              virtualJobs.get(jobId).result = { error: userFriendlyError };
+            }
             reject(new Error(userFriendlyError));
           }
         });
@@ -1340,6 +1365,15 @@ videoWorker.on('failed', (job, err) => {
 
 
 // const downloadStats = downloadQueue.getStats(); // Unused
+
+// Cleanup Virtual Jobs Map periodically (Every hour)
+setInterval(() => {
+  // We don't store timestamps yet, so simple periodic clear for now if it gets too large (> 1000)
+  if (virtualJobs.size > 1000) {
+    console.log("Cleaning up virtualJobs map...");
+    virtualJobs.clear();
+  }
+}, 60 * 60 * 1000);
 
 // Security Middleware
 app.disable('x-powered-by');
@@ -3224,22 +3258,28 @@ app.get("/zip-job-status/:id", (req, res) => {
 
 app.get('/job-status/:jobId', async (req, res) => {
   const { jobId } = req.params;
-  const job = await videoQueue.getJob(jobId);
 
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found' });
+  // 1. Try BullMQ first (for non-YouTube/Queued jobs)
+  const job = await videoQueue.getJob(jobId);
+  if (job) {
+    const state = await job.getState();
+    const progress = job.progress;
+    const result = job.returnvalue;
+    return res.json({ id: job.id, state, progress, result });
   }
 
-  const state = await job.getState();
-  const progress = job.progress;
-  const result = job.returnvalue;
+  // 2. Try virtualJobs (for direct YouTube/Bypass jobs)
+  const vJob = virtualJobs.get(jobId);
+  if (vJob) {
+    return res.json({
+      id: jobId,
+      state: vJob.state, // 'active', 'completed', 'failed'
+      progress: vJob.progress,
+      result: vJob.result
+    });
+  }
 
-  res.json({
-    id: job.id,
-    state,
-    progress,
-    result
-  });
+  return res.status(404).json({ error: 'Job not found' });
 });
 
 // Endpoint to download the final zip
