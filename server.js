@@ -670,17 +670,22 @@ function parsePTDuration(ptDuration) {
 
 function getFormatScore(format) {
   let score = 0;
-  if (format.ext === "mp4") {
-    score += 500000;
-  }
-  if (format.vcodec && /avc|h264/i.test(format.vcodec)) {
-    score += 1000000; // Super high priority for native MP4 compatibility
-  }
+  // Bitrate is the most reliable indicator of real quality
   if (typeof format.tbr === "number") {
-    score += format.tbr;
+    score += format.tbr * 1000;
   }
   if (typeof format.filesize === "number") {
-    score += format.filesize / 1000000;
+    score += format.filesize / 1000;
+  } else if (typeof format.filesize_approx === "number") {
+    score += format.filesize_approx / 1000;
+  }
+
+  // h264 is good for compatibility, but don't let it hide 4K VP9/AV1
+  if (format.vcodec && /avc|h264/i.test(format.vcodec)) {
+    score += 500;
+  }
+  if (format.ext === "mp4") {
+    score += 100;
   }
   return score;
 }
@@ -726,8 +731,8 @@ function selectVideoQualities(formats, url = "") {
   });
 
   const selectedHeights = Array.from(heightMap.keys())
-    .sort((a, b) => a - b)
-    .slice(-6);
+    .sort((a, b) => a - b);
+  // REMOVED .slice(-6) to show ALL available resolutions
 
   return selectedHeights
     .map((height) => {
