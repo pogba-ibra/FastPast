@@ -293,27 +293,25 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     const isMeta = url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com") || url.includes("threads.net");
 
     if (isYouTube) {
-      // YouTube Stability: Chrome-131 is the most stable impersonation for YouTube
+      // YouTube Stability: Use impersonation ALONE to ensure valid signatures.
+      // Don't override with custom UA as it can break the client signature.
       pushUnique("--impersonate", "chrome-131");
+      const referer = 'https://www.youtube.com/';
+      pushUnique("--add-header", `Referer:${referer}`);
     } else if (isMeta) {
       pushUnique("--impersonate", "safari");
+      const referer = (url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/');
+      pushUnique("--add-header", `Referer:${referer}`);
+      pushUnique("--user-agent", requestUA || DESKTOP_UA);
     } else if (!url.includes("vk.com") && !url.includes("vk.ru") && !url.includes("vkvideo.ru")) {
       pushUnique("--impersonate", "chrome");
+      pushUnique("--user-agent", requestUA || DESKTOP_UA);
     }
 
     // 2. Connectivity: Force IPv4 for stability (Fly.io specific)
     pushUnique("--force-ipv4");
 
-    // 3. User-Agent Matching
-    // Prioritize the actual browser UA to appear more human, fallback to forced desktop
-    const finalUA = requestUA || DESKTOP_UA;
-    pushUnique("--user-agent", finalUA);
-
-    if (isMeta || isYouTube) {
-      const referer = isYouTube ? 'https://www.youtube.com/' : (url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/');
-      pushUnique("--add-header", `Referer:${referer}`);
-    }
-    else if (url.includes("tiktok.com")) {
+    if (url.includes("tiktok.com")) {
       // TikTok prefers no custom UA when impersonating
     }
     else if (!url.includes("reddit.com")) {
@@ -323,9 +321,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     // 3. Platform specific extractor args
     if (isYouTube) {
       pushUnique("--extractor-args", "youtube:player_client=default,ios");
-      // YouTube Stability: Mimic human behavior with small delays
-      pushUnique("--sleep-interval", "1");
-      pushUnique("--max-sleep-interval", "5");
+      // REMOVED: Sleep intervals. They cause 'Download hung' timeouts on Fly.io / high-speed envs.
     }
     else if (url.includes("vimeo.com")) {
       pushUnique("--extractor-args", "vimeo:player_url=https://player.vimeo.com");
@@ -1059,19 +1055,17 @@ async function processVideoDownload(jobOrData) {
         ];
 
         if (isYouTube) {
-          // Absolute Block: Tell yt-dlp that ffmpeg does not exist.
-          // This prevents ANY post-processing from even starting.
-          args.push("--ffmpeg-location", "/dev/null/no_ffmpeg_allowed");
+          // STABILITY: Restore real ffmpeg but force '-c copy' for instant remuxing.
+          // This avoids the 'slow processing' while preventing hangs on split formats.
+          args.push("--postprocessor-args", "ffmpeg:-c copy");
+          // Remove the sabotaged path - let it find the system ffmpeg
         } else {
           args.push("--ffmpeg-location", "/usr/local/bin/ffmpeg");
-        }
-
-        configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
-
-        if (!isYouTube) {
           // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming for other platforms
           args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
         }
+
+        configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
         // STABILITY: Aggressive network guards
         args.push("--socket-timeout", "30");
