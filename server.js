@@ -1048,7 +1048,8 @@ async function processVideoDownload(job) {
       console.log(`[YouTube CDN Redirect] Getting direct URL for instant download: ${jobId}`);
 
       // Get the direct stream URL using yt-dlp
-      const getUrlArgs = ["--get-url", "-f", formatId || "best[height<=1080]"];
+      // Prefer single combined formats to allow direct CDN redirect (Skip ffmpeg merge server-side)
+      const getUrlArgs = ["--get-url", "-f", formatId || "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"];
       configureAntiBlockingArgs(getUrlArgs, url, userAgent, _freshCookiePath, false);
       getUrlArgs.push(url);
 
@@ -1142,15 +1143,15 @@ async function processVideoDownload(job) {
 
           // Smarter default for standard formats when no specific ID is used
           if (finalFormat === 'mp4') {
-            args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b");
+            args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
           } else if (finalFormat === 'mp3') {
             args.push("-x", "--audio-format", "mp3", "--audio-quality", "0");
           } else {
             args.push("-f", finalFormat);
           }
         } else {
-          // Fallback: prefer MP4 for web compatibility
-          args.push("-f", "bv*[ext=mp4]+ba[ext=m4a]/best[ext=mp4]/best");
+          // Fallback: prefer combined formats to skip merging when possible
+          args.push("-f", "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best");
         }
 
         args.push("--merge-output-format", "mp4");
