@@ -48,13 +48,10 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
-# Install Deno (Supported JS Runtime for yt-dlp)
-RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://deno.land/install.sh | sh && \
-    mv /root/.deno/bin/deno /usr/local/bin/deno && \
-    chmod 755 /usr/local/bin/deno && \
-    rm -rf /root/.deno
-# No need to modify PATH as /usr/local/bin is already in PATH
+# Install Deno
+RUN curl -fsSL https://deno.land/install.sh | sh
+ENV PATH="/root/.deno/bin:$PATH"
+
 
 # Copy app source
 COPY . .
