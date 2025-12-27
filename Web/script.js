@@ -1767,6 +1767,7 @@ document.addEventListener("DOMContentLoaded", () => {
         startTime: startInput?.value || "",
         endTime: endInput?.value || "",
         title: videoTitle.textContent || "video",
+        duration: window.videoDuration || "",
         filesize: selectedQuality?.filesize || "",
         hasAudio: selectedQuality?.hasAudio || false,
         dlToken: 'dl_' + Date.now() + '_' + Math.floor(Math.random() * 1000),

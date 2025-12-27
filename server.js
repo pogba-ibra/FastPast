@@ -914,9 +914,10 @@ const activeStreams = new Map();
 // Worker for processing video downloads
 // Standalone function to process video downloads (Can be called by Worker OR Direct)
 async function processVideoDownload(job) {
-  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, mode, filesize: jobFilesize, title: jobTitle, hasAudio: jobHasAudio } = job.data;
+  const { url, format, formatId, qualityLabel, startTime: start, endTime: end, userAgent, jobId, isZipItem, outputPath, _freshCookiePath, mode, filesize: jobFilesize, duration: jobDuration, title: jobTitle, hasAudio: jobHasAudio } = job.data;
   let title = jobTitle || job.data.title || 'video';
   let filesize = (jobFilesize && jobFilesize !== "") ? jobFilesize : null;
+  let duration = jobDuration || null;
 
   // 1. Resolve Final Format and Merge requirements proactively
   // We need this BEFORE initializing pipes to avoid deadlocks
@@ -924,6 +925,13 @@ async function processVideoDownload(job) {
   let hasAudio = (jobHasAudio === true || jobHasAudio === "true") || isLegacyCombined;
 
   let finalFmt = formatId || format || 'best';
+
+  // OPTIMIZATION: If video is long (>10 mins) and not trimming, skip merge by using best combined format
+  const isLongVideo = duration && parseFloat(duration) > 600;
+  if (isLongVideo && !start && !end) {
+    console.log(`[Worker] Long video detected (${duration}s). Overriding format to skip ffmpeg merge.`);
+    finalFmt = "best[height<=1080][ext=mp4]/best";
+  }
 
   // Apply default selectors for generic keywords before checking for merges
   if (!formatId && finalFmt === 'mp4') {
@@ -973,32 +981,38 @@ async function processVideoDownload(job) {
           title = info.title;
         }
 
-        // Robust Filesize Calculation
-        filesize = info.filesize || info.filesize_approx;
-
-        if (formatId && info.formats) {
-          // Handle merged formats like "137+140"
-          if (typeof formatId === 'string' && formatId.includes('+')) {
-            const IDs = formatId.split('+');
-            let total = 0;
-            IDs.forEach(id => {
-              const f = info.formats.find(x => x.format_id === id);
-              if (f) total += (f.filesize || f.filesize_approx || 0);
-            });
-            if (total > 0) filesize = total;
-          } else {
-            // Single format
-            const f = info.formats.find(x => x.format_id === formatId);
-            if (f) filesize = f.filesize || f.filesize_approx;
-          }
+        // Extract duration if missing
+        if (!duration && info.duration) {
+          duration = info.duration;
+          console.log(`[Worker] Resolved duration for ${jobId}: ${duration}s`);
         }
+      }
 
-        if (filesize) {
-          console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
-          logger.info("Metadata resolved filesize", { jobId, filesize });
+      // Robust Filesize Calculation
+      filesize = info.filesize || info.filesize_approx;
+
+      if (formatId && info.formats) {
+        // Handle merged formats like "137+140"
+        if (typeof formatId === 'string' && formatId.includes('+')) {
+          const IDs = formatId.split('+');
+          let total = 0;
+          IDs.forEach(id => {
+            const f = info.formats.find(x => x.format_id === id);
+            if (f) total += (f.filesize || f.filesize_approx || 0);
+          });
+          if (total > 0) filesize = total;
         } else {
-          console.log(`[Worker] Could not resolve filesize for ${jobId}`);
+          // Single format
+          const f = info.formats.find(x => x.format_id === formatId);
+          if (f) filesize = f.filesize || f.filesize_approx;
         }
+      }
+
+      if (filesize) {
+        console.log(`[Worker] Resolved filesize for ${jobId}: ${filesize} bytes`);
+        logger.info("Metadata resolved filesize", { jobId, filesize });
+      } else {
+        console.log(`[Worker] Could not resolve filesize for ${jobId}`);
       }
     } catch (err) {
       logger.warn("Worker metadata resolution failed", { jobId, error: err.message });
@@ -4144,6 +4158,7 @@ app.post("/download", async (req, res) => {
       startTime,
       endTime,
       title: req.body.title || 'video',
+      duration: req.body.duration,
       mode: 'stream',
       dlToken: req.body.dlToken,
       filesize: req.body.filesize,
