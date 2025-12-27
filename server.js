@@ -292,13 +292,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
     // 1. Client Impersonation (Dec 2025 Standard)
-    // Avoid impersonation for VK (causes 400 Bad Request)
-    if (isYouTube) {
-      // LEGACY RESTORATION: YouTube health relies on Chrome-131 impersonation
-      pushUnique("--impersonate", "Chrome-131");
+    // Use Safari impersonation for Meta (FB/IG) and YouTube as it's often more stable and faster
+    if ((isMeta || isYouTube) && !isVK) {
+      pushUnique("--impersonate", "safari");
     } else if (!isVK) {
-      // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
-      pushUnique("--impersonate", isMeta ? "safari" : "chrome");
+      pushUnique("--impersonate", "chrome");
     }
 
     // 2. Connectivity: Force IPv4 for major platforms to avoid IPv6 timeouts/hangs (Fly.io specific stability)
@@ -312,17 +310,13 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     const finalUA = requestUA || DESKTOP_UA;
     pushUnique("--user-agent", finalUA);
 
-    if (url.includes("facebook.com") || url.includes("fb.watch") || url.includes("instagram.com")) {
-      console.log(`🕵️ Using Forced Desktop User-Agent for Meta`);
-      pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
-    }
-    else if (url.includes("youtube.com") || url.includes("youtu.be")) {
-      // LEGACY RESTORATION: Critical for YouTube health
-      pushUnique("--extractor-args", "youtube:player_client=default,ios");
+    if (isMeta || isYouTube) {
+      const referer = isYouTube ? 'https://www.youtube.com/' : (url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/');
+      pushUnique("--add-header", `Referer:${referer}`);
 
-      // LEGACY RESTORATION: Add YT referer specifically for Shorts to prevent 403
-      if (url.includes("shorts")) {
-        pushUnique("--add-header", "Referer:https://www.youtube.com/");
+      // Only use player_client for metadata fetching, keep download stage "simple" as requested
+      if (isYouTube && !isDownload) {
+        pushUnique("--extractor-args", "youtube:player_client=default,ios");
       }
     }
     else if (url.includes("tiktok.com")) {
@@ -343,7 +337,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
 
     // 5. Cache Management
-    if (url.includes("facebook.com") || url.includes("fb.watch")) {
+    if (isMeta || isYouTube) {
       pushUnique("--rm-cache-dir");
     }
   }
