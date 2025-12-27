@@ -292,8 +292,11 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
 
     // 1. Client Impersonation (Dec 2025 Standard)
-    // Avoid impersonation for YouTube (native is better) and VK (causes 400 Bad Request)
-    if (!isYouTube && !isVK) {
+    // Avoid impersonation for VK (causes 400 Bad Request)
+    if (isYouTube) {
+      // LEGACY RESTORATION: YouTube health relies on Chrome-131 impersonation
+      pushUnique("--impersonate", "Chrome-131");
+    } else if (!isVK) {
       // Use Safari impersonation for Meta (FB/IG) as it's often more stable for their specific browser checks
       pushUnique("--impersonate", isMeta ? "safari" : "chrome");
     }
@@ -314,6 +317,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       pushUnique("--add-header", `Referer:${url.includes('instagram.com') ? 'https://www.instagram.com/' : 'https://www.facebook.com/'}`);
     }
     else if (url.includes("youtube.com") || url.includes("youtu.be")) {
+      // LEGACY RESTORATION: Critical for YouTube health
+      pushUnique("--extractor-args", "youtube:player_client=default,ios");
+
       // LEGACY RESTORATION: Add YT referer specifically for Shorts to prevent 403
       if (url.includes("shorts")) {
         pushUnique("--add-header", "Referer:https://www.youtube.com/");
