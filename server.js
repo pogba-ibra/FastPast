@@ -691,7 +691,8 @@ function buildFallbackQuality(height) {
   };
 }
 
-function selectVideoQualities(formats) {
+function selectVideoQualities(formats, url = "") {
+  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
   const heightMap = new Map();
   formats.forEach((format) => {
     if (!format || format.vcodec === "none" || !format.height) {
@@ -706,7 +707,7 @@ function selectVideoQualities(formats) {
       if (!entry.combined || scored.score > entry.combined.score) {
         entry.combined = scored;
       }
-    } else {
+    } else if (!isYouTube) {
       if (!entry.videoOnly || scored.score > entry.videoOnly.score) {
         entry.videoOnly = scored;
       }
@@ -1032,19 +1033,25 @@ async function processVideoDownload(job) {
     // Helper function for regular server-side download
     function beginRegularDownload() {
       try {
+        const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
         let args = [
           "-o", outputTemplate,
           "--no-check-certificate",
           "--no-restrict-filenames",
-          "--ffmpeg-location", "/usr/local/bin/ffmpeg",
           "--progress",
           "--newline"
         ];
 
+        if (!isYouTube) {
+          args.push("--ffmpeg-location", "/usr/local/bin/ffmpeg");
+        }
+
         configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
 
-        // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming
-        args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
+        if (!isYouTube) {
+          // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming for other platforms
+          args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
+        }
 
         // STABILITY: Aggressive network guards
         args.push("--socket-timeout", "30");
@@ -1113,7 +1120,7 @@ async function processVideoDownload(job) {
           args.push("--merge-output-format", "mp4");
         }
 
-        if (start && end) {
+        if (start && end && !isYouTube) {
           args.push("--download-sections", `*${start}-${end}`);
           args.push("--force-keyframes-at-cuts");
         }
@@ -3701,7 +3708,7 @@ app.post("/get-qualities", async (req, res) => {
             `Total formats returned by yt-dlp for ${videoUrl}: ${videoFormats.length}`
           );
 
-          qualities = selectVideoQualities(videoFormats);
+          qualities = selectVideoQualities(videoFormats, videoUrl);
 
           // User Request: Inject Direct HD Capture if found by Playwright (Bypass yt-dlp extracting)
           // Ensure capturedExtractions and its properties are checked
