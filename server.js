@@ -273,7 +273,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
   };
 
   // aria2c is ONLY for actual downloads, it adds overhead to metadata fetches
-  if (isDownload) {
+  const isYouTube = url.includes("youtube.com") || url.includes("youtu.be");
+  if (isDownload && !isYouTube) {
     pushUnique("--downloader", "aria2c");
     pushUnique("--downloader-args", "aria2c:-x 8 -s 8 -k 1M");
   }
@@ -296,7 +297,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       // YouTube Stability: Use impersonation ALONE to ensure valid signatures.
       // Don't override with custom UA as it can break the client signature.
       pushUnique("--impersonate", "chrome-131");
-      const referer = 'https://www.youtube.com/';
+      const referer = 'www.youtube.com';
       pushUnique("--add-header", `Referer:${referer}`);
     } else if (isMeta) {
       pushUnique("--impersonate", "safari");
@@ -320,7 +321,7 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
 
     // 3. Platform specific extractor args
     if (isYouTube) {
-      pushUnique("--extractor-args", "youtube:player_client=default,ios");
+      pushUnique("--extractor-args", "youtube:player_client=android,web");
       // REMOVED: Sleep intervals. They cause 'Download hung' timeouts on Fly.io / high-speed envs.
     }
     else if (url.includes("vimeo.com")) {
@@ -333,7 +334,9 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
     }
 
     // 5. Cache Management
-    pushUnique("--rm-cache-dir");
+    if (!isYouTube) {
+      pushUnique("--rm-cache-dir");
+    }
   }
 
   // 6. Cookies Authentication
@@ -1075,7 +1078,7 @@ async function processVideoDownload(jobOrData) {
         console.log(`[Worker Diagnostic] Final yt-dlp args: ${args.join(' ')}`);
 
         // STABILITY: Disable aria2c for non-YouTube streaming directly to stdout pipes WITHOUT disk fallback.
-        // YouTube is safe because we force single-file formats (no merging), avoiding pipe deadlocks.
+        // YouTube already has aria2c disabled in configureAntiBlockingArgs for 2025 stability.
         if (isStreaming && !useDiskFallback && !isYouTube) {
           console.log(`${logPrefix}Disabling aria2c for direct pipe stream (Job: ${jobId})`);
           const downloaderIndex = args.indexOf("--downloader");
@@ -1086,8 +1089,8 @@ async function processVideoDownload(jobOrData) {
           if (downloaderArgsIndex !== -1) {
             args.splice(downloaderArgsIndex, 2); // Remove --downloader-args ...
           }
-        } else if (isStreaming && (useDiskFallback || isYouTube)) {
-          console.log(`${logPrefix}Keeping aria2c enabled for ${isYouTube ? 'YouTube direct' : 'disk fallback'} download (Job: ${jobId})`);
+        } else if (isStreaming && useDiskFallback) {
+          console.log(`${logPrefix}Keeping aria2c enabled for disk fallback download (Job: ${jobId})`);
         }
 
         if (url.includes("vimeo.com")) {
