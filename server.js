@@ -715,7 +715,9 @@ function selectVideoQualities(formats, url = "") {
       if (!entry.combined || scored.score > entry.combined.score) {
         entry.combined = scored;
       }
-    } else if (!isYouTube) {
+    } else {
+      // Restore High Quality for YouTube (1080p, 1440p, 4K)
+      // These are split streams (video only) and will be merged near-instantly using our '-c copy' policy.
       if (!entry.videoOnly || scored.score > entry.videoOnly.score) {
         entry.videoOnly = scored;
       }
