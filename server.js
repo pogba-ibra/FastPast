@@ -4,7 +4,7 @@ const axios = require("axios");
 const cors = require("cors");
 const { spawn, exec } = require("child_process");
 const path = require("path");
-const { extractFacebookVideoUrl } = require('./facebook-extractor'); // Facebook headless browser extraction
+// Facebook headless browser extraction REMOVED - Using browser-less/yt-dlp only
 // const multer = require("multer"); // Unused
 // const ffmpeg = require("ffmpeg-static");
 // const ffmpeg = "ffmpeg"; // Unused: yt-dlp uses system PATH automatically
@@ -3973,9 +3973,8 @@ app.post("/get-qualities", async (req, res) => {
                 const cookieFile = path.resolve(__dirname, 'www.instagram.com_cookies.txt');
                 extraction = await extractThreadsBrowserless(videoUrl, cookieFile);
               } else {
-                console.log("🛡️ [Qualities Fallback] yt-dlp failed on Facebook. Attempting headless extraction...");
-                const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-                extraction = await extractFacebookVideoUrl(videoUrl, cookieFile, req.headers['user-agent']).catch(() => null);
+                console.log("🛡️ [Qualities Fallback] yt-dlp failed on Facebook. Headless fallback REMOVED.");
+                extraction = null; // No longer using headless extractor
               }
 
               if (extraction && (extraction.videoUrl || (extraction.candidateStreams && extraction.candidateStreams.length > 0))) {
@@ -4100,17 +4099,9 @@ app.post("/download", async (req, res) => {
             req.body._userAgent = extractionResult.userAgent;
           }
         } else if (isFacebook) {
-          // Facebook: Browser extraction (Only for direct_hd format)
           const isDirectHD = req.body.formatId === 'direct_hd' || req.body.formatSelector === 'direct_hd';
           if (isDirectHD) {
-            const cookieFile = path.resolve(__dirname, 'www.facebook.com_cookies.txt');
-            const extractionResult = await extractFacebookVideoUrl(url, cookieFile, req.headers['user-agent']);
-            if (extractionResult.videoUrl) {
-              url = extractionResult.videoUrl;
-              req.body._browserExtractedTitle = extractionResult.title;
-              req.body._freshCookiePath = extractionResult.freshCookiePath;
-              req.body._userAgent = extractionResult.userAgent;
-            }
+            console.log("🛡️ [Direct HD] Facebook headless extraction REMOVED. Using original URL.");
           }
         }
       }
