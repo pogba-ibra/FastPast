@@ -666,7 +666,7 @@ function getFormatScore(format) {
     score += 500000;
   }
   if (format.vcodec && /avc|h264/i.test(format.vcodec)) {
-    score += 20000;
+    score += 1000000; // Super high priority for native MP4 compatibility
   }
   if (typeof format.tbr === "number") {
     score += format.tbr;
@@ -1037,6 +1037,9 @@ async function processVideoDownload(job) {
         ];
 
         configureAntiBlockingArgs(args, url, userAgent, _freshCookiePath, true);
+
+        // OPTIMIZATION: Use ultrafast preset for ffmpeg to speed up merging/trimming
+        args.push("--postprocessor-args", "ffmpeg:-preset ultrafast");
 
         // STABILITY: Aggressive network guards
         args.push("--socket-timeout", "30");
