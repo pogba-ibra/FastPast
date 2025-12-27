@@ -1115,12 +1115,29 @@ async function processVideoDownload(job) {
         args.push("--concurrent-fragments", "5");
       }
 
+      // Add verbose logging for YouTube to debug hangs
+      const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+      if (isYouTube) {
+        args.push("--verbose");
+      }
+
       args.push(url);
 
       console.log("[Worker] Spawn yt-dlp args:", args.join(" "));
       const ytDlp = spawnYtDlp(["-m", "yt_dlp", ...args]);
 
       let stderr = "";
+      let lastProgressTime = Date.now();
+
+      // Safety timeout: kill download if no progress for 5 minutes
+      const progressTimeout = setInterval(() => {
+        const timeSinceProgress = Date.now() - lastProgressTime;
+        if (timeSinceProgress > 300000) { // 5 minutes
+          console.error(`[Worker] Download hung for 5 minutes with no progress. Killing. Job: ${jobId}`);
+          clearInterval(progressTimeout);
+          ytDlp.kill('SIGKILL');
+        }
+      }, 30000); // Check every 30s
 
       // If direct streaming, pipe stdout to the PassThrough
       if (isStreaming && !useDiskFallback) {
@@ -1143,9 +1160,15 @@ async function processVideoDownload(job) {
         const line = data.toString();
         stderr += line;
 
+        // Log verbose output for YouTube debugging
+        if (isYouTube && (line.includes('[debug]') || line.includes('[info]') || line.includes('ERROR'))) {
+          console.log(`[yt-dlp] ${line.trim()}`);
+        }
+
         // Always parse progress from stderr when download is active (DASH/Streaming)
         const match = line.match(/\[download\]\s+(\d+\.?\d*)%/);
         if (match) {
+          lastProgressTime = Date.now(); // Reset timeout
           const percent = parseFloat(match[1]);
           io.emit('job_progress', { jobId, percent, url });
           job.updateProgress(percent);
@@ -1153,6 +1176,7 @@ async function processVideoDownload(job) {
       });
 
       ytDlp.on("close", async (code) => {
+        clearInterval(progressTimeout); // Clean up safety timeout
         if (code === 0) {
           // If we used disk fallback for streaming, we don't pipe to PassThrough anymore.
           // Instead, we mark the file as ready for direct serving.
