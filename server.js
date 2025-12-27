@@ -368,6 +368,8 @@ function configureAntiBlockingArgs(args, url, requestUA, freshCookiePath, isDown
       else targetCookieFile = path.join('downloads', 'www.reddit.com_cookies.txt');
     }
     else if (url.includes("tiktok.com")) targetCookieFile = "www.tiktok.com_cookies.txt";
+    else if (url.includes("youtube.com") || url.includes("youtu.be")) targetCookieFile = "www.youtube.com_cookies.txt";
+    else if (url.includes("x.com") || url.includes("twitter.com")) targetCookieFile = "x.com_cookies.txt";
     else if (url.includes("twitter.com") || url.includes("x.com")) targetCookieFile = "x.com_cookies.txt";
     else if (url.includes("youtube.com") || url.includes("youtu.be")) {
       targetCookieFile = "www.youtube.com_cookies.txt";
@@ -711,7 +713,7 @@ function selectVideoQualities(formats, url = "") {
     if (!format || format.vcodec === "none" || !format.height) {
       return;
     }
-    if (format.height < 144 || format.height > 4320) {
+    if (format.height < 144 || format.height > 8640) {
       return;
     }
     const entry = heightMap.get(format.height) || { combined: null, videoOnly: null };
@@ -737,10 +739,22 @@ function selectVideoQualities(formats, url = "") {
   return selectedHeights
     .map((height) => {
       const entry = heightMap.get(height);
-      if (!entry) {
-        return null;
-      }
-      if (entry.combined) {
+      if (!entry) return null;
+
+      // YouTube Optimization: Always prefer the highest bitrate (score)
+      // Usually videoOnly split formats have much higher bitrate than legacy combined formats.
+      const useVideoOnly = entry.videoOnly && (!entry.combined || entry.videoOnly.score > entry.combined.score);
+
+      if (useVideoOnly) {
+        return {
+          value: `${entry.videoOnly.format.format_id}+bestaudio/best`,
+          text: buildQualityLabel(height),
+          height,
+          hasAudio: true,
+          ext: "mp4", // We'll remux to mp4
+          filesize: entry.videoOnly.format.filesize || entry.videoOnly.format.filesize_approx,
+        };
+      } else if (entry.combined) {
         return {
           value: entry.combined.format.format_id,
           text: buildQualityLabel(height),
@@ -748,16 +762,6 @@ function selectVideoQualities(formats, url = "") {
           hasAudio: true,
           ext: entry.combined.format.ext || "mp4",
           filesize: entry.combined.format.filesize || entry.combined.format.filesize_approx,
-        };
-      }
-      if (entry.videoOnly) {
-        return {
-          value: `${entry.videoOnly.format.format_id}+bestaudio/best`,
-          text: buildQualityLabel(height),
-          height,
-          hasAudio: false,
-          ext: entry.videoOnly.format.ext || "mp4",
-          filesize: entry.videoOnly.format.filesize || entry.videoOnly.format.filesize_approx,
         };
       }
       return null;
