@@ -1032,37 +1032,6 @@ async function processVideoDownload(jobOrData) {
     }
   }
 
-  // OPTIMIZATION: For YouTube streaming WITHOUT trimming, redirect to direct CDN URL (instant)
-  const canRedirect = isYouTube && mode === 'stream' && !start && !end;
-  if (canRedirect) {
-    try {
-      console.log(`${logPrefix}Attempting instant CDN redirect for YouTube (Job: ${jobId})`);
-      const redirectArgs = ["-m", "yt_dlp", "-g", url];
-      configureAntiBlockingArgs(redirectArgs, url, userAgent, _freshCookiePath, false);
-      const child = spawnYtDlp(redirectArgs);
-      let stdout = "";
-      child.stdout.on('data', d => stdout += d);
-
-      const redirectTimeout = setTimeout(() => {
-        child.kill('SIGKILL');
-      }, 8000);
-
-      const directUrl = await new Promise(r => {
-        child.on('close', () => {
-          clearTimeout(redirectTimeout);
-          r(stdout.trim());
-        });
-      });
-
-      if (directUrl && directUrl.startsWith('http')) {
-        console.log(`${logPrefix}Instant CDN redirect successful (Job: ${jobId})`);
-        io.emit('job_complete', { jobId, url, directUrl });
-        return { status: 'completed', directUrl };
-      }
-    } catch (err) {
-      console.log(`${logPrefix}Instant CDN redirect failed: ${err.message}`);
-    }
-  }
 
   // 3. Cleanup redundant definitions and setup arguments
   let tempFilePath = null;
